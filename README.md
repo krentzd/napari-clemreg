@@ -1,13 +1,12 @@
 # napari-clemreg
 
-[![License](https://img.shields.io/pypi/l/napari-clemreg.svg?color=green)](https://github.com/krentzd/napari-clemreg/raw/master/LICENSE)
+<!-- [![License](https://img.shields.io/pypi/l/napari-clemreg.svg?color=green)](https://github.com/krentzd/napari-clemreg/raw/master/LICENSE)
 [![PyPI](https://img.shields.io/pypi/v/napari-clemreg.svg?color=green)](https://pypi.org/project/napari-clemreg)
 [![Python Version](https://img.shields.io/pypi/pyversions/napari-clemreg.svg?color=green)](https://python.org)
 [![tests](https://github.com/krentzd/napari-clemreg/workflows/tests/badge.svg)](https://github.com/krentzd/napari-clemreg/actions)
-[![codecov](https://codecov.io/gh/krentzd/napari-clemreg/branch/master/graph/badge.svg)](https://codecov.io/gh/krentzd/napari-clemreg)
+[![codecov](https://codecov.io/gh/krentzd/napari-clemreg/branch/master/graph/badge.svg)](https://codecov.io/gh/krentzd/napari-clemreg) -->
 
-A plugin for registering multimodal image volumes based on common segmented structures of interest with point-clouds.
-
+An automated point-set based registration algorithm for correlative light and electron microscopy (CLEM) 
 ----------------------------------
 
 This [napari] plugin was generated with [Cookiecutter] using [@napari]'s [cookiecutter-napari-plugin] template.
@@ -22,14 +21,27 @@ https://napari.org/docs/plugins/index.html
 
 ## Installation
 
-You can install `napari-clemreg` via [pip]:
+To install `napari-clemreg` it is recommended to create a fresh conda enviornment with Python 3.8:
 
-    pip install napari-clemreg
+```
+conda create -n clemreg_env python=3.8
+```
+Next, install `napari` with the following command: 
 
-When installing clemreg on a Windows machine you may encounter the following error:
+```
+pip install "napari[all]"
+```
 
-    error Microsoft Visual C++ 14.0 is required
+Finally, `napari-clemreg` can be installed with:
+```
+pip install napari-clemreg
+```
 
+
+When installing clemreg on a Windows machine, the following error might appear:
+```
+error Microsoft Visual C++ 14.0 is required
+```
 Ensure that [Visual Studios C++ 14.00](https://visualstudio.microsoft.com/thank-you-downloading-visual-studio/?sku=BuildTools&rel=16) is installed
 
 ## Contributing
