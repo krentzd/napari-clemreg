@@ -10,7 +10,7 @@ An automated point-set based registration algorithm for correlative light and el
 ----------------------------------
 ## Installation
 
-To install `napari-clemreg` it is recommended to create a fresh conda enviornment with Python 3.8:
+To install `napari-clemreg` it is recommended to create a fresh [conda] enviornment with Python 3.8:
 
 ```
 conda create -n clemreg_env python=3.8
@@ -62,5 +62,6 @@ If you encounter any problems, please [file an issue] along with a detailed desc
 [tox]: https://tox.readthedocs.io/en/latest/
 [pip]: https://pypi.org/project/pip/
 [PyPI]: https://pypi.org/
+[conda]: https://docs.conda.io/en/latest/
 
 This [napari] plugin was generated with [Cookiecutter] using [@napari]'s [cookiecutter-napari-plugin] template.
