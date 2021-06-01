@@ -8,17 +8,6 @@
 
 An automated point-set based registration algorithm for correlative light and electron microscopy (CLEM) 
 ----------------------------------
-
-This [napari] plugin was generated with [Cookiecutter] using [@napari]'s [cookiecutter-napari-plugin] template.
-
-<!--
-Don't miss the full getting started guide to set up your new package:
-https://github.com/napari/cookiecutter-napari-plugin#getting-started
-
-and review the napari docs for plugin developers:
-https://napari.org/docs/plugins/index.html
--->
-
 ## Installation
 
 To install `napari-clemreg` it is recommended to create a fresh conda enviornment with Python 3.8:
