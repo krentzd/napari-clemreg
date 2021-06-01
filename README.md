@@ -15,7 +15,7 @@ To install `napari-clemreg` it is recommended to create a fresh conda enviornmen
 ```
 conda create -n clemreg_env python=3.8
 ```
-Next, install `napari` with the following command: 
+Next, install `napari` with the following command via [pip]: 
 
 ```
 pip install "napari[all]"
