@@ -38,7 +38,7 @@ pip install napari-clemreg
 ```
 
 
-When installing clemreg on a Windows machine, the following error might appear:
+When installing `napari-clemreg` on a Windows machine, the following error might appear:
 ```
 error Microsoft Visual C++ 14.0 is required
 ```
