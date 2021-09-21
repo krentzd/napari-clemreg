@@ -7,3 +7,8 @@ import numpy as np
 @magic_factory
 def change_layer_type(input: ImageData) -> LabelsData:
     return input
+    
+# Widget to load unet model
+# Choose layer which was used for sparse segmentation
+# Train button
+# Run predictions on chosen layer from unet model
