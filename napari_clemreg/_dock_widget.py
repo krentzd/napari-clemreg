@@ -8,11 +8,11 @@ from .widgets.point_cloud_registration import make_point_cloud_registration
 from .widgets.point_cloud_sampling import make_point_cloud_sampling
 from .widgets.warp_image_volume import make_image_warping
 from .widgets.convert_em_segmentation import change_layer_type
-from .widgets.utility import crop_volume
+from .widgets.utility import mask_roi
 
 @napari_hook_implementation
 def napari_experimental_provide_dock_widget():
-    return [(crop_volume, {"name": "A1. Crop volume"}),
+    return [(mask_roi, {"name": "A1. Mask ROI"}),
             (make_data_preprocessing, {"name": "A2. Preprocess data"}),
             (make_log_segmentation, {"name": "B. Segment FM data"}),
             (change_layer_type, {"name": "C. Load EM segmentation"}),
