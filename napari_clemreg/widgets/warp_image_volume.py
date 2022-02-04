@@ -151,8 +151,8 @@ def on_init(widget):
     for x in ['moving_points', 'approximate_grid', 'sub_division_factor']:
         setattr(getattr(widget, x), 'visible', False)
 
-    def toggle_transform_widget(event):
-        if event.value == "Deformable":
+    def toggle_transform_widget(warping: str):
+        if warping == "Deformable":
             for x in ['moving_points', 'transformed_points', 'approximate_grid', 'sub_division_factor']:
                 setattr(getattr(widget, x), 'visible', True)
 

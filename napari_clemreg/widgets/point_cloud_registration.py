@@ -68,14 +68,15 @@ def on_init(widget):
     for x in ['fixed_image', 'sub_division_factor_x', 'sub_division_factor_y', 'sub_division_factor_z']:
         setattr(getattr(widget, x), 'visible', False)
 
-    def toggle_registration_widget(event):
-        if event.value == "BCPD":
+    def toggle_registration_widget(registration_type: str):
+    # def toggle_registration_widget(event):
+        if registration_type == "BCPD":
             for x in ['voxel_size', 'every_k_points']:
                 setattr(getattr(widget, x), 'visible', True)
-            for x in ['fixed_image', 'sub_division_factor']:
+            for x in ['fixed_image', 'sub_division_factor_x', 'sub_division_factor_y', 'sub_division_factor_z']:
                 setattr(getattr(widget, x), 'visible', False)
 
-        # if event.value == "Piecewise BCPD":
+        # if registration_type == "Piecewise BCPD":
         #     for x in ['fixed_image', 'voxel_size', 'every_k_points', 'max_iterations', 'sub_division_factor_x', 'sub_division_factor_y', 'sub_division_factor_z']:
         #         setattr(getattr(widget, x), 'visible', True)
 

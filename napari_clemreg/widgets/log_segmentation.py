@@ -12,18 +12,67 @@ from skimage import feature
 from typing_extensions import Annotated
 
 
+# Use on_init framework to change SpinBox visibility
+
+def on_init(widget):
+    """Initializes widget layout amd updates widget layout according to user input."""
+
+    # for x in ['moving', 'fixed', 'algorithm', 'visualise', 'max_iterations', 'voxel_size', 'every_k_points']:
+    #     setattr(getattr(widget, x), 'visible', True)
+    # for x in ['fixed_image', 'sub_division_factor_x', 'sub_division_factor_y', 'sub_division_factor_z']:
+    #     setattr(getattr(widget, x), 'visible', False)
+
+    # def get_num_of_channels(input):
+    #     if len(input.data.shape[0]) == 5:
+    #         setattr(getattr(widget, 'channel'), 'visible', True)
+    #     else:
+    #         setattr(getattr(widget, 'channel'), 'visible', False)
+
+    # def toggle_registration_widget(event):
+    #     if event.value == "BCPD":
+    #         for x in ['voxel_size', 'every_k_points']:
+    #             setattr(getattr(widget, x), 'visible', True)
+    #         for x in ['fixed_image', 'sub_division_factor']:
+    #             setattr(getattr(widget, x), 'visible', False)
+    #
+    #     # if event.value == "Piecewise BCPD":
+    #     #     for x in ['fixed_image', 'voxel_size', 'every_k_points', 'max_iterations', 'sub_division_factor_x', 'sub_division_factor_y', 'sub_division_factor_z']:
+    #     #         setattr(getattr(widget, x), 'visible', True)
+    #
+    #     else:
+    #         for x in ['moving', 'fixed', 'algorithm', 'visualise', 'max_iterations', 'voxel_size', 'every_k_points']:
+    #             setattr(getattr(widget, x), 'visible', True)
+    #         for x in ['fixed_image', 'sub_division_factor_x', 'sub_division_factor_y', 'sub_division_factor_z']:
+    #             setattr(getattr(widget, x), 'visible', False)
+
+    # widget.algorithm.changed.connect(get_num_of_channels)
+
+# @magic_factory(widget_init=on_init, layout='vertical', call_button="Segment")
 @magic_factory
 def make_log_segmentation(
     viewer: "napari.viewer.Viewer",
     input: Image,
     sigma: Annotated[float, {"min": 0.5, "max": 20, "step": 0.5}]=3,
-    threshold: Annotated[float, {"min": 0, "max": 20, "step": 0.1}]=1.2
+    threshold: Annotated[float, {"min": 0, "max": 20, "step": 0.1}]=1.2,
+    channel: int=0#Annotated[int, {"min": 0, "max": input.data.shape[0] if len(input.data.shape[0]) == 5 else 0, "step": 1}]=0,
 ):
     from napari.qt import thread_worker
+
+    # channel_sbox = widgets.SpinBox(name='channel', min=0, max=input.data.shape[0]) #, bind=channel)
+    # make_log_segmentation.insert(-2, channel_sbox)
+    #
+    # if len(input.data.shape) == 3:
+    #     channel_sbox.hide()
 
     pbar = widgets.ProgressBar()
     pbar.range = (0, 0)  # unknown duration
     make_log_segmentation.insert(0, pbar)  # add progress bar to the top of widget
+
+    # Add support for multi-channel images
+    # Choose channel to segment
+    # Squeeze array
+    # If 4 dimensions, assume dimension with smallest size is colour channel
+    # Reshape stack to be [channel, z, x, y]
 
     def _min_max_scaling(data):
         n = data - np.min(data)
@@ -62,11 +111,16 @@ def make_log_segmentation(
         self.pop(0).hide()  # remove the progress bar
 
     @thread_worker(connect={"returned": _add_data})
-    def _log_segmentation(input: Image,
+    def _log_segmentation(input: np.ndarray,
                          sigma: float=3,
-                         threshold: float=1.2):
+                         threshold: float=1.2,
+                         channel: int=0):
 
-        volume = _min_max_scaling(input.data)
+        if len(input.data.shape) == 5:
+            input_arr = input.data[channel]
+        else:
+            input_arr = input.data
+        volume = _min_max_scaling(input_arr)
         sigma_2 = sigma * 1.6
         log_iso_volume = _diff_of_gauss(volume, sigma, sigma_2)
         seg_volume = _slice_adaptive_thresholding(log_iso_volume, threshold)
@@ -79,4 +133,5 @@ def make_log_segmentation(
     # start the thread
     _log_segmentation(input=input,
                       sigma=sigma,
-                      threshold=threshold)
+                      threshold=threshold,
+                      channel=channel)

@@ -6,10 +6,11 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
+import random
 import numpy as np
 import matplotlib.pyplot as plt
-from keras import backend as K
-from keras.callbacks import Callback
+from tensorflow.keras import backend as K
+from tensorflow.keras.callbacks import Callback
 
 # from: https://gist.github.com/wassname/ce364fddfc8a025bfab4348cf5de852d
 def weighted_categorical_crossentropy(weights):
@@ -25,11 +26,16 @@ def weighted_categorical_crossentropy(weights):
 
     return loss
 
+# Only compute Dice on foreground
 def dice_coefficient(y_true, y_pred):
 
+    # print(y_true.shape, y_pred.shape)
+
     eps = 1e-6
-    y_true_f = K.flatten(y_true)
-    y_pred_f = K.flatten(y_pred)
+    y_true_f = K.flatten(y_true[...,1])
+    y_pred_f = K.flatten(y_pred[...,1])
+    # y_true_f = K.flatten(y_true)
+    # y_pred_f = K.flatten(y_pred)
     intersection = K.sum(y_true_f * y_pred_f)
 
     return (2. * intersection) / (K.sum(y_true_f * y_true_f) + K.sum(y_pred_f * y_pred_f) + eps)
@@ -53,7 +59,7 @@ class SampleImageCallback(Callback):
         plt.axis('off');
 
         plt.subplot(1,2,2)
-        plt.imshow(sample_predict[0,:,:,1], interpolation='nearest', cmap='magma')
+        plt.imshow(sample_predict[0,:,:,1 if sample_predict.shape[3] == 3 else 0], interpolation='nearest', cmap='magma')
         plt.title('Predicted target')
         plt.axis('off');
 
