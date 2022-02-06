@@ -12,7 +12,7 @@ from .widgets.utility import mask_roi
 
 @napari_hook_implementation
 def napari_experimental_provide_dock_widget():
-    return [(mask_roi, {"name": "Mask ROI"}), 
+    return [(mask_roi, {"name": "Mask ROI"}),
             (make_data_preprocessing, {"name": "Preprocess data"}),
             (make_log_segmentation, {"name": "Segment FM data"}),
             (train_model, {"name": "Train EM segmentation model"}),

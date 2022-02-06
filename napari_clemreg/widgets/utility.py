@@ -13,8 +13,12 @@ def on_init(widget):
     """Initializes widget layout and updates widget layout according to user input."""
 
     def change_z_max(input_image: Image):
-        widget.z_max.max = input_image.data.shape[0]
-        widget.z_max.value = input_image.data.shape[0]
+        if len(input_image.data.shape) == 3:
+            widget.z_max.max = input_image.data.shape[0]
+            widget.z_max.value = input_image.data.shape[0]
+        elif len(input_image.data.shape) == 4:
+            widget.z_max.max = input_image.data.shape[1]
+            widget.z_max.value = input_image.data.shape[1]
 
     def change_z_min(z_max_val: int):
         widget.z_min.max = z_max_val
@@ -49,33 +53,21 @@ def mask_roi(input: Image,
     top_idx = crop_mask.shape_type.index('polygon') if 'polygon' in crop_mask.shape_type else crop_mask.shape_type.index('rectangle')
     top_z = z_min
 
-    # if len(crop_mask.data) == 2:
-    #     bot_idx = crop_mask.shape_type.index('ellipse')
-    #     bot_z = int(crop_mask.data[bot_idx][0][0])
-    #     assert top_z < bot_z, 'Ellipse shape must mark last z value'
-    # else:
-    #     bot_z = input.data.shape[0]
-    #     assert top_z < bot_z, 'Shape must be contained within image'
     bot_z = z_max
 
     input_arr = input.data #np.squeeze(input.data)
     print(input_arr.shape)
 
-    temp_idx = 3 if len(input_arr) == 5 or len(input_arr) == 4 else 1
+    temp_idx = 3 if len(input_arr) == 4 else 1
     print(input_arr.shape[temp_idx:])
     binary_mask = draw.polygon2mask(input_arr.shape[temp_idx:], crop_mask.data[top_idx][:,1:])
     top_vol = [np.zeros(input_arr.shape[temp_idx:])] * top_z
     binary_mask_vol = [binary_mask] * (bot_z - top_z)
     bot_vol = [np.zeros(input_arr.shape[temp_idx:])] * (input_arr.shape[temp_idx - 1] - bot_z)
 
-    # binary_mask = draw.polygon2mask(input.data.shape[1:], crop_mask.data[top_idx][:,1:])
-    # top_vol = [np.zeros(input.data.shape[1:])] * top_z
-    # binary_mask_vol = [binary_mask] * (bot_z - top_z)
-    # bot_vol = [np.zeros(input.data.shape[1:])] * (input.data.shape[0] - bot_z)
-
     binary_mask_full_vol = np.stack([top_vol + binary_mask_vol + bot_vol])
     print(len(input_arr))
-    if len(input_arr) == 5 or len(input_arr) == 4:
+    if len(input_arr) == 4:
         print(binary_mask_full_vol.shape)
         binary_mask_full_vol = np.stack([binary_mask_full_vol] * input_arr.shape[0])
         print(binary_mask_full_vol.shape)
