@@ -252,7 +252,7 @@ def make_image_warping(
                 kwargs_list.append(dict(name=moving_image.name + '_warped_ch_' + str(c)))
 
             print('Finished warping')
-            return (warped_images, kwargs_list)
+            return (np.stack(warped_images), kwargs_list)
 
         else:
             warped_image = np.empty(fixed_image.shape)

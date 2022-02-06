@@ -28,9 +28,7 @@ from tensorflow.keras.utils import Sequence
 
 from napari.layers import Labels, Image
 
-# TODO: Implement DataGenerator that uses label file as training data and automatically crops it
 class SparseNapariDataGenerator(Sequence):
-
     def __init__(self,
                  source_layer: Image,
                  target_layer: Labels,

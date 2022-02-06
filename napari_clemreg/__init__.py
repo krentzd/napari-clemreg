@@ -9,4 +9,4 @@ from ._reader import napari_get_reader
 # Set napari-clemreg reader as default
 from napari.settings import get_settings
 settings = get_settings()
-settings.plugins.extension2reader = {'.tif': 'napari-clemreg'}
+settings.plugins.extension2reader = {'.tif': 'napari-clemreg', '.tiff': 'napari-clemreg'}
