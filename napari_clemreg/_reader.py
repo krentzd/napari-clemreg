@@ -63,7 +63,7 @@ def to_czxy(img, metadata):
         src_idx = [img.shape.index(d) for d in m_dims[:2]]
         img = np.moveaxis(img, src_idx, [0, 1])
         return img
-    elif img.shape[1:] == metadata_dims:
+    elif img.shape[1:] == m_dims:
         return img
 
 def tiff_reader(path: str):
