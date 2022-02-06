@@ -11,58 +11,29 @@ from napari.layers import Image
 from skimage import feature
 from typing_extensions import Annotated
 
-
-# Use on_init framework to change SpinBox visibility
-
 def on_init(widget):
-    """Initializes widget layout amd updates widget layout according to user input."""
+    """Initializes widget layout and updates widget layout according to user input."""
 
-    # for x in ['moving', 'fixed', 'algorithm', 'visualise', 'max_iterations', 'voxel_size', 'every_k_points']:
-    #     setattr(getattr(widget, x), 'visible', True)
-    # for x in ['fixed_image', 'sub_division_factor_x', 'sub_division_factor_y', 'sub_division_factor_z']:
-    #     setattr(getattr(widget, x), 'visible', False)
+    widget.channel.visible = False
 
-    # def get_num_of_channels(input):
-    #     if len(input.data.shape[0]) == 5:
-    #         setattr(getattr(widget, 'channel'), 'visible', True)
-    #     else:
-    #         setattr(getattr(widget, 'channel'), 'visible', False)
+    def change_channels(input_image: Image):
+        if len(input_image.data.shape) == 3:
+            widget.channel.visible = False
+        elif len(input_image.data.shape) == 4:
+            widget.channel.visible = True
+            widget.channel.max = input_image.data.shape[0] - 1
 
-    # def toggle_registration_widget(event):
-    #     if event.value == "BCPD":
-    #         for x in ['voxel_size', 'every_k_points']:
-    #             setattr(getattr(widget, x), 'visible', True)
-    #         for x in ['fixed_image', 'sub_division_factor']:
-    #             setattr(getattr(widget, x), 'visible', False)
-    #
-    #     # if event.value == "Piecewise BCPD":
-    #     #     for x in ['fixed_image', 'voxel_size', 'every_k_points', 'max_iterations', 'sub_division_factor_x', 'sub_division_factor_y', 'sub_division_factor_z']:
-    #     #         setattr(getattr(widget, x), 'visible', True)
-    #
-    #     else:
-    #         for x in ['moving', 'fixed', 'algorithm', 'visualise', 'max_iterations', 'voxel_size', 'every_k_points']:
-    #             setattr(getattr(widget, x), 'visible', True)
-    #         for x in ['fixed_image', 'sub_division_factor_x', 'sub_division_factor_y', 'sub_division_factor_z']:
-    #             setattr(getattr(widget, x), 'visible', False)
+    widget.input.changed.connect(change_channels)
 
-    # widget.algorithm.changed.connect(get_num_of_channels)
-
-# @magic_factory(widget_init=on_init, layout='vertical', call_button="Segment")
-@magic_factory
+@magic_factory(widget_init=on_init, layout='vertical', call_button="Segment")
 def make_log_segmentation(
     viewer: "napari.viewer.Viewer",
     input: Image,
     sigma: Annotated[float, {"min": 0.5, "max": 20, "step": 0.5}]=3,
     threshold: Annotated[float, {"min": 0, "max": 20, "step": 0.1}]=1.2,
-    channel: int=0#Annotated[int, {"min": 0, "max": input.data.shape[0] if len(input.data.shape[0]) == 5 else 0, "step": 1}]=0,
-):
-    from napari.qt import thread_worker
+    channel: int=0):
 
-    # channel_sbox = widgets.SpinBox(name='channel', min=0, max=input.data.shape[0]) #, bind=channel)
-    # make_log_segmentation.insert(-2, channel_sbox)
-    #
-    # if len(input.data.shape) == 3:
-    #     channel_sbox.hide()
+    from napari.qt import thread_worker
 
     pbar = widgets.ProgressBar()
     pbar.range = (0, 0)  # unknown duration
@@ -116,7 +87,7 @@ def make_log_segmentation(
                          threshold: float=1.2,
                          channel: int=0):
 
-        if len(input.data.shape) == 5:
+        if len(input.data.shape) == 4:
             input_arr = input.data[channel]
         else:
             input_arr = input.data

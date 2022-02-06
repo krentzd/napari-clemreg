@@ -252,7 +252,7 @@ def make_image_warping(
                 kwargs_list.append(dict(name=moving_image.name + '_warped_ch_' + str(c)))
 
             print('Finished warping')
-            return (warped_images, kwargs_list)
+            return (np.squeeze(np.stack(warped_images)), kwargs_list)
 
         else:
             warped_image = np.empty(fixed_image.shape)
@@ -306,15 +306,15 @@ def make_image_warping(
         print(affine_matrix)
 
         if len(moving_image.data.shape) == 1 + len(fixed_image.shape):
-
+            warped_images = []
             for c in range(moving_image.data.shape[0]):
-                img_wrp = _warp_image_volume_affine(image=moving_image.data[c],
+                warped_images.append(_warp_image_volume_affine(image=moving_image.data[c],
                                                     matrix=affine_matrix,
                                                     output_shape=fixed_image.data.shape,
-                                                    interpolation_order=interpolation_order)
-                if isinstance(moving_image, Image):
-                    viewer.add_image(img_wrp,
-                                     name=moving_image.name + '_warped_ch_' + str(c))
+                                                    interpolation_order=interpolation_order))
+            if isinstance(moving_image, Image):
+                viewer.add_image(np.squeeze(np.stack(warped_images)),
+                                 name=moving_image.name + '_warped')
 
         else:
             assert moving_image.data.shape == fixed_image.data.shape, 'Shape of moving image must be equal or larger than fixed image!'
