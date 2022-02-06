@@ -182,7 +182,12 @@ def make_data_preprocessing(
                                        reference_z_pixelsize)
         print(f'Zooming by {xy_zoom} in x-y-plane and {z_zoom} along z-axis')
 
-        output = ndimage.zoom(input.data, (z_zoom, xy_zoom, xy_zoom))
+        input_arr = input.data
+        if len(input_arr.shape) == 4:
+            output = [ndimage.zoom(input_arr[c], (z_zoom, xy_zoom, xy_zoom)) for c in range(4)]
+            output = np.squeeze(np.stack(output))
+        else:
+            output = ndimage.zoom(input_arr, (z_zoom, xy_zoom, xy_zoom))
 
         elapsed = time.time() - start
         print('Finished execution after {elapsed} seconds.')
