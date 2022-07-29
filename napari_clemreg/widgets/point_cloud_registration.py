@@ -219,10 +219,10 @@ def make_point_cloud_registration(
         #                   face_color='blue',
         #                   size=5)
 
-            return (np.vstack(source_out),
-                    np.asarray(target.points),
-                    np.vstack(transformed_out),
-                    kwargs)
+            # return (np.vstack(source_out),
+            #         np.asarray(target.points),
+            #         np.vstack(transformed_out),
+            #         kwargs)
 
         elapsed = time.time() - start
         print("time: ", elapsed)

@@ -9,10 +9,12 @@ from .widgets.point_cloud_sampling import make_point_cloud_sampling
 from .widgets.warp_image_volume import make_image_warping
 from .widgets.em_segmentation import train_model, predict_from_model
 from .widgets.utility import mask_roi
+from .widgets.run_registration import make_run_registration
 
 @napari_hook_implementation
 def napari_experimental_provide_dock_widget():
-    return [(mask_roi, {"name": "Mask ROI"}),
+    return [(make_run_registration, {"name": "Run registration"}),
+            (mask_roi, {"name": "Mask ROI"}),
             (make_data_preprocessing, {"name": "Preprocess data"}),
             (make_log_segmentation, {"name": "Segment FM data"}),
             (train_model, {"name": "Train EM segmentation model"}),

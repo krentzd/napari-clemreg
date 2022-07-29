@@ -144,7 +144,7 @@ def _warp_image_volume_affine(image,
     return img_wrp
 
 def on_init(widget):
-    """Initializes widget layout amd updates widget layout according to user input."""
+    """Initializes widget layout and updates widget layout according to user input."""
 
     for x in ['transformed_points', 'interpolation_order']:
         setattr(getattr(widget, x), 'visible', True)
