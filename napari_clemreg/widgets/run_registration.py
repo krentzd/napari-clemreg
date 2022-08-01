@@ -3,10 +3,13 @@
 from napari.layers import Image, Shapes
 from magicgui import magic_factory, widgets
 from typing_extensions import Annotated
+from ..clemreg.log_segmentation import log_segmentation
+from ..clemreg.point_cloud_sampling import point_cloud_sampling
+from ..clemreg.mask_roi import mask_roi
 
 def on_init(widget):
     """Initializes widget layout and updates widget layout according to user input."""
-    standard_settings = ['widget_header', 'moving_image', 'fixed_image', 'mask_roi', 'advanced']
+    standard_settings = ['widget_header', 'Moving_Image', 'Fixed_Image', 'Mask_ROI', 'advanced']
     advanced_settings = ['log_header',
                          'log_sigma',
                          'log_threshold',
@@ -28,7 +31,7 @@ def on_init(widget):
 
     for x in standard_settings:
         setattr(getattr(widget, x), 'visible', True)
-    for x in advanced_settings:
+    for x in advanced_settings + ['z_min', 'z_max']:
         setattr(getattr(widget, x), 'visible', False)
 
     def toggle_transform_widget(advanced: bool):
@@ -42,12 +45,49 @@ def on_init(widget):
             for x in advanced_settings:
                 setattr(getattr(widget, x), 'visible', False)
 
+    def change_z_max(input_image: Image):
+        if len(input_image.data.shape) == 3:
+            widget.z_max.max = input_image.data.shape[0]
+            widget.z_max.value = input_image.data.shape[0]
+        elif len(input_image.data.shape) == 4:
+            widget.z_max.max = input_image.data.shape[1]
+            widget.z_max.value = input_image.data.shape[1]
+
+    def change_z_min(z_max_val: int):
+        widget.z_min.max = z_max_val
+
+    def change_z_max_from_z_min(z_min_val: int):
+        widget.z_max.min = z_min_val
+
+    # TODO: z_min and z_max only shown and not hidden if no layer chosen
+    def reveal_z_min_and_z_max():
+        if len(widget.Mask_ROI.choices) > 0:
+            for x in ['z_min', 'z_max']:
+                setattr(getattr(widget, x), 'visible', True)
+        else:
+            for x in ['z_min', 'z_max']:
+                setattr(getattr(widget, x), 'visible', False)
+
+    widget.z_max.changed.connect(change_z_min)
+    widget.Moving_Image.changed.connect(change_z_max)
+    widget.z_min.changed.connect(change_z_max_from_z_min)
+    widget.Mask_ROI.changed.connect(reveal_z_min_and_z_max)
+
     widget.advanced.changed.connect(toggle_transform_widget)
 
 
 @magic_factory(widget_init=on_init, layout='vertical', call_button='Register',
                widget_header={'widget_type': 'Label',
-                              'label': f'<h1 text-align="center">CLEM-Reg</h1>'},
+                              'label': f'<h1 text-align="left">CLEM-Reg</h1>'},
+
+               z_min={'widget_type': 'SpinBox',
+                      'label': 'Minimum z value for masking',
+                      "min": 0, "max": 10, "step": 1,
+                      'value': 0},
+               z_max={'widget_type': 'SpinBox',
+                      'label': 'Maximum z value for masking',
+                      "min": 0, "max": 10, "step": 1,
+                      'value': 0},
                registration_algorithm={'label': 'Registration Algorithm',
                                        'widget_type':'ComboBox',
                                        'choices': ["BCPD", "Rigid CPD", "Affine CPD"],
@@ -59,7 +99,7 @@ def on_init(widget):
 
                white_space_1={'widget_type': 'Label', 'label': ' '},
                log_header={'widget_type': 'Label',
-                           'label': f'<h3 text-align="center">LoG Segmentation Parameters</h3>'},
+                           'label': f'<h3 text-align="left">LoG Segmentation Parameters</h3>'},
                log_sigma={'label': 'Sigma',
                           'widget_type': 'FloatSpinBox',
                           'min': 0.5, 'max': 20, 'step': 0.5,
@@ -71,7 +111,7 @@ def on_init(widget):
 
                white_space_2={'widget_type': 'Label', 'label': ' '},
                point_cloud_header={'widget_type': 'Label',
-                                   'label': f'<h3 text-align="center">Point Cloud Sampling</h3>'},
+                                   'label': f'<h3 text-align="left">Point Cloud Sampling</h3>'},
                point_cloud_sampling_frequency={'label': 'Sampling Frequency',
                                                'widget_type': 'SpinBox',
                                                'min': 1, 'max': 100, 'step': 1,
@@ -83,7 +123,7 @@ def on_init(widget):
 
                white_space_3={'widget_type': 'Label', 'label': ' '},
                registration_header={'widget_type': 'Label',
-                                    'label': f'<h3 text-align="center">Point Cloud Registration</h3>'},
+                                    'label': f'<h3 text-align="left">Point Cloud Registration</h3>'},
                registration_voxel_size={'label': 'Voxel Size',
                                         'widget_type': 'SpinBox',
                                         'min': 1, 'max': 1000, 'step': 1,
@@ -99,7 +139,7 @@ def on_init(widget):
 
                white_space_4={'widget_type': 'Label', 'label': ' '},
                warping_header={'widget_type': 'Label',
-                               'label': f'<h3 text-align="center">Image Warping</h3>'},
+                               'label': f'<h3 text-align="left">Image Warping</h3>'},
                warping_interpolation_order={'label': 'Interpolation Order',
                                             'widget_type': 'SpinBox',
                                             'min': 0, 'max': 5, 'step': 1,
@@ -116,9 +156,11 @@ def on_init(widget):
 def make_run_registration(
     viewer: 'napari.viewer.Viewer',
     widget_header,
-    moving_image: Image,
-    fixed_image: Image,
-    mask_roi: Shapes,
+    Moving_Image: Image,
+    Fixed_Image: Image,
+    Mask_ROI: Shapes,
+    z_min,
+    z_max,
     registration_algorithm,
     advanced,
 
@@ -143,15 +185,58 @@ def make_run_registration(
     warping_interpolation_order,
     warping_approximate_grid,
     warping_sub_division_factor) -> Image:
-
     """Run CLEM-Reg end-to-end"""
 
-    def _add_data(return_value, self=make_clean_binary_segmentation):
-        print('Adding new layer to viewer...')
-        data, kwargs = return_value
-        viewer.add_labels(data, **kwargs)
-        self.pop(0).hide()  # remove the progress bar
-        print('Done!')
+    from napari.qt.threading import thread_worker
+
+    @thread_worker
+    def _run_moving_thread():
+        seg_volume = log_segmentation(input=Moving_Image,
+                                      sigma=log_sigma,
+                                      threshold=log_threshold)
+        seg_volume_mask = mask_roi(input=seg_volume,
+                                   crop_mask=Mask_ROI, z_min=z_min, z_max=z_max)
+        point_cloud = point_cloud_sampling(input=seg_volume_mask,
+                                           sampling_frequency=point_cloud_sampling_frequency / 100,
+                                           sigma=point_cloud_sigma)
+        return point_cloud
+        # print('Moving thread')
+
+    @thread_worker
+    def _run_target_thread():
+        seg_volume = empanada_segmentation()
+        point_cloud = point_cloud_sampling(input=seg_volume,
+                                           sampling_frequency=point_cloud_sampling_frequency / 100,
+                                           sigma=point_cloud_sigma)
+        return point_cloud
+        # print('Target thread')
+
+    worker_moving = _run_moving_thread()
+    # worker_moving.returned.connect(viewer.add_layer)
+    worker_moving.start()
+
+    worker_target = _run_target_thread()
+    # worker_target.returned.connect(viewer.add_layer)
+    worker_target.start()
+
+    # Need to implement equivalent function to join in thread_worker
+    # worker_target.join()
+    # worker_moving.join()
+
+    print('Waited for both threads!')
+    # worker_log_segmentation = log_segmentation(input=Moving_Image,
+    #                                            sigma=log_sigma,
+    #                                            threshold=log_threshold)
+    #
+    # worker_log_segmentation.returned.connect(_add_labels_data)
+    # worker_log_segmentation.start()
+    #
+    # worker_point_cloud_sampling = point_cloud_sampling(input=viewer.layers[Moving_Image.name + '_seg'].data,
+    #                                                    sampling_frequency=point_cloud_sampling_frequency / 100,
+    #                                                    sigma=point_cloud_sigma)
+    #
+    # worker_point_cloud_sampling.returned.connect(_add_points_data)
+    # worker_log_segmentation.finished.connect(worker_point_cloud_sampling.start)
 
     # @thread_worker(connect={"returned": _add_data})
     # def _run_registration(input: Labels,
