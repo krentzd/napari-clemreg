@@ -1,13 +1,48 @@
 #!/usr/bin/env python3
 # coding: utf-8
-from napari.layers import Image, Shapes, Labels
+from napari.layers import Image, Shapes, Labels, Points
 from magicgui import magic_factory, widgets
 from napari.qt.threading import thread_worker
 import time
+import numpy as np
+
 from ..clemreg.log_segmentation import log_segmentation
 from ..clemreg.point_cloud_sampling import point_cloud_sampling
 from ..clemreg.mask_roi import mask_roi
 from ..clemreg.empanada_segmentation import empanada_segmentation
+from ..clemreg.point_cloud_registration import point_cloud_registration
+
+# Use as worker.join workaround --> Launch registration thread_worker from here
+class RegistrationThreadJoiner:
+    def __init__(self, worker_function):
+        self.moving_ready = False
+        self.fixed_ready = False
+        self.fixed_points = None
+        self.moving_points = None
+        self.worker_function = worker_function
+
+    def set_fixed_points(self, points):
+        self.fixed_points = points
+
+    def set_moving_points(self, points):
+        self.moving_points = points
+
+    def finished_fixed(self):
+        self.fixed_ready = True
+        print('Fixed points set', self.fixed_ready, self.moving_ready)
+        print(self.fixed_points, self.moving_points)
+        if self.moving_ready and self.fixed_ready:
+            self.launch_worker()
+
+    def finished_moving(self):
+        self.moving_ready = True
+        print('Moving points set', self.fixed_ready, self.moving_ready)
+        print(self.fixed_points, self.moving_points)
+        if self.moving_ready and self.fixed_ready:
+            self.launch_worker()
+
+    def launch_worker(self):
+        self.worker_function(self.moving_points, self.fixed_points)
 
 def on_init(widget):
     """Initializes widget layout and updates widget layout according to user input."""
@@ -76,48 +111,6 @@ def on_init(widget):
     widget.Mask_ROI.changed.connect(reveal_z_min_and_z_max)
 
     widget.advanced.changed.connect(toggle_transform_widget)
-
-class PointCloudRegistration:
-    def __init__(self):
-        self.moving_ready = False
-        self.fixed_ready = False
-        self.fixed_points = None
-        self.moving_points = None
-
-    def set_fixed_points(self, points):
-        self.fixed_points = points
-        self.moving_ready = True
-        print(self.moving_ready, self.fixed_ready)
-        if self.moving_ready and self.fixed_ready:
-            self.register_point_clouds()
-
-    def set_moving_points(self, points):
-        self.moving_points = points
-        self.fixed_ready = True
-        print(self.moving_ready, self.fixed_ready)
-        if self.moving_ready and self.fixed_ready:
-            self.register_point_clouds()
-
-    def moving_thread_finished(self):
-        self.moving_ready = True
-        print(self.moving_ready, self.fixed_ready)
-        if self.moving_ready and self.fixed_ready:
-            self.register_point_clouds()
-
-    def fixed_thread_finished(self):
-        self.fixed_ready = True
-        print(self.moving_ready, self.fixed_ready)
-
-        if self.moving_ready and self.fixed_ready:
-            self.register_point_clouds()
-
-    def configure_worker(self):
-        self.worker = self.register_point_clouds()
-
-    # @thread_worker
-    def register_point_clouds(self):
-        print('Both threads finished! Starting registration')
-
 
 @magic_factory(widget_init=on_init, layout='vertical', call_button='Register',
                widget_header={'widget_type': 'Label',
@@ -232,75 +225,78 @@ def make_run_registration(
 
     @thread_worker
     def _run_moving_thread():
-        # seg_volume = log_segmentation(input=Moving_Image,
-        #                               sigma=log_sigma,
-        #                               threshold=log_threshold)
-        # print('Mask_ROI:', Mask_ROI)
-        # if Mask_ROI is not None:
-        #     seg_volume_mask = mask_roi(input=seg_volume,
-        #                                crop_mask=Mask_ROI, z_min=z_min, z_max=z_max)
-        # else:
-        #     seg_volume_mask = seg_volume
-        #
-        # point_cloud = point_cloud_sampling(input=seg_volume_mask,
-        #                                    sampling_frequency=point_cloud_sampling_frequency / 100,
-        #                                    sigma=point_cloud_sigma)
-        # return point_cloud
-        time.sleep(10)
-        print('Moving thread')
-        return 10
+        seg_volume = log_segmentation(input=Moving_Image,
+                                      sigma=log_sigma,
+                                      threshold=log_threshold)
+        print('Mask_ROI:', Mask_ROI)
+        if Mask_ROI is not None:
+            seg_volume_mask = mask_roi(input=seg_volume,
+                                       crop_mask=Mask_ROI, z_min=z_min, z_max=z_max)
+        else:
+            seg_volume_mask = seg_volume
+
+        point_cloud = point_cloud_sampling(input=seg_volume_mask,
+                                           sampling_frequency=point_cloud_sampling_frequency / 100,
+                                           sigma=point_cloud_sigma)
+        return point_cloud
 
     @thread_worker
     def _run_fixed_thread():
-        # seg_volume = empanada_segmentation(input=Fixed_Image.data)
-        # point_cloud = point_cloud_sampling(input=Labels(seg_volume),
-        #                                    sampling_frequency=point_cloud_sampling_frequency / 100,
-        #                                    sigma=point_cloud_sigma)
-        # return point_cloud
-        print('Target thread')
-        return 11
+        seg_volume = empanada_segmentation(input=Fixed_Image.data)
+        print(seg_volume)
+        point_cloud = point_cloud_sampling(input=Labels(seg_volume),
+                                           sampling_frequency=point_cloud_sampling_frequency / 100,
+                                           sigma=point_cloud_sigma)
+        return point_cloud
 
-    registration = PointCloudRegistration()
+    def _add_data(return_value):
+        moving, fixed, transformed, kwargs = return_value
+        viewer.add_points(moving,
+                          name='moving_points',
+                          size=5,
+                          face_color='red')
+        viewer.add_points(fixed,
+                          name='fixed_points',
+                          size=5,
+                          face_color='green')
+        viewer.add_points(moving, **kwargs)
+        viewer.add_points(transformed,
+                          name='transformed_points_probreg',
+                          size=5,
+                          face_color='yellow')
+
+    @thread_worker(connect={"returned": _add_data})
+    def _run_registration_thread(moving_points, fixed_points):
+        print('Entered thread!')
+
+        return point_cloud_registration(moving_points.data, fixed_points.data,
+                                        algorithm=registration_algorithm,
+                                        voxel_size=registration_voxel_size,
+                                        every_k_points=registration_every_k_points,
+                                        max_iterations=registration_max_iterations)
+
+
+
+    joiner = RegistrationThreadJoiner(worker_function=_run_registration_thread)
 
     def _class_setter_moving(x):
-        registration.set_moving_points(x)
+        joiner.set_moving_points(x)
 
     def _class_setter_fixed(x):
-        registration.set_fixed_points(x)
+        joiner.set_fixed_points(x)
+
+    def _finished_moving_emitter():
+        joiner.finished_moving()
+
+    def _finished_fixed_emitter():
+        joiner.finished_fixed()
 
     worker_moving = _run_moving_thread()
     worker_moving.returned.connect(_class_setter_moving)
-    # worker_moving.finished.connect(registration.moving_thread_finished)
+    worker_moving.finished.connect(_finished_moving_emitter)
     worker_moving.start()
 
     worker_fixed = _run_fixed_thread()
     worker_fixed.returned.connect(_class_setter_fixed)
-    # worker_fixed.finished.connect(registration.fixed_thread_finished)
+    worker_fixed.finished.connect(_finished_fixed_emitter)
     worker_fixed.start()
-
-    # Need to implement equivalent function to join in thread_worker
-    # worker_target.join()
-    # worker_moving.join()
-
-    # print('Waited for both threads!')
-    # worker_log_segmentation = log_segmentation(input=Moving_Image,
-    #                                            sigma=log_sigma,
-    #                                            threshold=log_threshold)
-    #
-    # worker_log_segmentation.returned.connect(_add_labels_data)
-    # worker_log_segmentation.start()
-    #
-    # worker_point_cloud_sampling = point_cloud_sampling(input=viewer.layers[Moving_Image.name + '_seg'].data,
-    #                                                    sampling_frequency=point_cloud_sampling_frequency / 100,
-    #                                                    sigma=point_cloud_sigma)
-    #
-    # worker_point_cloud_sampling.returned.connect(_add_points_data)
-    # worker_log_segmentation.finished.connect(worker_point_cloud_sampling.start)
-
-    # @thread_worker(connect={"returned": _add_data})
-    # def _run_registration(input: Labels,
-    #                                percentile: int=95):
-    #
-    #
-    # _run_registration(input=input,
-    #                            percentile=percentile)

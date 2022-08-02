@@ -230,6 +230,7 @@ def _empanada_segmentation(args, volume):
             # io.imsave(os.path.join(volpath, volname), consensus_vol)
 
     print('Finished!')
+    print(consensus_vol)
     return consensus_vol
 
 def empanada_segmentation(input):
@@ -238,4 +239,4 @@ def empanada_segmentation(input):
     args = parse_args()
     args.config = config
 
-    _empanada_segmentation(args, input)
+    return _empanada_segmentation(args, input)
