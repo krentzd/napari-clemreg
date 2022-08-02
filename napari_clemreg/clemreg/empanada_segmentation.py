@@ -20,7 +20,7 @@ from empanada.inference.patterns import *
 def parse_args():
     parser = argparse.ArgumentParser(description='Runs empanada model inference.')
     parser.add_argument('-config', type=str, metavar='config', help='Path to a model config yaml file')
-    parser.add_argument('-volume_path', type=str, metavar='volume_path', help='Path to a Zarr volume')
+    # parser.add_argument('-volume_path', type=str, metavar='volume_path', help='Path to a Zarr volume')
     parser.add_argument('-data-key', type=str, metavar='data-key', default='em',
                         help='Key in zarr volume (if volume_path is a zarr). For multiple keys, separate with a comma.')
     parser.add_argument('-mode', type=str, dest='mode', metavar='inference_mode', choices=['orthoplane', 'stack'],
@@ -55,9 +55,7 @@ def parse_args():
     parser.add_argument('--save-panoptic', action='store_true', help='Whether to save raw panoptic segmentation for each stack.')
     return parser.parse_args()
 
-if __name__ == "__main__":
-    args = parse_args()
-
+def _empanada_segmentation(args, volume):
     # read the model config file
     config = load_config(args.config)
 
@@ -74,18 +72,19 @@ if __name__ == "__main__":
     model = model.to(device)
     model.eval()
 
+    zarr_store = None
     # load the volume
-    if '.zarr' in args.volume_path:
-        zarr_store = zarr.open(args.volume_path, mode='r+')
-        keys = args.data_key.split(',')
-        volume = zarr_store[keys[0]]
-        for key in  keys[1:]:
-            volume = volume[key]
-    elif '.tif' in args.volume_path:
-        zarr_store = None
-        volume = io.imread(args.volume_path)
-    else:
-        raise Exception(f'Unable to read file {args.volume_path}. Volume must be .tif or .zarr')
+    # if '.zarr' in args.volume_path:
+    #     zarr_store = zarr.open(args.volume_path, mode='r+')
+    #     keys = args.data_key.split(',')
+    #     volume = zarr_store[keys[0]]
+    #     for key in  keys[1:]:
+    #         volume = volume[key]
+    # elif '.tif' in args.volume_path:
+    #     zarr_store = None
+    #     volume = io.imread(args.volume_path)
+    # else:
+    #     raise Exception(f'Unable to read file {args.volume_path}. Volume must be .tif or .zarr')
 
     shape = volume.shape
     if args.mode == 'orthoplane':
@@ -216,18 +215,27 @@ if __name__ == "__main__":
         dtype = np.uint32 if class_id in thing_list else np.uint8
 
         # decode and fill the instances
-        if zarr_store is not None:
-            consensus_vol = zarr_store.create_dataset(
-                f'{class_name}_pred', shape=shape, dtype=dtype,
-                overwrite=True, chunks=(1, None, None)
-            )
-            fill_volume(consensus_vol, consensus_tracker.instances, processes=4)
-        else:
-            consensus_vol = np.zeros(shape, dtype=dtype)
-            fill_volume(consensus_vol, consensus_tracker.instances)
+        # if zarr_store is not None:
+            # consensus_vol = zarr_store.create_dataset(
+                # f'{class_name}_pred', shape=shape, dtype=dtype,
+                # overwrite=True, chunks=(1, None, None)
+            # )
+            # fill_volume(consensus_vol, consensus_tracker.instances, processes=4)
+        # else:
+        consensus_vol = np.zeros(shape, dtype=dtype)
+        fill_volume(consensus_vol, consensus_tracker.instances)
 
-            volpath = os.path.dirname(args.volume_path)
-            volname = os.path.basename(args.volume_path).replace('.tif', f'_{class_name}.tif')
-            io.imsave(os.path.join(volpath, volname), consensus_vol)
+            # volpath = os.path.dirname(args.volume_path)
+            # volname = os.path.basename(args.volume_path).replace('.tif', f'_{class_name}.tif')
+            # io.imsave(os.path.join(volpath, volname), consensus_vol)
 
     print('Finished!')
+    return consensus_vol
+
+def empanada_segmentation(input):
+
+    config = os.path.abspath(os.path.join(os.path.realpath(__file__), '..', '..', 'empanada_configs', 'MitoNet_V1.yaml'))
+    args = parse_args()
+    args.config = config
+
+    _empanada_segmentation(args, input)

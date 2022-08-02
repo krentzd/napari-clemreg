@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 # coding: utf-8
-from napari.layers import Image, Shapes
+from napari.layers import Image, Shapes, Labels
 from magicgui import magic_factory, widgets
-from typing_extensions import Annotated
+from napari.qt.threading import thread_worker
+import time
 from ..clemreg.log_segmentation import log_segmentation
 from ..clemreg.point_cloud_sampling import point_cloud_sampling
 from ..clemreg.mask_roi import mask_roi
+from ..clemreg.empanada_segmentation import empanada_segmentation
 
 def on_init(widget):
     """Initializes widget layout and updates widget layout according to user input."""
@@ -74,6 +76,47 @@ def on_init(widget):
     widget.Mask_ROI.changed.connect(reveal_z_min_and_z_max)
 
     widget.advanced.changed.connect(toggle_transform_widget)
+
+class PointCloudRegistration:
+    def __init__(self):
+        self.moving_ready = False
+        self.fixed_ready = False
+        self.fixed_points = None
+        self.moving_points = None
+
+    def set_fixed_points(self, points):
+        self.fixed_points = points
+        self.moving_ready = True
+        print(self.moving_ready, self.fixed_ready)
+        if self.moving_ready and self.fixed_ready:
+            self.register_point_clouds()
+
+    def set_moving_points(self, points):
+        self.moving_points = points
+        self.fixed_ready = True
+        print(self.moving_ready, self.fixed_ready)
+        if self.moving_ready and self.fixed_ready:
+            self.register_point_clouds()
+
+    def moving_thread_finished(self):
+        self.moving_ready = True
+        print(self.moving_ready, self.fixed_ready)
+        if self.moving_ready and self.fixed_ready:
+            self.register_point_clouds()
+
+    def fixed_thread_finished(self):
+        self.fixed_ready = True
+        print(self.moving_ready, self.fixed_ready)
+
+        if self.moving_ready and self.fixed_ready:
+            self.register_point_clouds()
+
+    def configure_worker(self):
+        self.worker = self.register_point_clouds()
+
+    # @thread_worker
+    def register_point_clouds(self):
+        print('Both threads finished! Starting registration')
 
 
 @magic_factory(widget_init=on_init, layout='vertical', call_button='Register',
@@ -187,43 +230,59 @@ def make_run_registration(
     warping_sub_division_factor) -> Image:
     """Run CLEM-Reg end-to-end"""
 
-    from napari.qt.threading import thread_worker
-
     @thread_worker
     def _run_moving_thread():
-        seg_volume = log_segmentation(input=Moving_Image,
-                                      sigma=log_sigma,
-                                      threshold=log_threshold)
-        seg_volume_mask = mask_roi(input=seg_volume,
-                                   crop_mask=Mask_ROI, z_min=z_min, z_max=z_max)
-        point_cloud = point_cloud_sampling(input=seg_volume_mask,
-                                           sampling_frequency=point_cloud_sampling_frequency / 100,
-                                           sigma=point_cloud_sigma)
-        return point_cloud
-        # print('Moving thread')
+        # seg_volume = log_segmentation(input=Moving_Image,
+        #                               sigma=log_sigma,
+        #                               threshold=log_threshold)
+        # print('Mask_ROI:', Mask_ROI)
+        # if Mask_ROI is not None:
+        #     seg_volume_mask = mask_roi(input=seg_volume,
+        #                                crop_mask=Mask_ROI, z_min=z_min, z_max=z_max)
+        # else:
+        #     seg_volume_mask = seg_volume
+        #
+        # point_cloud = point_cloud_sampling(input=seg_volume_mask,
+        #                                    sampling_frequency=point_cloud_sampling_frequency / 100,
+        #                                    sigma=point_cloud_sigma)
+        # return point_cloud
+        time.sleep(10)
+        print('Moving thread')
+        return 10
 
     @thread_worker
-    def _run_target_thread():
-        seg_volume = empanada_segmentation()
-        point_cloud = point_cloud_sampling(input=seg_volume,
-                                           sampling_frequency=point_cloud_sampling_frequency / 100,
-                                           sigma=point_cloud_sigma)
-        return point_cloud
-        # print('Target thread')
+    def _run_fixed_thread():
+        # seg_volume = empanada_segmentation(input=Fixed_Image.data)
+        # point_cloud = point_cloud_sampling(input=Labels(seg_volume),
+        #                                    sampling_frequency=point_cloud_sampling_frequency / 100,
+        #                                    sigma=point_cloud_sigma)
+        # return point_cloud
+        print('Target thread')
+        return 11
+
+    registration = PointCloudRegistration()
+
+    def _class_setter_moving(x):
+        registration.set_moving_points(x)
+
+    def _class_setter_fixed(x):
+        registration.set_fixed_points(x)
 
     worker_moving = _run_moving_thread()
-    # worker_moving.returned.connect(viewer.add_layer)
+    worker_moving.returned.connect(_class_setter_moving)
+    # worker_moving.finished.connect(registration.moving_thread_finished)
     worker_moving.start()
 
-    worker_target = _run_target_thread()
-    # worker_target.returned.connect(viewer.add_layer)
-    worker_target.start()
+    worker_fixed = _run_fixed_thread()
+    worker_fixed.returned.connect(_class_setter_fixed)
+    # worker_fixed.finished.connect(registration.fixed_thread_finished)
+    worker_fixed.start()
 
     # Need to implement equivalent function to join in thread_worker
     # worker_target.join()
     # worker_moving.join()
 
-    print('Waited for both threads!')
+    # print('Waited for both threads!')
     # worker_log_segmentation = log_segmentation(input=Moving_Image,
     #                                            sigma=log_sigma,
     #                                            threshold=log_threshold)
