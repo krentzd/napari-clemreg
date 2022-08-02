@@ -11,6 +11,7 @@ from ..clemreg.point_cloud_sampling import point_cloud_sampling
 from ..clemreg.mask_roi import mask_roi
 from ..clemreg.empanada_segmentation import empanada_segmentation
 from ..clemreg.point_cloud_registration import point_cloud_registration
+from ..clemreg.warp_image_volume import warp_image_volume
 
 # Use as worker.join workaround --> Launch registration thread_worker from here
 class RegistrationThreadJoiner:
@@ -250,31 +251,31 @@ def make_run_registration(
         return point_cloud
 
     def _add_data(return_value):
-        moving, fixed, transformed, kwargs = return_value
-        viewer.add_points(moving,
-                          name='moving_points',
-                          size=5,
-                          face_color='red')
-        viewer.add_points(fixed,
-                          name='fixed_points',
-                          size=5,
-                          face_color='green')
-        viewer.add_points(moving, **kwargs)
-        viewer.add_points(transformed,
-                          name='transformed_points_probreg',
-                          size=5,
-                          face_color='yellow')
+        data, kwargs = return_value
+        viewer.add_image(data, **kwargs)
 
     @thread_worker(connect={"returned": _add_data})
     def _run_registration_thread(moving_points, fixed_points):
         print('Entered thread!')
 
-        return point_cloud_registration(moving_points.data, fixed_points.data,
-                                        algorithm=registration_algorithm,
-                                        voxel_size=registration_voxel_size,
-                                        every_k_points=registration_every_k_points,
-                                        max_iterations=registration_max_iterations)
+        moving, fixed, transformed, kwargs =  point_cloud_registration(moving_points.data, fixed_points.data,
+                                                                       algorithm=registration_algorithm,
+                                                                       voxel_size=registration_voxel_size,
+                                                                       every_k_points=registration_every_k_points,
+                                                                       max_iterations=registration_max_iterations)
 
+        if registration_algorithm == 'Affine CPD' or registration_algorithm == 'Rigid CPD':
+            transformed = Points(moving, **kwargs)
+            print(transformed)
+
+        return warp_image_volume(moving_image=Moving_Image,
+                                 fixed_image=Fixed_Image.data,
+                                 transform_type=registration_algorithm,
+                                 moving_points=Points(moving),
+                                 transformed_points=transformed,
+                                 interpolation_order=warping_interpolation_order,
+                                 approximate_grid=warping_approximate_grid,
+                                 sub_division_factor=warping_sub_division_factor)
 
 
     joiner = RegistrationThreadJoiner(worker_function=_run_registration_thread)

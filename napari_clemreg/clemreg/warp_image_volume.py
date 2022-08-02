@@ -15,12 +15,6 @@ from typing import Sequence
 from pathlib import Path
 from napari.qt import thread_worker
 
-def _read_transform_from_file(fpath):
-    """
-    Read transfrom T from filepath
-    """
-    pass
-
 def _warp_images(from_points, to_points, image, output_region, interpolation_order=5, approximate_grid=10):
     print('Entered warp_images')
     transform = _make_inverse_warp(from_points, to_points, output_region, approximate_grid)
@@ -143,118 +137,26 @@ def _warp_image_volume_affine(image,
 
     return img_wrp
 
-def on_init(widget):
-    """Initializes widget layout and updates widget layout according to user input."""
+def _warp_image_volume(moving_image: Image,
+                       fixed_image: ImageData,
+                       moving_points: PointsData,
+                       transformed_points: PointsData,
+                       interpolation_order: int=1,
+                       approximate_grid: int=1,
+                       sub_division_factor: int=1):
 
-    for x in ['transformed_points', 'interpolation_order']:
-        setattr(getattr(widget, x), 'visible', True)
-    for x in ['moving_points', 'approximate_grid', 'sub_division_factor']:
-        setattr(getattr(widget, x), 'visible', False)
+    print('Warping image volume')
+    assert len(moving_points) == len(transformed_points), 'Moving and transformed points must be of same length.'
 
-    def toggle_transform_widget(warping: str):
-        if warping == "Deformable":
-            for x in ['moving_points', 'transformed_points', 'approximate_grid', 'sub_division_factor']:
-                setattr(getattr(widget, x), 'visible', True)
+    x_chunk = math.ceil(fixed_image.shape[1] / sub_division_factor)
+    y_chunk = math.ceil(fixed_image.shape[2] / sub_division_factor)
+    z_chunk = math.ceil(fixed_image.shape[0] / sub_division_factor)
 
-        else:
-            for x in ['transformed_points', 'interpolation_order']:
-                setattr(getattr(widget, x), 'visible', True)
-            for x in ['moving_points', 'approximate_grid', 'sub_division_factor']:
-                setattr(getattr(widget, x), 'visible', False)
+    if len(moving_image.data.shape) == 1 + len(fixed_image.shape):
+        warped_images = []
+        kwargs_list = []
 
-    widget.transform_type.changed.connect(toggle_transform_widget)
-
-@magic_factory(widget_init=on_init, layout='vertical', call_button="Warp")
-def make_image_warping(
-    viewer: "napari.viewer.Viewer",
-    moving_image: Image,
-    fixed_image: ImageData,
-    transform_type: Annotated[str, {"choices": ["Rigid", "Affine", "Deformable"]}],
-    moving_points: Points,
-    transformed_points: Points,
-    interpolation_order: Annotated[int, {"min": 0, "max": 5, "step": 1}]=1,
-    approximate_grid: Annotated[int, {"min": 1, "max": 10, "step": 1}]=1,
-    sub_division_factor: Annotated[int, {"min": 1, "max": 10, "step": 1}]=1
-    ):
-
-    pbar = widgets.ProgressBar()
-    pbar.range = (0, 0)  # unknown duration
-    make_image_warping.insert(0, pbar)  # add progress bar to the top of widget
-
-    # this function will be called after we return
-    def _add_data(return_value, self=make_image_warping):
-        data, kwargs = return_value
-        if isinstance(data, list) and isinstance(kwargs, list):
-            for data_val, kwargs_val in zip(data, kwargs):
-                if isinstance(moving_image, Image):
-                    viewer.add_image(data_val, **kwargs_val)
-                elif isinstance(moving_image, Labels):
-                    viewer.add_labels(data_val, **kwargs_val)
-        else:
-            if isinstance(moving_image, Image):
-                viewer.add_image(data, **kwargs)
-            elif isinstance(moving_image, Labels):
-                viewer.add_labels(data, **kwargs)
-
-        self.pop(0).hide()  # remove the progress bar
-
-    @thread_worker(connect={"returned": _add_data})
-    def _warp_image_volume(moving_image: Image,
-                           fixed_image: ImageData,
-                           moving_points: PointsData,
-                           transformed_points: PointsData,
-                           interpolation_order: int=1,
-                           approximate_grid: int=1,
-                           sub_division_factor: int=1):
-
-        print('Warping image volume')
-        assert len(moving_points) == len(transformed_points), 'Moving and transformed points must be of same length.'
-
-        x_chunk = math.ceil(fixed_image.shape[1] / sub_division_factor)
-        y_chunk = math.ceil(fixed_image.shape[2] / sub_division_factor)
-        z_chunk = math.ceil(fixed_image.shape[0] / sub_division_factor)
-
-        if len(moving_image.data.shape) == 1 + len(fixed_image.shape):
-            warped_images = []
-            kwargs_list = []
-
-            for c in range(moving_image.data.shape[0]):
-                warped_image = np.empty(fixed_image.shape)
-
-                for x in range(math.ceil(fixed_image.shape[1] / x_chunk)):
-                  for y in range(math.ceil(fixed_image.shape[2] / y_chunk)):
-                    for z in range(math.ceil(fixed_image.shape[0] / z_chunk)):
-                        output_region = (z * z_chunk,
-                                         x * x_chunk,
-                                         y * y_chunk,
-                                         min((z * z_chunk + z_chunk), fixed_image.shape[0]),
-                                         min((x * x_chunk + x_chunk), fixed_image.shape[1]),
-                                         min((y * y_chunk + y_chunk), fixed_image.shape[2]))
-
-                        z_min, x_min, y_min, z_max, x_max, y_max = output_region
-
-                        print('Output region:', output_region)
-
-                        warped_region = _warp_images(from_points=moving_points,
-                                                     to_points=transformed_points,
-                                                     image=moving_image.data[c],
-                                                     output_region=output_region,
-                                                     interpolation_order=interpolation_order,
-                                                     approximate_grid=approximate_grid)
-
-                        print('Warped region:', warped_region.shape)
-                        print('Warped region smaller:', warped_region[:-1, :-1, :-1].shape)
-
-                        # Warping function returns images padded by one in each dimension
-                        warped_image[z_min:z_max, x_min:x_max, y_min:y_max] = warped_region[:-1, :-1, :-1]
-
-                warped_images.append(warped_image)
-                kwargs_list.append(dict(name=moving_image.name + '_warped_ch_' + str(c)))
-
-            print('Finished warping')
-            return (np.squeeze(np.stack(warped_images)), kwargs_list)
-
-        else:
+        for c in range(moving_image.data.shape[0]):
             warped_image = np.empty(fixed_image.shape)
 
             for x in range(math.ceil(fixed_image.shape[1] / x_chunk)):
@@ -273,7 +175,7 @@ def make_image_warping(
 
                     warped_region = _warp_images(from_points=moving_points,
                                                  to_points=transformed_points,
-                                                 image=moving_image.data,
+                                                 image=moving_image.data[c],
                                                  output_region=output_region,
                                                  interpolation_order=interpolation_order,
                                                  approximate_grid=approximate_grid)
@@ -284,24 +186,70 @@ def make_image_warping(
                     # Warping function returns images padded by one in each dimension
                     warped_image[z_min:z_max, x_min:x_max, y_min:y_max] = warped_region[:-1, :-1, :-1]
 
-                # Return list of Images and add all at once
-            kwargs = dict(
-                name=moving_image.name + '_warped'
-            )
-            print('Finished warping')
-            return (warped_image, kwargs)
+            warped_images.append(warped_image)
+            kwargs_list.append(dict(name=moving_image.name + '_warped_ch_' + str(c)))
 
-    if transform_type == 'Deformable':
+        print('Finished warping')
+        return (np.squeeze(np.stack(warped_images)), kwargs_list)
 
-        _warp_image_volume(moving_image=moving_image,
-                           fixed_image=fixed_image.data,
-                           moving_points=moving_points.data,
-                           transformed_points=transformed_points.data,
-                           interpolation_order=interpolation_order,
-                           approximate_grid=approximate_grid,
-                           sub_division_factor=sub_division_factor)
+    else:
+        warped_image = np.empty(fixed_image.shape)
 
-    elif transform_type == 'Affine' or transform_type == 'Rigid':
+        for x in range(math.ceil(fixed_image.shape[1] / x_chunk)):
+          for y in range(math.ceil(fixed_image.shape[2] / y_chunk)):
+            for z in range(math.ceil(fixed_image.shape[0] / z_chunk)):
+                output_region = (z * z_chunk,
+                                 x * x_chunk,
+                                 y * y_chunk,
+                                 min((z * z_chunk + z_chunk), fixed_image.shape[0]),
+                                 min((x * x_chunk + x_chunk), fixed_image.shape[1]),
+                                 min((y * y_chunk + y_chunk), fixed_image.shape[2]))
+
+                z_min, x_min, y_min, z_max, x_max, y_max = output_region
+
+                print('Output region:', output_region)
+
+                warped_region = _warp_images(from_points=moving_points,
+                                             to_points=transformed_points,
+                                             image=moving_image.data,
+                                             output_region=output_region,
+                                             interpolation_order=interpolation_order,
+                                             approximate_grid=approximate_grid)
+
+                print('Warped region:', warped_region.shape)
+                print('Warped region smaller:', warped_region[:-1, :-1, :-1].shape)
+
+                # Warping function returns images padded by one in each dimension
+                warped_image[z_min:z_max, x_min:x_max, y_min:y_max] = warped_region[:-1, :-1, :-1]
+
+            # Return list of Images and add all at once
+        kwargs = dict(
+            name=moving_image.name + '_warped'
+        )
+        print('Finished warping')
+        return (warped_image, kwargs)
+
+def warp_image_volume(
+    moving_image: Image,
+    fixed_image: ImageData,
+    transform_type: str,
+    moving_points: Points,
+    transformed_points: Points,
+    interpolation_order: int=1,
+    approximate_grid: int=1,
+    sub_division_factor: int=1
+    ):
+    if transform_type == 'BCPD':
+
+        return _warp_image_volume(moving_image=moving_image,
+                                  fixed_image=fixed_image.data,
+                                  moving_points=moving_points.data,
+                                  transformed_points=transformed_points.data,
+                                  interpolation_order=interpolation_order,
+                                  approximate_grid=approximate_grid,
+                                  sub_division_factor=sub_division_factor)
+
+    elif transform_type == 'Affine CPD' or transform_type == 'Rigid CPD':
         affine_matrix = transformed_points.affine.affine_matrix
         print(affine_matrix)
 
@@ -312,19 +260,17 @@ def make_image_warping(
                                                     matrix=affine_matrix,
                                                     output_shape=fixed_image.data.shape,
                                                     interpolation_order=interpolation_order))
-            if isinstance(moving_image, Image):
-                viewer.add_image(np.squeeze(np.stack(warped_images)),
-                                 name=moving_image.name + '_warped')
+            kwargs = dict(
+                name=moving_image.name + '_warped'
+            )
+            return (np.squeeze(np.stack(warped_images), kwargs))
 
         else:
-            # assert moving_image.data.shape == fixed_image.data.shape, 'Shape of moving image must be equal or larger than fixed image!'
-
             img_wrp = _warp_image_volume_affine(image=moving_image.data,
                                                 matrix=affine_matrix,
                                                 output_shape=fixed_image.data.shape,
                                                 interpolation_order=interpolation_order)
-            if isinstance(moving_image, Image):
-                viewer.add_image(img_wrp,
-                                 name=moving_image.name + '_warped')
-
-        make_image_warping.pop(0).hide()
+            kwargs = dict(
+                name=moving_image.name + '_warped'
+            )
+            return (img_wrp, kwargs)
