@@ -277,7 +277,6 @@ def make_run_registration(
                                  approximate_grid=warping_approximate_grid,
                                  sub_division_factor=warping_sub_division_factor)
 
-
     joiner = RegistrationThreadJoiner(worker_function=_run_registration_thread)
 
     def _class_setter_moving(x):

@@ -8,16 +8,15 @@ import time
 from napari.types import PointsData, ImageData
 from math import cos, sin
 import math
+from tqdm import tqdm
 
 # TODO: Account for piecewise maxi iterations
 class RegistrationProgressCallback(object):
     def __init__(self, maxiter):
-        self.counter = 0
-        self.maxiter = maxiter
+        self.pbar = tqdm(total=maxiter, position=0, leave=True, desc='Registering point clouds...')
 
     def __call__(self, *args):
-        self.counter += 1
-        print('{}/{}'.format(self.counter, self.maxiter))
+        self.pbar.update()
 
 def _make_matrix_from_rigid_params(rot, trans, s):
     "Create homogenous transformation matrix from rigid parameters"
