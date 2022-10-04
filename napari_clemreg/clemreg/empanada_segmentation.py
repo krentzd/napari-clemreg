@@ -1,4 +1,4 @@
-import os
+import os, sys
 import argparse
 import zarr
 import numpy as np
@@ -6,6 +6,7 @@ import torch
 import albumentations as A
 from albumentations.pytorch import ToTensorV2
 from skimage import io
+from urllib.parse import urlparse
 
 import torch.multiprocessing as mp
 from torch.utils.data import DataLoader
@@ -17,6 +18,33 @@ from empanada.inference import filters
 from empanada.config_loaders import load_config
 from empanada.inference.patterns import *
 
+
+def load_model_to_device(fpath_or_url, device):
+    # check whether local file or url
+    if os.path.isfile(fpath_or_url):
+        model = torch.jit.load(fpath_or_url, map_location=device)
+    else:
+        hub_dir = torch.hub.get_dir()
+
+        # download file to hub_dir
+        try:
+            os.makedirs(hub_dir)
+        except:
+            pass
+
+        # set the filename
+        parts = urlparse(fpath_or_url)
+        filename = os.path.basename(parts.path)
+        cached_file = os.path.join(hub_dir, filename)
+
+        if not os.path.exists(cached_file):
+            sys.stderr.write('Downloading: "{}" to {}\n'.format(fpath_or_url, cached_file))
+            hash_prefix = None
+            torch.hub.download_url_to_file(fpath_or_url, cached_file, hash_prefix, progress=True)
+
+        model = torch.jit.load(cached_file, map_location=device)
+
+    return model
 def parse_args():
     parser = argparse.ArgumentParser(description='Runs empanada model inference.')
     parser.add_argument('-config', type=str, metavar='config', help='Path to a model config yaml file')
@@ -55,21 +83,22 @@ def parse_args():
     parser.add_argument('--save-panoptic', action='store_true', help='Whether to save raw panoptic segmentation for each stack.')
     return parser.parse_args()
 
+
 def _empanada_segmentation(args, volume):
     # read the model config file
     config = load_config(args.config)
 
     # set device and determine model to load
     device = torch.device("cuda:0" if torch.cuda.is_available() and not args.use_cpu else "cpu")
-    use_quantized = str(device) == 'cpu' and config.get('model_quantized') is not None
-    model_key = 'model_quantized' if use_quantized  else 'model'
-
-    if os.path.isfile(config[model_key]):
-        model = torch.jit.load(config[model_key])
+    if sys.platform != 'darwin':
+        use_quantized = str(device) == 'cpu' and config.get('model_quantized') is not None
+        model_key = 'model_quantized' if use_quantized  else 'model'
     else:
-        model = torch.hub.load_state_dict_from_url(config[model_key])
+        model_key = 'model'
 
+    model = load_model_to_device(config[model_key], device)
     model = model.to(device)
+
     model.eval()
 
     zarr_store = None
@@ -98,7 +127,7 @@ def _empanada_segmentation(args, volume):
     ])
 
     trackers = {}
-    class_labels = config['class_names'].keys()
+    class_labels = config['class_names']
     thing_list = config['thing_list']
     label_divisor = args.label_divisor
 
@@ -123,6 +152,15 @@ def _empanada_segmentation(args, volume):
         else:
             stack = None
 
+        # make axis-specific dataset
+        dataset = VolumeDataset(volume, axis, eval_tfs, scale=args.downsample_f)
+
+        num_workers = 8 if zarr_store is not None else 0
+        dataloader = DataLoader(
+            dataset, batch_size=1, shuffle=False, pin_memory=False,
+            drop_last=False, num_workers=0
+        )
+
         # create the inference engine
         inference_engine = PanopticDeepLabRenderEngine3d(
             model, thing_list=thing_list,
@@ -138,6 +176,12 @@ def _empanada_segmentation(args, volume):
         # create a separate matcher for each thing class
         matchers = create_matchers(thing_list, label_divisor, args.iou_thr, args.ioa_thr)
 
+        if sys.platform == "darwin":
+            try:
+                mp.set_start_method('spawn')
+            except RuntimeError:
+                pass
+
         # setup matcher for multiprocessing
         queue = mp.Queue()
         rle_stack = []
@@ -149,15 +193,7 @@ def _empanada_segmentation(args, volume):
         matcher_proc = mp.Process(target=forward_matching, args=matcher_args)
         matcher_proc.start()
 
-        # make axis-specific dataset
-        dataset = VolumeDataset(volume, axis, eval_tfs, scale=args.downsample_f)
 
-        num_workers = 8 if zarr_store is not None else 1
-        dataloader = DataLoader(
-            dataset, batch_size=1, shuffle=False,
-            pin_memory=(device == 'gpu'), drop_last=False,
-            num_workers=num_workers
-        )
 
         for batch in tqdm(dataloader, total=len(dataloader)):
             image = batch['image']
