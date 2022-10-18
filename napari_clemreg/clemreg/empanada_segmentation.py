@@ -45,6 +45,8 @@ def load_model_to_device(fpath_or_url, device):
         model = torch.jit.load(cached_file, map_location=device)
 
     return model
+
+
 def parse_args():
     parser = argparse.ArgumentParser(description='Runs empanada model inference.')
     parser.add_argument('-config', type=str, metavar='config', help='Path to a model config yaml file')
@@ -52,7 +54,7 @@ def parse_args():
     parser.add_argument('-data-key', type=str, metavar='data-key', default='em',
                         help='Key in zarr volume (if volume_path is a zarr). For multiple keys, separate with a comma.')
     parser.add_argument('-mode', type=str, dest='mode', metavar='inference_mode', choices=['orthoplane', 'stack'],
-                        default='orthoplane', help='Pick orthoplane (xy, xz, yz) or stack (xy)')
+                        default='stack', help='Pick orthoplane (xy, xz, yz) or stack (xy)')
     parser.add_argument('-qlen', type=int, dest='qlen', metavar='qlen', choices=[1, 3, 5, 7, 9, 11],
                         default=3, help='Length of median filtering queue, an odd integer')
     parser.add_argument('-nmax', type=int, dest='label_divisor', metavar='label_divisor',
@@ -77,10 +79,13 @@ def parse_args():
                         help='Minimum number of consecutive slices that object must appear on in final 3d segmentation')
     parser.add_argument('-downsample-f', type=int, dest='downsample_f', metavar='dowsample_f', default=1,
                         help='Factor by which to downsample images before inference, must be log base 2.')
-    parser.add_argument('--one-view', action='store_true', help='One to allow instances seen in just 1 stack through to orthoplane consensus.')
-    parser.add_argument('--fine-boundaries', action='store_true', help='Whether to calculate cells on full resolution image.')
+    parser.add_argument('--one-view', action='store_true',
+                        help='One to allow instances seen in just 1 stack through to orthoplane consensus.')
+    parser.add_argument('--fine-boundaries', action='store_true',
+                        help='Whether to calculate cells on full resolution image.')
     parser.add_argument('--use-cpu', action='store_true', help='Whether to force inference to run on CPU.')
-    parser.add_argument('--save-panoptic', action='store_true', help='Whether to save raw panoptic segmentation for each stack.')
+    parser.add_argument('--save-panoptic', action='store_true',
+                        help='Whether to save raw panoptic segmentation for each stack.')
     return parser.parse_args()
 
 
@@ -92,7 +97,7 @@ def _empanada_segmentation(args, volume):
     device = torch.device("cuda:0" if torch.cuda.is_available() and not args.use_cpu else "cpu")
     if sys.platform != 'darwin':
         use_quantized = str(device) == 'cpu' and config.get('model_quantized') is not None
-        model_key = 'model_quantized' if use_quantized  else 'model'
+        model_key = 'model_quantized' if use_quantized else 'model'
     else:
         model_key = 'model'
 
@@ -193,8 +198,6 @@ def _empanada_segmentation(args, volume):
         matcher_proc = mp.Process(target=forward_matching, args=matcher_args)
         matcher_proc.start()
 
-
-
         for batch in tqdm(dataloader, total=len(dataloader)):
             image = batch['image']
             size = batch['size']
@@ -222,7 +225,7 @@ def _empanada_segmentation(args, volume):
         matcher_proc.join()
 
         print(f'Propagating labels backward through the stack...')
-        for index,rle_seg in tqdm(backward_matching(rle_stack, matchers, shape[axis]), total=shape[axis]):
+        for index, rle_seg in tqdm(backward_matching(rle_stack, matchers, shape[axis]), total=shape[axis]):
             update_trackers(rle_seg, index, trackers[axis_name], axis, stack)
 
         finish_tracking(trackers[axis_name])
@@ -252,27 +255,33 @@ def _empanada_segmentation(args, volume):
 
         # decode and fill the instances
         # if zarr_store is not None:
-            # consensus_vol = zarr_store.create_dataset(
-                # f'{class_name}_pred', shape=shape, dtype=dtype,
-                # overwrite=True, chunks=(1, None, None)
-            # )
-            # fill_volume(consensus_vol, consensus_tracker.instances, processes=4)
+        # consensus_vol = zarr_store.create_dataset(
+        # f'{class_name}_pred', shape=shape, dtype=dtype,
+        # overwrite=True, chunks=(1, None, None)
+        # )
+        # fill_volume(consensus_vol, consensus_tracker.instances, processes=4)
         # else:
         consensus_vol = np.zeros(shape, dtype=dtype)
         fill_volume(consensus_vol, consensus_tracker.instances)
 
-            # volpath = os.path.dirname(args.volume_path)
-            # volname = os.path.basename(args.volume_path).replace('.tif', f'_{class_name}.tif')
-            # io.imsave(os.path.join(volpath, volname), consensus_vol)
+        # volpath = os.path.dirname(args.volume_path)
+        # volname = os.path.basename(args.volume_path).replace('.tif', f'_{class_name}.tif')
+        # io.imsave(os.path.join(volpath, volname), consensus_vol)
 
     print('Finished!')
     print(consensus_vol)
     return consensus_vol
 
-def empanada_segmentation(input):
 
-    config = os.path.abspath(os.path.join(os.path.realpath(__file__), '..', '..', 'empanada_configs', 'MitoNet_V1.yaml'))
+def empanada_segmentation(input, axis_prediction):
+    config = os.path.abspath(
+        os.path.join(os.path.realpath(__file__), '..', '..', 'empanada_configs', 'MitoNet_V1.yaml'))
     args = parse_args()
     args.config = config
+
+    if axis_prediction:
+        args.mode = 'orthoplane'
+    else:
+        args.mode = 'stack'
 
     return _empanada_segmentation(args, input)
