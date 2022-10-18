@@ -5,6 +5,7 @@ from magicgui import magic_factory, widgets
 from napari.qt.threading import thread_worker
 import time
 import numpy as np
+import warnings
 
 from ..clemreg.log_segmentation import log_segmentation
 from ..clemreg.point_cloud_sampling import point_cloud_sampling
@@ -12,6 +13,7 @@ from ..clemreg.mask_roi import mask_roi
 from ..clemreg.empanada_segmentation import empanada_segmentation
 from ..clemreg.point_cloud_registration import point_cloud_registration
 from ..clemreg.warp_image_volume import warp_image_volume
+
 
 # Use as worker.join workaround --> Launch registration thread_worker from here
 class RegistrationThreadJoiner:
@@ -45,10 +47,13 @@ class RegistrationThreadJoiner:
     def launch_worker(self):
         self.worker_function(self.moving_points, self.fixed_points)
 
+
 def on_init(widget):
     """Initializes widget layout and updates widget layout according to user input."""
     standard_settings = ['widget_header', 'Moving_Image', 'Fixed_Image', 'Mask_ROI', 'advanced']
-    advanced_settings = ['log_header',
+    advanced_settings = ['em_seg_header',
+                         'em_seg_axis',
+                         'log_header',
                          'log_sigma',
                          'log_threshold',
                          'point_cloud_header',
@@ -113,6 +118,7 @@ def on_init(widget):
 
     widget.advanced.changed.connect(toggle_transform_widget)
 
+
 @magic_factory(widget_init=on_init, layout='vertical', call_button='Register',
                widget_header={'widget_type': 'Label',
                               'label': f'<h1 text-align="left">CLEM-Reg</h1>'},
@@ -126,13 +132,20 @@ def on_init(widget):
                       "min": 0, "max": 10, "step": 1,
                       'value': 0},
                registration_algorithm={'label': 'Registration Algorithm',
-                                       'widget_type':'ComboBox',
+                                       'widget_type': 'ComboBox',
                                        'choices': ["BCPD", "Rigid CPD", "Affine CPD"],
                                        'value': 'Rigid CPD',
                                        'tooltip': 'Speed: Rigid CPD > Affine CPD > BCPD'},
                advanced={'text': 'Show advanced parameters',
-                          'widget_type': 'CheckBox',
-                          'value': False},
+                         'widget_type': 'CheckBox',
+                         'value': False},
+
+               white_space_0={'widget_type': 'Label', 'label': ' '},
+               em_seg_header={'widget_type': 'Label',
+                              'label': f'<h3 text-align="left">MitoNet Segmentation Parameters</h3>'},
+               em_seg_axis={'text': 'Prediction Across Three Axis',
+                            'widget_type': 'CheckBox',
+                            'value': False},
 
                white_space_1={'widget_type': 'Label', 'label': ' '},
                log_header={'widget_type': 'Label',
@@ -189,39 +202,43 @@ def on_init(widget):
                                             'widget_type': 'SpinBox',
                                             'min': 1, 'max': 10, 'step': 1,
                                             'value': 1}
-                )
+               )
 def make_run_registration(
-    viewer: 'napari.viewer.Viewer',
-    widget_header,
-    Moving_Image: Image,
-    Fixed_Image: Image,
-    Mask_ROI: Shapes,
-    z_min,
-    z_max,
-    registration_algorithm,
-    advanced,
+        viewer: 'napari.viewer.Viewer',
+        widget_header,
+        Moving_Image: Image,
+        Fixed_Image: Image,
+        Mask_ROI: Shapes,
+        z_min,
+        z_max,
+        registration_algorithm,
+        advanced,
 
-    white_space_1,
-    log_header,
-    log_sigma,
-    log_threshold,
+        white_space_0,
+        em_seg_header,
+        em_seg_axis,
 
-    white_space_2,
-    point_cloud_header,
-    point_cloud_sampling_frequency,
-    point_cloud_sigma,
+        white_space_1,
+        log_header,
+        log_sigma,
+        log_threshold,
 
-    white_space_3,
-    registration_header,
-    registration_voxel_size,
-    registration_every_k_points,
-    registration_max_iterations,
+        white_space_2,
+        point_cloud_header,
+        point_cloud_sampling_frequency,
+        point_cloud_sigma,
 
-    white_space_4,
-    warping_header,
-    warping_interpolation_order,
-    warping_approximate_grid,
-    warping_sub_division_factor) -> Image:
+        white_space_3,
+        registration_header,
+        registration_voxel_size,
+        registration_every_k_points,
+        registration_max_iterations,
+
+        white_space_4,
+        warping_header,
+        warping_interpolation_order,
+        warping_approximate_grid,
+        warping_sub_division_factor) -> Image:
     """Run CLEM-Reg end-to-end"""
 
     @thread_worker
@@ -243,7 +260,8 @@ def make_run_registration(
 
     @thread_worker
     def _run_fixed_thread():
-        seg_volume = empanada_segmentation(input=Fixed_Image.data)
+        seg_volume = empanada_segmentation(input=Fixed_Image.data,
+                                           axis_prediction=em_seg_axis)
         print(seg_volume)
         point_cloud = point_cloud_sampling(input=Labels(seg_volume),
                                            sampling_frequency=point_cloud_sampling_frequency / 100,
@@ -258,11 +276,11 @@ def make_run_registration(
     def _run_registration_thread(moving_points, fixed_points):
         print('Entered thread!')
 
-        moving, fixed, transformed, kwargs =  point_cloud_registration(moving_points.data, fixed_points.data,
-                                                                       algorithm=registration_algorithm,
-                                                                       voxel_size=registration_voxel_size,
-                                                                       every_k_points=registration_every_k_points,
-                                                                       max_iterations=registration_max_iterations)
+        moving, fixed, transformed, kwargs = point_cloud_registration(moving_points.data, fixed_points.data,
+                                                                      algorithm=registration_algorithm,
+                                                                      voxel_size=registration_voxel_size,
+                                                                      every_k_points=registration_every_k_points,
+                                                                      max_iterations=registration_max_iterations)
 
         if registration_algorithm == 'Affine CPD' or registration_algorithm == 'Rigid CPD':
             transformed = Points(moving, **kwargs)
@@ -276,6 +294,34 @@ def make_run_registration(
                                  interpolation_order=warping_interpolation_order,
                                  approximate_grid=warping_approximate_grid,
                                  sub_division_factor=warping_sub_division_factor)
+
+    def mask_area(x, y):
+        return 0.5 * np.abs(np.dot(x, np.roll(y, 1)) - np.dot(y, np.roll(x, 1)))
+
+    if Moving_Image is None or Fixed_Image is None:
+        warnings.warn("WARNING: You have not inputted both a fixed and moving image")
+        return
+
+    if len(Moving_Image.data.shape) == 2 or len(Fixed_Image.data.shape) == 2:
+        warnings.warn(
+            "WARNING: Your input must be 3D, you're current input has a shape of {}".format(Moving_Image.data.shape))
+        return
+
+    if Moving_Image.data.shape != Fixed_Image.data.shape:
+        warnings.warn(
+            "WARNING: Your fixed and moving images must have the same shape. Fixed shape: {fixed_shape} != Moving shape:{moving_shape}".format(
+                fixed_shape=Fixed_Image.data.shape,
+                moving_shape=Moving_Image.data.shape))
+        return
+
+    if Mask_ROI is not None:
+        if len(Mask_ROI.data) != 1:
+            warnings.warn("WARNING: You must input only 1 Mask ROI, you have inputted {}.".format(len(Mask_ROI.data)))
+            return
+        if mask_area(Mask_ROI.data[0][:, 1], Mask_ROI.data[0][:, 2]) > Moving_Image.data.shape[1] * \
+                Moving_Image.data.shape[2]:
+            warnings.warn("WARNING: You must input only 1 Mask ROI, you have inputted {}.".format(len(Mask_ROI.data)))
+            return
 
     joiner = RegistrationThreadJoiner(worker_function=_run_registration_thread)
 
