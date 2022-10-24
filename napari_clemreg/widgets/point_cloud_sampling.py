@@ -7,15 +7,34 @@ from napari.layers import Labels
 import napari
 from typing_extensions import Annotated
 
+
 @magic_factory
 def make_point_cloud_sampling(
-    viewer: "napari.viewer.Viewer",
-    input: Labels,
-    sampling_frequency: Annotated[int, {"min": 1, "max": 100, "step": 1}]=5,
-    sigma: Annotated[float, {"min": 0, "max": 10, "step": 0.1}]=1.0,
-    face_color: Annotated[str, {"choices": ["red", "green", "blue", "yellow"]}]='red',
-    point_size: Annotated[int, {"min": 1, "max": 20, "step": 1}]=5
+        viewer: "napari.viewer.Viewer",
+        input: Labels,
+        sampling_frequency: Annotated[int, {"min": 1, "max": 100, "step": 1}] = 5,
+        sigma: Annotated[float, {"min": 0, "max": 10, "step": 0.1}] = 1.0,
+        face_color: Annotated[str, {"choices": ["red", "green", "blue", "yellow"]}] = 'red',
+        point_size: Annotated[int, {"min": 1, "max": 20, "step": 1}] = 5
 ):
+    """
+
+    Parameters
+    ----------
+    viewer : napari.viewer.Viewer
+        Napari viewer allows addition of layer once thread_worker finished
+        executing
+    input : napari.layers.Labels
+    sampling_frequency : int
+        Frequency of cloud samppling
+    sigma : float
+    face_color : str
+    point_size : int
+
+    Returns
+    -------
+
+    """
     from napari.qt import thread_worker
     pbar = widgets.ProgressBar()
     pbar.range = (0, 0)  # unknown duration
@@ -29,11 +48,11 @@ def make_point_cloud_sampling(
 
     @thread_worker(connect={"returned": _add_data})
     def _point_cloud_sampling(input: Labels,
-                              sampling_frequency: float=0.01,
-                              sigma: float=1.0,
-                              edge_color: str='black',
-                              face_color: str='red',
-                              point_size: int=5):
+                              sampling_frequency: float = 0.01,
+                              sigma: float = 1.0,
+                              edge_color: str = 'black',
+                              face_color: str = 'red',
+                              point_size: int = 5):
         point_lst = []
         for z in range(input.data.shape[0]):
             img = (input.data[z] > 0).astype('uint8') * 255
