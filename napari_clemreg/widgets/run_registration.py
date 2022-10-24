@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # coding: utf-8
+import napari
 from napari.layers import Image, Shapes, Labels, Points
 from magicgui import magic_factory, widgets
 from napari.qt.threading import thread_worker
@@ -49,7 +50,13 @@ class RegistrationThreadJoiner:
 
 
 def on_init(widget):
-    """Initializes widget layout and updates widget layout according to user input."""
+    """ Initializes widget layout and updates widget layout according to user input.
+
+    Parameters
+    ----------
+    widget : magicgui.widgets.Widget
+        The parent widget of the plugin.
+    """
     standard_settings = ['widget_header', 'Moving_Image', 'Fixed_Image', 'Mask_ROI', 'advanced']
     advanced_settings = ['em_seg_header',
                          'em_seg_axis',
@@ -239,7 +246,45 @@ def make_run_registration(
         warping_interpolation_order,
         warping_approximate_grid,
         warping_sub_division_factor) -> Image:
-    """Run CLEM-Reg end-to-end"""
+    """Run CLEM-Reg end-to-end
+
+    Parameters
+    ----------
+    viewer
+    widget_header
+    Moving_Image
+    Fixed_Image
+    Mask_ROI
+    z_min
+    z_max
+    registration_algorithm
+    advanced
+    white_space_0
+    em_seg_header
+    em_seg_axis
+    white_space_1
+    log_header
+    log_sigma
+    log_threshold
+    white_space_2
+    point_cloud_header
+    point_cloud_sampling_frequency
+    point_cloud_sigma
+    white_space_3
+    registration_header
+    registration_voxel_size
+    registration_every_k_points
+    registration_max_iterations
+    white_space_4
+    warping_header
+    warping_interpolation_order
+    warping_approximate_grid
+    warping_sub_division_factor
+
+    Returns
+    -------
+
+    """
 
     @thread_worker
     def _run_moving_thread():
