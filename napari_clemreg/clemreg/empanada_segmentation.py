@@ -1,26 +1,36 @@
-import os, sys
 import argparse
-import zarr
-import numpy as np
+import os
+import sys
 import torch
 import albumentations as A
-from albumentations.pytorch import ToTensorV2
-from skimage import io
-from urllib.parse import urlparse
-
+import numpy as np
 import torch.multiprocessing as mp
+from urllib.parse import urlparse
+from albumentations.pytorch import ToTensorV2
+from empanada.config_loaders import load_config
+from empanada.data import VolumeDataset
+from empanada.inference import filters
+from empanada.inference.engines import PanopticDeepLabRenderEngine3d
+from empanada.inference.patterns import *
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
-from empanada.data import VolumeDataset
-from empanada.inference.engines import PanopticDeepLabRenderEngine3d
-from empanada.inference import filters
-from empanada.config_loaders import load_config
-from empanada.inference.patterns import *
-
 
 def load_model_to_device(fpath_or_url, device):
-    # check whether local file or url
+    """ Check whether to use a local version of the mitonet model
+    or to download it from a given url
+
+    Parameters
+    ----------
+    fpath_or_url : str
+        String indicating whether the model is stored locally or will be downloaded
+    device : str
+        Device which the model will be loaded to
+    Returns
+    -------
+        Loaded model
+    """
+    #
     if os.path.isfile(fpath_or_url):
         model = torch.jit.load(fpath_or_url, map_location=device)
     else:
@@ -90,6 +100,21 @@ def parse_args():
 
 
 def _empanada_segmentation(args, volume):
+    """ Function to apply empanada segmentation based on user args input
+    and volume input
+
+
+    Parameters
+    ----------
+    args : dict
+        Dictionary of arguments for the parameters of the empanada segmentation
+    volume : napari.layers.Image
+        Volume to be segmented using empanada model
+
+    Returns
+    -------
+        Segmented volume
+    """
     # read the model config file
     config = load_config(args.config)
 
@@ -274,6 +299,19 @@ def _empanada_segmentation(args, volume):
 
 
 def empanada_segmentation(input, axis_prediction):
+    """ Initialise empanada segmentation
+
+    Parameters
+    ----------
+    input : napari.layers.Image
+        Image volume to apply segmentation to
+    axis_prediction : bool
+        Determine whether to run prediction across orthogonal planes or not.
+
+    Returns
+    -------
+        Segmentation of the user inputted image
+    """
     config = os.path.abspath(
         os.path.join(os.path.realpath(__file__), '..', '..', 'empanada_configs', 'MitoNet_V1.yaml'))
     args = parse_args()
