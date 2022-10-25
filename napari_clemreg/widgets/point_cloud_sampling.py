@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 # coding: utf-8
-from magicgui import magic_factory, widgets
+import napari
 import numpy as np
 from skimage import feature
 from napari.layers import Labels
-import napari
+from magicgui import magic_factory, widgets
 from typing_extensions import Annotated
 
 

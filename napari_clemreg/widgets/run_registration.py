@@ -1,18 +1,16 @@
 #!/usr/bin/env python3
 # coding: utf-8
-import napari
-from napari.layers import Image, Shapes, Labels, Points
-from magicgui import magic_factory, widgets
-from napari.qt.threading import thread_worker
-import time
-import numpy as np
 import warnings
-
-from ..clemreg.log_segmentation import log_segmentation
-from ..clemreg.point_cloud_sampling import point_cloud_sampling
-from ..clemreg.mask_roi import mask_roi
+import napari
+import numpy as np
+from magicgui import magic_factory
+from napari.layers import Image, Shapes, Labels, Points
+from napari.qt.threading import thread_worker
 from ..clemreg.empanada_segmentation import empanada_segmentation
+from ..clemreg.log_segmentation import log_segmentation
+from ..clemreg.mask_roi import mask_roi
 from ..clemreg.point_cloud_registration import point_cloud_registration
+from ..clemreg.point_cloud_sampling import point_cloud_sampling
 from ..clemreg.warp_image_volume import warp_image_volume
 
 

@@ -1,11 +1,8 @@
 #!/usr/bin/env python3
 # coding: utf-8
 import numpy as np
-from magicgui import magic_factory, widgets
-from scipy import ndimage
+from magicgui import magic_factory
 from napari.layers import Image, Shapes
-import time
-import math
 from skimage import draw
 from typing_extensions import Annotated
 
