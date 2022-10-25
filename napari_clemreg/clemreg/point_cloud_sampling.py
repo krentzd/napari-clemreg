@@ -1,20 +1,34 @@
 #!/usr/bin/env python3
 # coding: utf-8
-from magicgui import magic_factory, widgets
-import numpy as np
-from skimage import feature
-from napari.layers import Labels, Points
-from napari.qt.threading import thread_worker
 import time
+import numpy as np
+from napari.layers import Labels, Points
+from skimage import feature
+
 
 # @thread_worker
 def point_cloud_sampling(input: Labels,
-                          sampling_frequency: float=0.01,
-                          sigma: float=1.0,
-                          edge_color: str='black',
-                          face_color: str='red',
-                          point_size: int=5):
+                         sampling_frequency: float = 0.01,
+                         sigma: float = 1.0,
+                         edge_color: str = 'black',
+                         face_color: str = 'red',
+                         point_size: int = 5):
+    """
 
+    Parameters
+    ----------
+    input : napari.layers.Labels
+    sampling_frequency : float
+        Frequency of cloud sampling
+    sigma : float
+    face_color : str
+    point_size : int
+
+
+    Returns
+    -------
+
+    """
     print(f'Sampling point cloud from {input.name} with sigma={sigma} and sampling_frequency={sampling_frequency}...')
     start_time = time.time()
 
