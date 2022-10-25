@@ -1,14 +1,13 @@
 #!/usr/bin/env python3
 # coding: utf-8
-from probreg import cpd, bcpd, callbacks
+import time
 import numpy as np
 import open3d as o3
 import transforms3d as t3d
-import time
-from napari.types import PointsData, ImageData
-from math import cos, sin
-import math
+from napari.types import PointsData
+from probreg import cpd, bcpd, callbacks
 from tqdm import tqdm
+
 
 # TODO: Account for piecewise maxi iterations
 class RegistrationProgressCallback(object):
@@ -18,9 +17,20 @@ class RegistrationProgressCallback(object):
     def __call__(self, *args):
         self.pbar.update()
 
-def _make_matrix_from_rigid_params(rot, trans, s):
-    "Create homogenous transformation matrix from rigid parameters"
 
+def _make_matrix_from_rigid_params(rot, trans, s):
+    """ Create homogenous transformation matrix from rigid parameters
+
+    Parameters
+    ----------
+    rot
+    trans
+    s
+
+    Returns
+    -------
+
+    """
     T_a = np.array([[1., 0., 0., trans[0]],
                     [0., 1., 0., trans[1]],
                     [0., 0., 1., trans[2]],
@@ -36,10 +46,24 @@ def _make_matrix_from_rigid_params(rot, trans, s):
 
     return T_a @ T_rot @ T_s
 
+
 def prepare_source_and_target_nonrigid_3d(source_array,
                                           target_array,
                                           voxel_size=5,
                                           every_k_points=2):
+    """
+
+    Parameters
+    ----------
+    source_array
+    target_array
+    voxel_size
+    every_k_points
+
+    Returns
+    -------
+
+    """
     source = o3.geometry.PointCloud()
     target = o3.geometry.PointCloud()
     source.points = o3.utility.Vector3dVector(source_array)
@@ -50,7 +74,18 @@ def prepare_source_and_target_nonrigid_3d(source_array,
     target = target.voxel_down_sample(voxel_size=voxel_size)
     return source, target
 
-def _add_data(return_value):
+
+def _add_data(return_value, viewer):
+    """ Function to add value to the napari viewer
+
+    Parameters
+    ----------
+    return_value : ndarray
+        Value to be added to the napari viewer.
+    viewer : napari.viewer.Viewer
+        Napari viewer allows addition of layer once thread_worker finished
+        executing.
+    """
     moving, fixed, transformed, kwargs = return_value
     viewer.add_points(moving,
                       name='moving_points',
@@ -66,13 +101,30 @@ def _add_data(return_value):
                       size=5,
                       face_color='yellow')
 
+
 def point_cloud_registration(moving: PointsData,
                              fixed: PointsData,
-                             algorithm: str='Rigid CPD',
-                             voxel_size: int=5,
-                             every_k_points: int=1,
-                             max_iterations: int=50,
-                             visualise: bool=False):
+                             algorithm: str = 'Rigid CPD',
+                             voxel_size: int = 5,
+                             every_k_points: int = 1,
+                             max_iterations: int = 50,
+                             visualise: bool = False):
+    """
+
+    Parameters
+    ----------
+    moving : napari.types.PointsData
+    fixed : napari.types.PointsData
+    algorithm : str
+    voxel_size : int
+    every_k_points : int
+    max_iterations : int
+    visualise : bool
+
+    Returns
+    -------
+
+    """
     start = time.time()
     source, target = prepare_source_and_target_nonrigid_3d(moving,
                                                            fixed,
@@ -136,7 +188,7 @@ def point_cloud_registration(moving: PointsData,
         kwargs = dict(name='transformed_points',
                       face_color='blue',
                       affine=mat,
-                      size=0.5) # Point sizes don't display correctly
+                      size=0.5)  # Point sizes don't display correctly
 
     return (np.asarray(source.points),
             np.asarray(target.points),
