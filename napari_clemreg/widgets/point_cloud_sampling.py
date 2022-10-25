@@ -26,7 +26,7 @@ def make_point_cloud_sampling(
         executing
     input : napari.layers.Labels
     sampling_frequency : int
-        Frequency of cloud samppling
+        Frequency of cloud sampling
     sigma : float
     face_color : str
     point_size : int
