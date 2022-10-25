@@ -8,13 +8,41 @@ from napari.qt.threading import thread_worker
 import time
 from napari.layers import Labels
 
+
 def _min_max_scaling(data):
+    """
+
+    Parameters
+    ----------
+    data
+
+    Returns
+    -------
+
+    """
     n = data - np.min(data)
     d = np.max(data) - np.min(data)
 
     return n / d
 
+
 def _diff_of_gauss(img, sigma_1=2.5, sigma_2=4):
+    """ Applies Gaussian blur to the input image twice with different sigma
+    values resulting in two images which are then subtracted from each other.
+
+    Parameters
+    ----------
+    img : napari.layers.Image
+        Image to apply difference of gaussian to
+    sigma_1 : float
+        float Sigma of the first Gaussian filter
+    sigma_2 : float
+        float Sigma of the second Gaussian filter
+    Returns
+    -------
+    diff_of_gauss : Image
+        Difference of gaussian of image
+    """
     gauss_img_0_e = gaussian_filter1d(img, sigma_1, axis=0)
     gauss_img_1_e = gaussian_filter1d(gauss_img_0_e, sigma_1, axis=1)
     gauss_img_2_e = gaussian_filter1d(gauss_img_1_e, sigma_1, axis=2)
@@ -27,7 +55,22 @@ def _diff_of_gauss(img, sigma_1=2.5, sigma_2=4):
 
     return diff_of_gauss
 
+
 def _slice_adaptive_thresholding(img, thresh):
+    """ Apply adaptive thresholding to the user inputted image stack
+    based on the threshold value.
+
+    Parameters
+    ----------
+    img : napari.layers.Image
+        Image to apply adaptive thresholding to.
+    thresh : float
+        Threshold value to be applied to Image.
+    Returns
+    -------
+    thresh_img : np.array
+        Segmented image
+    """
     thresh_img = []
     for i in range(img.shape[0]):
         slice = exposure.rescale_intensity(img[i], out_range='uint8')
@@ -38,11 +81,26 @@ def _slice_adaptive_thresholding(img, thresh):
 
     return np.asarray(thresh_img)
 
+
 # @thread_worker
 def log_segmentation(input: Image,
-                     sigma: float=3,
-                     threshold: float=1.2):
+                     sigma: float = 3,
+                     threshold: float = 1.2):
+    """ Apply log segmentation to user input.
 
+    Parameters
+    ----------
+    input : napari.layers.Image
+        Image to be segmented as napari Image layer
+    sigma : float
+        Sigma value for 1D gaussian filter to be applied oto image before segmentation
+    threshold : float
+        Threshold value to apply to image
+    Returns
+    -------
+    Labels : napari.layers.Labels
+        Labels of the segmented moving image
+    """
     print(f'Segmenting {input.name} with sigma={sigma} and threshold={threshold}...')
     start_time = time.time()
 
