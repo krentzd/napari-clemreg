@@ -7,6 +7,24 @@ from skimage import draw
 from typing_extensions import Annotated
 
 
+def mask_area(x, y):
+    """ Calculates the area of the mask
+
+    Parameters
+    ----------
+    x : int
+        The x dimension of the mask
+    y : int
+        The y dimension of the mask
+
+    Returns
+    -------
+    area : float
+        The area of the mask based on its x and y dimensions
+    """
+    return 0.5 * np.abs(np.dot(x, np.roll(y, 1)) - np.dot(y, np.roll(x, 1)))
+
+
 def mask_roi(input: Image,
              crop_mask: Shapes,
              z_min: Annotated[int, {"min": 0, "max": 10, "step": 1}] = 0,
