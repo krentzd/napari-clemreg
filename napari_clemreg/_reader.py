@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 import numpy as np
 import tifffile
-import os
 
 
 def napari_get_reader(path):
