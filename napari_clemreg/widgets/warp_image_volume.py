@@ -1,19 +1,15 @@
 #!/usr/bin/env python3
 # coding: utf-8
 # Adapted from: https://github.com/zpincus/celltool/blob/master/celltool/numerics/image_warp.py
-
-from scipy import ndimage
-import numpy as np
-from probreg import bcpd
-import napari
-from magicgui import magic_factory, widgets
-from napari.types import PointsData, ImageData
-from napari.layers import Points, Layer, Image, Labels
-from typing_extensions import Annotated
 import math
-from typing import Sequence
-from pathlib import Path
+import napari
+import numpy as np
+from magicgui import magic_factory, widgets
+from napari.layers import Points, Image, Labels
 from napari.qt import thread_worker
+from napari.types import PointsData, ImageData
+from scipy import ndimage
+from typing_extensions import Annotated
 
 
 def _read_transform_from_file(fpath):

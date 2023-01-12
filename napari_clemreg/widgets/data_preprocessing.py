@@ -18,7 +18,7 @@ def get_pixelsize(metadata: dict):
         Metadata of user inputted image
     Returns
     -------
-        ?
+        Pixel size
     """
 
     try:
@@ -131,6 +131,9 @@ def make_data_preprocessing(
 
     Parameters
     ----------
+    unit
+    fixed
+    moving
     viewer : napari.viewer.Viewer
         Napari viewer allows addition of layer once thread_worker finished
         executing
@@ -151,6 +154,18 @@ def make_data_preprocessing(
     make_data_preprocessing.insert(0, pbar)  # add progress bar to the top of widget
 
     def _add_data(return_value, self=make_data_preprocessing):
+        """
+        Add results to the napari image viewer
+
+        Parameters
+        ----------
+        return_value: Value to be added
+        self
+
+        Returns
+        -------
+            Image to the napari viewer.
+        """
         print('Adding new layer to viewer...')
         data, kwargs = return_value
         viewer.add_image(data, **kwargs)
@@ -213,7 +228,7 @@ def make_data_preprocessing(
         kwargs = dict(
             name=input.name + '_preprocessed'
         )
-        return (output, kwargs)
+        return output, kwargs
 
     _preprocess(input=moving,
                 input_xy_pixelsize=moving_xy_pixelsize,

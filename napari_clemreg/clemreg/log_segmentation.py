@@ -27,8 +27,8 @@ def _min_max_scaling(data):
 
 
 def _diff_of_gauss(img, sigma_1=2.5, sigma_2=4):
-    """ Applies Gaussian blur to the input image twice with different sigma
-    values resulting in two images which are then subtracted from each other.
+    """ Calculates difference of gaussian of an inputted image
+    with two sigma values._
 
     Parameters
     ----------

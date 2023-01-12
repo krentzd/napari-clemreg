@@ -123,7 +123,7 @@ def make_log_segmentation(
         kwargs = dict(
             name=input.name + '_seg'
         )
-        return (seg_volume, kwargs)
+        return seg_volume, kwargs
 
     # start the thread
     _log_segmentation(input=input,

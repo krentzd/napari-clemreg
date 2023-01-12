@@ -2,13 +2,12 @@
 # coding: utf-8
 import warnings
 import napari
-import numpy as np
 from magicgui import magic_factory
 from napari.layers import Image, Shapes, Labels, Points
 from napari.qt.threading import thread_worker
 from ..clemreg.empanada_segmentation import empanada_segmentation
 from ..clemreg.log_segmentation import log_segmentation
-from ..clemreg.mask_roi import mask_roi
+from ..clemreg.mask_roi import mask_roi, mask_area
 from ..clemreg.point_cloud_registration import point_cloud_registration
 from ..clemreg.point_cloud_sampling import point_cloud_sampling
 from ..clemreg.warp_image_volume import warp_image_volume
@@ -83,7 +82,7 @@ def on_init(widget):
         setattr(getattr(widget, x), 'visible', False)
 
     def toggle_transform_widget(advanced: bool):
-        if advanced == True:
+        if advanced:
             for x in advanced_settings + standard_settings:
                 setattr(getattr(widget, x), 'visible', True)
 
@@ -338,9 +337,6 @@ def make_run_registration(
                                  approximate_grid=warping_approximate_grid,
                                  sub_division_factor=warping_sub_division_factor)
 
-    def mask_area(x, y):
-        return 0.5 * np.abs(np.dot(x, np.roll(y, 1)) - np.dot(y, np.roll(x, 1)))
-
     if Moving_Image is None or Fixed_Image is None:
         warnings.warn("WARNING: You have not inputted both a fixed and moving image")
         return
@@ -352,7 +348,8 @@ def make_run_registration(
 
     if Moving_Image.data.shape != Fixed_Image.data.shape:
         warnings.warn(
-            "WARNING: Your fixed and moving images must have the same shape. Fixed shape: {fixed_shape} != Moving shape:{moving_shape}".format(
+            "WARNING: Your fixed and moving images must have the same shape. Fixed shape: {fixed_shape} != Moving "
+            "shape:{moving_shape}".format(
                 fixed_shape=Fixed_Image.data.shape,
                 moving_shape=Moving_Image.data.shape))
         return
@@ -363,7 +360,7 @@ def make_run_registration(
             return
         if mask_area(Mask_ROI.data[0][:, 1], Mask_ROI.data[0][:, 2]) > Moving_Image.data.shape[1] * \
                 Moving_Image.data.shape[2]:
-            warnings.warn("WARNING: You must input only 1 Mask ROI, you have inputted {}.".format(len(Mask_ROI.data)))
+            warnings.warn("WARNING: Your mask size exceeds the size of the image.")
             return
 
     joiner = RegistrationThreadJoiner(worker_function=_run_registration_thread)
@@ -389,3 +386,4 @@ def make_run_registration(
     worker_fixed.returned.connect(_class_setter_fixed)
     worker_fixed.finished.connect(_finished_fixed_emitter)
     worker_fixed.start()
+
