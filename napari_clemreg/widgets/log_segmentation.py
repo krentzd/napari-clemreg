@@ -1,13 +1,9 @@
 #!/usr/bin/env python3
 # coding: utf-8
 import napari
-import numpy as np
 from magicgui import magic_factory, widgets
 from napari.layers import Image
-from scipy.ndimage import gaussian_filter1d
-from skimage import exposure
 from typing_extensions import Annotated
-from napari.qt import thread_worker
 
 
 def on_init(widget):
@@ -58,6 +54,10 @@ def make_log_segmentation(
     -------
 
     """
+    import numpy as np
+    from napari.qt import thread_worker
+    from skimage import exposure
+    from scipy.ndimage import gaussian_filter1d
 
     pbar = widgets.ProgressBar()
     pbar.range = (0, 0)  # unknown duration

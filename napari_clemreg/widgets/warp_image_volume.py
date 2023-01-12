@@ -6,7 +6,6 @@ import napari
 import numpy as np
 from magicgui import magic_factory, widgets
 from napari.layers import Points, Image, Labels
-from napari.qt import thread_worker
 from napari.types import PointsData, ImageData
 from scipy import ndimage
 from typing_extensions import Annotated
@@ -338,6 +337,8 @@ def make_image_warping(
     -------
 
     """
+    from napari.qt import thread_worker
+
     pbar = widgets.ProgressBar()
     pbar.range = (0, 0)  # unknown duration
     make_image_warping.insert(0, pbar)  # add progress bar to the top of widget

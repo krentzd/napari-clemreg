@@ -1,11 +1,7 @@
 #!/usr/bin/env python3
 # coding: utf-8
-import time
-import numpy as np
 from magicgui import magic_factory, widgets
-from scipy import ndimage
 from napari.layers import Image
-from napari.qt import thread_worker
 from typing_extensions import Annotated
 
 
@@ -148,6 +144,10 @@ def make_data_preprocessing(
     reference_z_pixelsize : float
         Pixelsize along z-axis of reference image volume
     """
+    import time
+    import numpy as np
+    from napari.qt import thread_worker
+    from scipy import ndimage
 
     pbar = widgets.ProgressBar()
     pbar.range = (0, 0)  # unknown duration

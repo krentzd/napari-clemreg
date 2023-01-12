@@ -4,13 +4,6 @@ import warnings
 import napari
 from magicgui import magic_factory
 from napari.layers import Image, Shapes, Labels, Points
-from napari.qt.threading import thread_worker
-from ..clemreg.empanada_segmentation import empanada_segmentation
-from ..clemreg.log_segmentation import log_segmentation
-from ..clemreg.mask_roi import mask_roi, mask_area
-from ..clemreg.point_cloud_registration import point_cloud_registration
-from ..clemreg.point_cloud_sampling import point_cloud_sampling
-from ..clemreg.warp_image_volume import warp_image_volume
 
 
 # Use as worker.join workaround --> Launch registration thread_worker from here
@@ -282,6 +275,13 @@ def make_run_registration(
     -------
 
     """
+    from ..clemreg.empanada_segmentation import empanada_segmentation
+    from ..clemreg.log_segmentation import log_segmentation
+    from ..clemreg.mask_roi import mask_roi, mask_area
+    from ..clemreg.point_cloud_registration import point_cloud_registration
+    from ..clemreg.point_cloud_sampling import point_cloud_sampling
+    from ..clemreg.warp_image_volume import warp_image_volume
+    from napari.qt.threading import thread_worker
 
     @thread_worker
     def _run_moving_thread():

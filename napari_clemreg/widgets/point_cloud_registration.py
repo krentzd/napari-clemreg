@@ -4,10 +4,8 @@ import time
 import napari
 import numpy as np
 import open3d as o3
-import transforms3d as t3d
 from magicgui import magic_factory, widgets
 from napari.types import PointsData, ImageData
-from probreg import cpd, bcpd, callbacks
 from typing_extensions import Annotated
 
 
@@ -200,6 +198,9 @@ def make_point_cloud_registration(
                                   every_k_points: int = 1,
                                   max_iterations: int = 50,
                                   visualise: bool = False):
+        import transforms3d as t3d
+        from probreg import cpd, bcpd, callbacks
+
         start = time.time()
         source, target = prepare_source_and_target_nonrigid_3d(moving,
                                                                fixed,

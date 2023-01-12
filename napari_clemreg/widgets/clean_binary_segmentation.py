@@ -1,13 +1,9 @@
 #!/usr/bin/env python3
 # coding: utf-8
-import cc3d
-import time
 import napari
-import numpy as np
 from magicgui import magic_factory, widgets
 from napari.layers import Labels
 from typing_extensions import Annotated
-from napari.qt import thread_worker
 
 
 @magic_factory
@@ -28,6 +24,10 @@ def make_clean_binary_segmentation(
         Specifies threshold for filtering individual objects based on size
         determined as the number of True pixels
     """
+    import cc3d
+    import numpy as np
+    import time
+    from napari.qt import thread_worker
 
     pbar = widgets.ProgressBar()
     # Unknown duration

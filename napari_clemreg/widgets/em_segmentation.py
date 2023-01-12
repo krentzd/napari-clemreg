@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
 # coding: utf-8
-import numpy as np
 from pathlib import Path
 from magicgui import magic_factory
 from napari.layers import Labels, Image
 from typing_extensions import Annotated
-from .sparse_unet.model import SparseUnet
 
 
 # TODO: Change run button to abort button for stoping thread_worker
@@ -40,6 +38,7 @@ def train_model(viewer: "napari.viewer.Viewer",
     -------
         Trained u-net model
     """
+    from .sparse_unet.model import SparseUnet
 
     # from napari.qt import thread_worker
     #
@@ -79,6 +78,9 @@ def predict_from_model(input: Image,
     napari.layers.Image
         Returns image containing the segmentations produced by the pretrained model.
     """
+    import numpy as np
+    from .sparse_unet.model import SparseUnet
+
     model = SparseUnet(shape=(512, 512, 1))
     model.load(str(model_path))
     segmented_image = []  # [model.predict(im, tile_shape=(512,512)) for im in input.data]

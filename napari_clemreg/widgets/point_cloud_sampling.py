@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 # coding: utf-8
 import napari
-import numpy as np
-from skimage import feature
 from napari.layers import Labels
 from magicgui import magic_factory, widgets
 from typing_extensions import Annotated
@@ -35,7 +33,10 @@ def make_point_cloud_sampling(
     -------
 
     """
+    import numpy as np
     from napari.qt import thread_worker
+    from skimage import feature
+
     pbar = widgets.ProgressBar()
     pbar.range = (0, 0)  # unknown duration
     make_point_cloud_sampling.insert(0, pbar)  # add progress bar to the top of widget
@@ -70,7 +71,7 @@ def make_point_cloud_sampling(
             name=input.name + '_points'
         )
 
-        return (np.asarray(point_lst), kwargs)
+        return np.asarray(point_lst), kwargs
 
     _point_cloud_sampling(input=input,
                           sampling_frequency=sampling_frequency / 100,

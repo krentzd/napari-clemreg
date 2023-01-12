@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
 # coding: utf-8
-import numpy as np
 from magicgui import magic_factory
 from napari.layers import Image, Shapes
-from skimage import draw
 from typing_extensions import Annotated
 
 
@@ -38,6 +36,8 @@ def mask_roi(input: Image,
     """
     Take crop_mask and mask input
     """
+    import numpy as np
+    from skimage import draw
 
     # Need to add support for multi-channel images
     # Squeeze array
