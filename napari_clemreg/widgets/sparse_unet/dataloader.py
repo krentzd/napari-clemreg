@@ -6,27 +6,15 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
-import os
-import random
-import h5py
-import glob
-import imageio
-import tifffile
 import math
+import random
 
-import numpy as np
-import tensorflow as tf
 import imgaug.augmenters as iaa
-
-from skimage import transform
+import numpy as np
+from napari.layers import Labels, Image
 from skimage import exposure
-from skimage import color
-from skimage.io import imread
-
-from tensorflow.keras import backend as K
 from tensorflow.keras.utils import Sequence
 
-from napari.layers import Labels, Image
 
 class SparseNapariDataGenerator(Sequence):
     def __init__(self,

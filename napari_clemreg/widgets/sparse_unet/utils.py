@@ -5,12 +5,10 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
-
-import random
-import numpy as np
 import matplotlib.pyplot as plt
 from tensorflow.keras import backend as K
 from tensorflow.keras.callbacks import Callback
+
 
 # from: https://gist.github.com/wassname/ce364fddfc8a025bfab4348cf5de852d
 def weighted_categorical_crossentropy(weights):

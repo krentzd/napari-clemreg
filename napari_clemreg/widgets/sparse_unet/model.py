@@ -5,38 +5,31 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
-import os
-import csv
-import h5py
 import math
+import os
 
 import numpy as np
 import tensorflow as tf
-import imgaug.augmenters as iaa
-
-from skimage import transform
 from skimage import exposure
-from skimage.exposure import equalize_hist
-
-from tensorflow.keras.layers import Conv2D
-from tensorflow.keras.layers import BatchNormalization
-from tensorflow.keras.layers import ReLU
-from tensorflow.keras.layers import MaxPooling2D
-from tensorflow.keras.layers import Dropout
-from tensorflow.keras.layers import Conv2DTranspose
-from tensorflow.keras.layers import Input
-from tensorflow.keras.layers import Concatenate
-from tensorflow.keras.layers import Reshape
-from tensorflow.keras.callbacks import ModelCheckpoint
+from skimage import transform
 from tensorflow.keras.callbacks import CSVLogger
-from tensorflow.keras.callbacks import Callback
+from tensorflow.keras.callbacks import ModelCheckpoint
+from tensorflow.keras.layers import BatchNormalization
+from tensorflow.keras.layers import Concatenate
+from tensorflow.keras.layers import Conv2D
+from tensorflow.keras.layers import Conv2DTranspose
+from tensorflow.keras.layers import Dropout
+from tensorflow.keras.layers import Input
+from tensorflow.keras.layers import MaxPooling2D
+from tensorflow.keras.layers import ReLU
 from tensorflow.keras.models import Model
-from tensorflow.keras.optimizers import Adam, SGD
+from tensorflow.keras.optimizers import Adam
 
 from .dataloader import SparseNapariDataGenerator
 from .utils import SampleImageCallback
-from .utils import weighted_categorical_crossentropy
 from .utils import dice_coefficient
+from .utils import weighted_categorical_crossentropy
+
 
 class SparseUnet:
     def __init__(self, shape=(256,256,1)):
