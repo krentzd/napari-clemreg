@@ -20,6 +20,11 @@ Next, install `napari` with the following command via [pip]:
 ```
 pip install "napari[all]"
 ```
+If using Mac M1 please do the following instead:
+```
+conda install imagecodecs pyqt
+pip install napari
+```
 
 Finally, `napari-clemreg` can be installed with:
 ```
