@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # coding: utf-8
+import json
 import warnings
 import napari
 from magicgui import magic_factory
@@ -47,7 +48,7 @@ def on_init(widget):
     widget : magicgui.widgets.Widget
         The parent widget of the plugin.
     """
-    standard_settings = ['widget_header', 'Moving_Image', 'Fixed_Image', 'Mask_ROI', 'advanced']
+    standard_settings = ['widget_header', 'Moving_Image', 'Fixed_Image', 'Mask_ROI', 'save_json', 'advanced']
     advanced_settings = ['em_seg_header',
                          'em_seg_axis',
                          'log_header',
@@ -198,7 +199,10 @@ def on_init(widget):
                warping_sub_division_factor={'label': 'Sub-division Factor',
                                             'widget_type': 'SpinBox',
                                             'min': 1, 'max': 10, 'step': 1,
-                                            'value': 1}
+                                            'value': 1},
+               save_json={'label': 'Save parameters',
+                          'widget_type': 'CheckBox',
+                          'value': False}
                )
 def make_run_registration(
         viewer: 'napari.viewer.Viewer',
@@ -209,6 +213,7 @@ def make_run_registration(
         z_min,
         z_max,
         registration_algorithm,
+        save_json,
         advanced,
 
         white_space_0,
@@ -240,6 +245,7 @@ def make_run_registration(
 
     Parameters
     ----------
+    save_json
     viewer
     widget_header
     Moving_Image
@@ -314,6 +320,27 @@ def make_run_registration(
         data, kwargs = return_value
         viewer.add_image(data, **kwargs)
 
+    def _create_json_file():
+        dictionary = {
+            "registration_algorithm": registration_algorithm,
+            "em_seg_axis": em_seg_axis,
+            "log_sigma": log_sigma,
+            "log_threshold": log_threshold,
+            "point_cloud_sampling_frequency": point_cloud_sampling_frequency,
+            "point_cloud_sigma": point_cloud_sigma,
+            "registration_voxel_size": registration_voxel_size,
+            "registration_every_k_points": registration_every_k_points,
+            "registration_max_iterations": registration_max_iterations,
+            "warping_interpolation_order": warping_interpolation_order,
+            "warping_approximate_grid": warping_approximate_grid,
+            "warping_sub_division_factor": warping_sub_division_factor
+        }
+
+        json_object = json.dumps(dictionary, indent=4)
+
+        with open("sample.json", "w") as outfile:
+            outfile.write(json_object)
+
     @thread_worker(connect={"returned": _add_data})
     def _run_registration_thread(moving_points, fixed_points):
         print('Entered thread!')
@@ -363,6 +390,8 @@ def make_run_registration(
             warnings.warn("WARNING: Your mask size exceeds the size of the image.")
             return
 
+    if save_json: _create_json_file()
+
     joiner = RegistrationThreadJoiner(worker_function=_run_registration_thread)
 
     def _class_setter_moving(x):
@@ -386,4 +415,3 @@ def make_run_registration(
     worker_fixed.returned.connect(_class_setter_fixed)
     worker_fixed.finished.connect(_finished_fixed_emitter)
     worker_fixed.start()
-
