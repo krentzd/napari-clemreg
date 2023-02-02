@@ -251,7 +251,7 @@ def _empanada_segmentation(args, volume):
 
         print(f'Propagating labels backward through the stack...')
         for index, rle_seg in tqdm(backward_matching(rle_stack, matchers, shape[axis]), total=shape[axis]):
-            update_trackers(rle_seg, index, trackers[axis_name], axis, stack)
+            update_trackers(rle_seg, index, trackers[axis_name]) #, axis, stack) # Updated empanada only requires 3 arguments 
 
         finish_tracking(trackers[axis_name])
         for tracker in trackers[axis_name]:

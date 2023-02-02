@@ -311,13 +311,19 @@ def make_run_registration(
         return point_cloud
 
     def _add_data(return_value):
-        data, kwargs = return_value
-        viewer.add_image(data, **kwargs)
+        if isinstance(return_value, list):
+            for image_data in return_value:
+                data, kwargs = image_data
+                viewer.add_image(data, **kwargs)
+        else:
+            data, kwargs = return_value
+            viewer.add_image(data, **kwargs)
 
     @thread_worker(connect={"returned": _add_data})
     def _run_registration_thread(moving_points, fixed_points):
         print('Entered thread!')
-
+        print(moving_points)
+        print(fixed_points)
         moving, fixed, transformed, kwargs = point_cloud_registration(moving_points.data, fixed_points.data,
                                                                       algorithm=registration_algorithm,
                                                                       voxel_size=registration_voxel_size,
@@ -344,14 +350,6 @@ def make_run_registration(
     if len(Moving_Image.data.shape) == 2 or len(Fixed_Image.data.shape) == 2:
         warnings.warn(
             "WARNING: Your input must be 3D, you're current input has a shape of {}".format(Moving_Image.data.shape))
-        return
-
-    if Moving_Image.data.shape != Fixed_Image.data.shape:
-        warnings.warn(
-            "WARNING: Your fixed and moving images must have the same shape. Fixed shape: {fixed_shape} != Moving "
-            "shape:{moving_shape}".format(
-                fixed_shape=Fixed_Image.data.shape,
-                moving_shape=Moving_Image.data.shape))
         return
 
     if Mask_ROI is not None:
@@ -386,4 +384,3 @@ def make_run_registration(
     worker_fixed.returned.connect(_class_setter_fixed)
     worker_fixed.finished.connect(_finished_fixed_emitter)
     worker_fixed.start()
-
