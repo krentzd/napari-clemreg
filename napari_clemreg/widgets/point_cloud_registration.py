@@ -293,14 +293,12 @@ def make_point_cloud_registration(
         print("time: ", elapsed)
 
         if algorithm == 'BCPD':
-            print("result: ", np.rad2deg(t3d.euler.mat2euler(tf_param.rigid_trans.rot)),
                   tf_param.rigid_trans.scale, tf_param.rigid_trans.t, tf_param.v)
             kwargs = dict(name='transformed_points',
                           face_color='blue',
                           size=5)
 
         elif algorithm == 'Rigid CPD':
-            print("result: ", tf_param.rot,
                   tf_param.scale, tf_param.t)
 
             mat = _make_matrix_from_rigid_params(tf_param.rot,
@@ -313,7 +311,6 @@ def make_point_cloud_registration(
                           size=5)
 
         elif algorithm == 'Affine CPD':
-            print("result: ", tf_param.b, tf_param.t)
             mat, off = tf_param.b, tf_param.t
 
             off = np.expand_dims(off, axis=0).T

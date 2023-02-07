@@ -44,8 +44,6 @@ def mask_roi(input: Image,
     # If 4 dimensions, assume dimension with smallest size is colour channel
     # Reshape stack to be [channel, z, x, y]
 
-    print(input.data.shape)
-
     if crop_mask.data[0].shape[-1] > 3:
         crop_mask.data = [mask[:, -3:] for mask in crop_mask.data]
 
@@ -58,11 +56,8 @@ def mask_roi(input: Image,
     bot_z = z_max
 
     input_arr = input.data  # np.squeeze(input.data)
-    print(input_arr.shape)
 
     temp_idx = 2 if len(input_arr.shape) == 4 else 1
-
-    print(input_arr.shape[temp_idx:])
 
     binary_mask = draw.polygon2mask(input_arr.shape[temp_idx:], crop_mask.data[top_idx][:, 1:])
     top_vol = [np.zeros(input_arr.shape[temp_idx:])] * top_z
@@ -81,7 +76,6 @@ def mask_roi(input: Image,
     masked_input = input_arr.data * binary_mask_full_vol
 
     if not masked_input.shape == input.data.shape:
-        print('Reshaped array')
         masked_input.reshape(input.data.shape)
 
     return Image(masked_input,

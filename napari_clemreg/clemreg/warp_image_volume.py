@@ -414,17 +414,22 @@ def warp_image_volume(
         # Get linked layers
         if len(get_linked_layers(moving_image)) > 0:
             img_wrp_list = []
+            images = get_linked_layers(moving_image)
+            images.add(moving_image)
             # Include actual image in set --> only one layer added to viewer
-            for image in get_linked_layers(moving_image):
+            for image in images:
+                print(image)
                 img_wrp = _warp_image_volume_affine(image=image.data,
                                                     matrix=affine_matrix,
                                                     output_shape=fixed_image.data.shape,
                                                     interpolation_order=interpolation_order)
                 kwargs = dict(
-                    name=image.name + '_warped'
+                    name=image.name + '_warped',
+                    colormap=image.colormap,
+                    blending=image.blending
                 )
                 img_wrp_list.append((img_wrp, kwargs))
-                return img_wrp_list
+            return img_wrp_list
 
         else:
             img_wrp = _warp_image_volume_affine(image=moving_image.data,

@@ -41,7 +41,6 @@ def _warp_images(from_points, to_points, image, output_region, interpolation_ord
     -------
 
     """
-    print('Entered warp_images')
     transform = _make_inverse_warp(from_points, to_points, output_region, approximate_grid)
     print('Resampling image...')
     return ndimage.map_coordinates(np.asarray(image), transform, order=interpolation_order)
@@ -61,7 +60,6 @@ def _make_inverse_warp(from_points, to_points, output_region, approximate_grid):
     -------
 
     """
-    print('Make inverse warp')
     x_min, y_min, z_min, x_max, y_max, z_max = output_region
     if approximate_grid is None: approximate_grid = 1
     x_steps = (x_max - x_min) // approximate_grid
@@ -180,18 +178,13 @@ def _make_L_matrix(points):
     -------
 
     """
-    print('making L matrix')
     n = len(points)
     K = _U(_interpoint_distances(points))
-    print('K matrix')
     P = np.ones((n, 4))
-    print('P matrix')
     P[:, 1:] = points
     O = np.zeros((4, 4))
-    print('Building block')
     L = np.block([[K, P], [P.transpose(), O]])
     # L = np.asarray(np.bmat([[K, P],[P.transpose(), O]]))
-    print('Built L')
     return L
 
 
@@ -240,13 +233,11 @@ def _make_warp(from_points, to_points, x_vals, y_vals, z_vals):
     V = np.resize(to_points, (len(to_points) + 4, 3))
     V[-3:, :] = 0
     print('Computing pseudoinverse of L...')
-    print(L.shape)
     # TODO: benchmark speed of numpy and scipy implementations of pinv
     # TODO: if piecewise non-linear transform only compute pseudoinverse once!
     L_pseudo_inverse = np.linalg.pinv(L)  # L increases with number of control points!
     print('Done!')
     coeffs = np.dot(L_pseudo_inverse, V)
-    print('L, V, coeffs', L.shape, V.shape, coeffs.shape)
     x_warp = _calculate_f(coeffs[:, 0], from_points, x_vals, y_vals, z_vals)
     y_warp = _calculate_f(coeffs[:, 1], from_points, x_vals, y_vals, z_vals)
     z_warp = _calculate_f(coeffs[:, 2], from_points, x_vals, y_vals, z_vals)
@@ -395,17 +386,12 @@ def make_image_warping(
 
                             z_min, x_min, y_min, z_max, x_max, y_max = output_region
 
-                            print('Output region:', output_region)
-
                             warped_region = _warp_images(from_points=moving_points,
                                                          to_points=transformed_points,
                                                          image=moving_image.data[c],
                                                          output_region=output_region,
                                                          interpolation_order=interpolation_order,
                                                          approximate_grid=approximate_grid)
-
-                            print('Warped region:', warped_region.shape)
-                            print('Warped region smaller:', warped_region[:-1, :-1, :-1].shape)
 
                             # Warping function returns images padded by one in each dimension
                             warped_image[z_min:z_max, x_min:x_max, y_min:y_max] = warped_region[:-1, :-1, :-1]
@@ -431,17 +417,12 @@ def make_image_warping(
 
                         z_min, x_min, y_min, z_max, x_max, y_max = output_region
 
-                        print('Output region:', output_region)
-
                         warped_region = _warp_images(from_points=moving_points,
                                                      to_points=transformed_points,
                                                      image=moving_image.data,
                                                      output_region=output_region,
                                                      interpolation_order=interpolation_order,
                                                      approximate_grid=approximate_grid)
-
-                        print('Warped region:', warped_region.shape)
-                        print('Warped region smaller:', warped_region[:-1, :-1, :-1].shape)
 
                         # Warping function returns images padded by one in each dimension
                         warped_image[z_min:z_max, x_min:x_max, y_min:y_max] = warped_region[:-1, :-1, :-1]
@@ -465,7 +446,6 @@ def make_image_warping(
 
     elif transform_type == 'Affine' or transform_type == 'Rigid':
         affine_matrix = transformed_points.affine.affine_matrix
-        print(affine_matrix)
 
         if len(moving_image.data.shape) == 1 + len(fixed_image.shape):
             warped_images = []
