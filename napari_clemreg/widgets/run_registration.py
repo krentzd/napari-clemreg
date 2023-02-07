@@ -283,17 +283,23 @@ def make_run_registration(
     from ..clemreg.point_cloud_registration import point_cloud_registration
     from ..clemreg.point_cloud_sampling import point_cloud_sampling
     from ..clemreg.warp_image_volume import warp_image_volume
+    from ..clemreg.data_preprocessing import make_isotropic
     from napari.qt.threading import thread_worker
     from napari.layers.utils._link_layers import link_layers
 
     @thread_worker
     def _run_moving_thread():
+        # Inplace operation, metadata extraction only works if TIFF file
+        z_zoom = make_isotropic(input_image=Moving_Image)
+
         seg_volume = log_segmentation(input=Moving_Image,
                                       sigma=log_sigma,
                                       threshold=log_threshold)
         if Mask_ROI is not None:
             seg_volume_mask = mask_roi(input=seg_volume,
-                                       crop_mask=Mask_ROI, z_min=z_min, z_max=z_max)
+                                       crop_mask=Mask_ROI,
+                                       z_min=int(z_min * z_zoom),
+                                       z_max=int(z_max * z_zoom))
         else:
             seg_volume_mask = seg_volume
 
