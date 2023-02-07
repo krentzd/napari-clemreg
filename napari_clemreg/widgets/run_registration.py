@@ -24,15 +24,11 @@ class RegistrationThreadJoiner:
 
     def finished_fixed(self):
         self.fixed_ready = True
-        print('Fixed points set', self.fixed_ready, self.moving_ready)
-        print(self.fixed_points, self.moving_points)
         if self.moving_ready and self.fixed_ready:
             self.launch_worker()
 
     def finished_moving(self):
         self.moving_ready = True
-        print('Moving points set', self.fixed_ready, self.moving_ready)
-        print(self.fixed_points, self.moving_points)
         if self.moving_ready and self.fixed_ready:
             self.launch_worker()
 
@@ -288,13 +284,13 @@ def make_run_registration(
     from ..clemreg.point_cloud_sampling import point_cloud_sampling
     from ..clemreg.warp_image_volume import warp_image_volume
     from napari.qt.threading import thread_worker
+    from napari.layers.utils._link_layers import link_layers
 
     @thread_worker
     def _run_moving_thread():
         seg_volume = log_segmentation(input=Moving_Image,
                                       sigma=log_sigma,
                                       threshold=log_threshold)
-        print('Mask_ROI:', Mask_ROI)
         if Mask_ROI is not None:
             seg_volume_mask = mask_roi(input=seg_volume,
                                        crop_mask=Mask_ROI, z_min=z_min, z_max=z_max)
@@ -310,15 +306,22 @@ def make_run_registration(
     def _run_fixed_thread():
         seg_volume = empanada_segmentation(input=Fixed_Image.data,
                                            axis_prediction=em_seg_axis)
-        print(seg_volume)
         point_cloud = point_cloud_sampling(input=Labels(seg_volume),
                                            sampling_frequency=point_cloud_sampling_frequency / 100,
                                            sigma=point_cloud_sigma)
         return point_cloud
 
     def _add_data(return_value):
-        data, kwargs = return_value
-        viewer.add_image(data, **kwargs)
+        if isinstance(return_value, list):
+            layers = []
+            for image_data in return_value:
+                data, kwargs = image_data
+                viewer.add_image(data, **kwargs)
+                layers.append(viewer.layers[kwargs['name']])
+            link_layers(layers)
+        else:
+            data, kwargs = return_value
+            viewer.add_image(data, **kwargs)
 
     def _create_json_file():
         dictionary = {
@@ -343,8 +346,6 @@ def make_run_registration(
 
     @thread_worker(connect={"returned": _add_data})
     def _run_registration_thread(moving_points, fixed_points):
-        print('Entered thread!')
-
         moving, fixed, transformed, kwargs = point_cloud_registration(moving_points.data, fixed_points.data,
                                                                       algorithm=registration_algorithm,
                                                                       voxel_size=registration_voxel_size,
@@ -353,7 +354,6 @@ def make_run_registration(
 
         if registration_algorithm == 'Affine CPD' or registration_algorithm == 'Rigid CPD':
             transformed = Points(moving, **kwargs)
-            print(transformed)
 
         return warp_image_volume(moving_image=Moving_Image,
                                  fixed_image=Fixed_Image.data,
@@ -371,14 +371,6 @@ def make_run_registration(
     if len(Moving_Image.data.shape) == 2 or len(Fixed_Image.data.shape) == 2:
         warnings.warn(
             "WARNING: Your input must be 3D, you're current input has a shape of {}".format(Moving_Image.data.shape))
-        return
-
-    if Moving_Image.data.shape != Fixed_Image.data.shape:
-        warnings.warn(
-            "WARNING: Your fixed and moving images must have the same shape. Fixed shape: {fixed_shape} != Moving "
-            "shape:{moving_shape}".format(
-                fixed_shape=Fixed_Image.data.shape,
-                moving_shape=Moving_Image.data.shape))
         return
 
     if Mask_ROI is not None:

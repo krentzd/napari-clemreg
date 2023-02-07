@@ -6,29 +6,8 @@ import numpy as np
 from napari.layers import Points, Image
 from napari.types import PointsData, ImageData
 from scipy import ndimage
-
-
-def _warp_images(from_points, to_points, image, output_region, interpolation_order=5, approximate_grid=10):
-    """
-
-    Parameters
-    ----------
-    from_points
-    to_points
-    image
-    output_region
-    interpolation_order
-    approximate_grid
-
-    Returns
-    -------
-
-    """
-    print('Entered warp_images')
-    transform = _make_inverse_warp(from_points, to_points, output_region, approximate_grid)
-    print('Resampling image...')
-    return ndimage.map_coordinates(np.asarray(image), transform, order=interpolation_order)
-
+from napari.layers.utils._link_layers import get_linked_layers
+from skimage import exposure
 
 def _make_inverse_warp(from_points, to_points, output_region, approximate_grid):
     """
@@ -236,6 +215,26 @@ def _make_warp(from_points, to_points, x_vals, y_vals, z_vals):
     np.seterr(**err)
     return [x_warp, y_warp, z_warp]
 
+def _warp_images(from_points, to_points, image, output_region, interpolation_order=5, approximate_grid=10):
+    """
+
+    Parameters
+    ----------
+    from_points
+    to_points
+    image
+    output_region
+    interpolation_order
+    approximate_grid
+
+    Returns
+    -------
+
+    """
+    print('Entered warp_images')
+    transform = _make_inverse_warp(from_points, to_points, output_region, approximate_grid)
+    print('Resampling image...')
+    return ndimage.map_coordinates(np.asarray(image), transform, order=interpolation_order)
 
 def _warp_image_volume_affine(image,
                               matrix,
@@ -254,6 +253,7 @@ def _warp_image_volume_affine(image,
     -------
 
     """
+    image = exposure.rescale_intensity(image, out_range='uint8')
     inv_mat = np.linalg.inv(matrix)
     img_wrp = ndimage.affine_transform(input=image,
                                        matrix=inv_mat,
@@ -267,9 +267,9 @@ def _warp_image_volume(moving_image: Image,
                        fixed_image: ImageData,
                        moving_points: PointsData,
                        transformed_points: PointsData,
-                       interpolation_order: int = 1,
-                       approximate_grid: int = 1,
-                       sub_division_factor: int = 1):
+                       interpolation_order: int=1,
+                       approximate_grid: int=1,
+                       sub_division_factor: int=1):
     """
 
     Parameters
@@ -398,8 +398,8 @@ def warp_image_volume(
     -------
 
     """
-    if transform_type == 'BCPD':
 
+    if transform_type == 'BCPD':
         return _warp_image_volume(moving_image=moving_image,
                                   fixed_image=fixed_image.data,
                                   moving_points=moving_points.data,
@@ -410,19 +410,26 @@ def warp_image_volume(
 
     elif transform_type == 'Affine CPD' or transform_type == 'Rigid CPD':
         affine_matrix = transformed_points.affine.affine_matrix
-        print(affine_matrix)
 
-        if len(moving_image.data.shape) == 1 + len(fixed_image.shape):
-            warped_images = []
-            for c in range(moving_image.data.shape[0]):
-                warped_images.append(_warp_image_volume_affine(image=moving_image.data[c],
-                                                               matrix=affine_matrix,
-                                                               output_shape=fixed_image.data.shape,
-                                                               interpolation_order=interpolation_order))
-            kwargs = dict(
-                name=moving_image.name + '_warped'
-            )
-            return np.squeeze(np.stack(warped_images), kwargs)
+        # Get linked layers
+        if len(get_linked_layers(moving_image)) > 0:
+            img_wrp_list = []
+            images = get_linked_layers(moving_image)
+            images.add(moving_image)
+            # Include actual image in set --> only one layer added to viewer
+            for image in images:
+                print(image)
+                img_wrp = _warp_image_volume_affine(image=image.data,
+                                                    matrix=affine_matrix,
+                                                    output_shape=fixed_image.data.shape,
+                                                    interpolation_order=interpolation_order)
+                kwargs = dict(
+                    name=image.name + '_warped',
+                    colormap=image.colormap,
+                    blending=image.blending
+                )
+                img_wrp_list.append((img_wrp, kwargs))
+            return img_wrp_list
 
         else:
             img_wrp = _warp_image_volume_affine(image=moving_image.data,
