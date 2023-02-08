@@ -44,7 +44,7 @@ def on_init(widget):
     widget : magicgui.widgets.Widget
         The parent widget of the plugin.
     """
-    standard_settings = ['widget_header', 'Moving_Image', 'Fixed_Image', 'Mask_ROI', 'save_json', 'advanced']
+    standard_settings = ['widget_header', 'Moving_Image', 'Fixed_Image', 'Mask_ROI', 'advanced']
     advanced_settings = ['em_seg_header',
                          'em_seg_axis',
                          'log_header',
@@ -61,26 +61,45 @@ def on_init(widget):
                          'warping_interpolation_order',
                          'warping_approximate_grid',
                          'warping_sub_division_factor',
-                         'white_space_1',
-                         'white_space_2',
-                         'white_space_3',
-                         'white_space_4']
+                         'save_json'
+                         ]
+    json_settings = ['load_json_file']
 
     for x in standard_settings:
         setattr(getattr(widget, x), 'visible', True)
     for x in advanced_settings + ['z_min', 'z_max']:
         setattr(getattr(widget, x), 'visible', False)
+    for x in json_settings:
+        setattr(getattr(widget, x), 'visible', True)
 
     def toggle_transform_widget(advanced: bool):
         if advanced:
             for x in advanced_settings + standard_settings:
                 setattr(getattr(widget, x), 'visible', True)
+            for x in json_settings:
+                setattr(getattr(widget, x), 'visible', False)
+
+            if widget.params_from_json.value:
+                widget.params_from_json.value = False
 
         else:
             for x in standard_settings:
                 setattr(getattr(widget, x), 'visible', True)
             for x in advanced_settings:
                 setattr(getattr(widget, x), 'visible', False)
+            widget.params_from_json.value = True
+            toggle_json_widget(True)
+
+    def toggle_json_widget(load_json: bool):
+
+        if load_json:
+            for x in json_settings:
+                setattr(getattr(widget, x), 'visible', True)
+            if widget.advanced.value:
+                widget.advanced.value = False
+        else:
+            widget.advanced.value = True
+            toggle_transform_widget(True)
 
     def change_z_max(input_image: Image):
         if len(input_image.data.shape) == 3:
@@ -109,8 +128,8 @@ def on_init(widget):
     widget.Moving_Image.changed.connect(change_z_max)
     widget.z_min.changed.connect(change_z_max_from_z_min)
     widget.Mask_ROI.changed.connect(reveal_z_min_and_z_max)
-
     widget.advanced.changed.connect(toggle_transform_widget)
+    widget.params_from_json.changed.connect(toggle_json_widget)
 
 
 @magic_factory(widget_init=on_init, layout='vertical', call_button='Register',
@@ -130,18 +149,16 @@ def on_init(widget):
                                        'choices': ["BCPD", "Rigid CPD", "Affine CPD"],
                                        'value': 'Rigid CPD',
                                        'tooltip': 'Speed: Rigid CPD > Affine CPD > BCPD'},
-               advanced={'text': 'Show advanced parameters',
+               advanced={'text': 'Parameters custom',
                          'widget_type': 'CheckBox',
                          'value': False},
 
-               white_space_0={'widget_type': 'Label', 'label': ' '},
                em_seg_header={'widget_type': 'Label',
                               'label': f'<h3 text-align="left">MitoNet Segmentation Parameters</h3>'},
                em_seg_axis={'text': 'Prediction Across Three Axis',
                             'widget_type': 'CheckBox',
                             'value': False},
 
-               white_space_1={'widget_type': 'Label', 'label': ' '},
                log_header={'widget_type': 'Label',
                            'label': f'<h3 text-align="left">LoG Segmentation Parameters</h3>'},
                log_sigma={'label': 'Sigma',
@@ -153,7 +170,6 @@ def on_init(widget):
                               'min': 0, 'max': 20, 'step': 0.1,
                               'value': 1.2},
 
-               white_space_2={'widget_type': 'Label', 'label': ' '},
                point_cloud_header={'widget_type': 'Label',
                                    'label': f'<h3 text-align="left">Point Cloud Sampling</h3>'},
                point_cloud_sampling_frequency={'label': 'Sampling Frequency',
@@ -165,7 +181,6 @@ def on_init(widget):
                                   'min': 0, 'max': 10, 'step': 0.1,
                                   'value': 1.0},
 
-               white_space_3={'widget_type': 'Label', 'label': ' '},
                registration_header={'widget_type': 'Label',
                                     'label': f'<h3 text-align="left">Point Cloud Registration</h3>'},
                registration_voxel_size={'label': 'Voxel Size',
@@ -181,7 +196,6 @@ def on_init(widget):
                                             'min': 1, 'max': 1000, 'step': 1,
                                             'value': 50},
 
-               white_space_4={'widget_type': 'Label', 'label': ' '},
                warping_header={'widget_type': 'Label',
                                'label': f'<h3 text-align="left">Image Warping</h3>'},
                warping_interpolation_order={'label': 'Interpolation Order',
@@ -198,7 +212,14 @@ def on_init(widget):
                                             'value': 1},
                save_json={'label': 'Save parameters',
                           'widget_type': 'CheckBox',
-                          'value': False}
+                          'value': False},
+               params_from_json={'label': 'Parameters from JSON',
+                                 'widget_type': 'CheckBox',
+                                 'value': True},
+               load_json_file={'label': 'Select Parameter File',
+                               'widget_type': 'FileEdit',
+                               'mode': 'r',
+                               'filter': '*.json'}
                )
 def make_run_registration(
         viewer: 'napari.viewer.Viewer',
@@ -209,34 +230,32 @@ def make_run_registration(
         z_min,
         z_max,
         registration_algorithm,
-        save_json,
+        params_from_json,
         advanced,
 
-        white_space_0,
         em_seg_header,
         em_seg_axis,
 
-        white_space_1,
         log_header,
         log_sigma,
         log_threshold,
 
-        white_space_2,
         point_cloud_header,
         point_cloud_sampling_frequency,
         point_cloud_sigma,
 
-        white_space_3,
         registration_header,
         registration_voxel_size,
         registration_every_k_points,
         registration_max_iterations,
 
-        white_space_4,
         warping_header,
         warping_interpolation_order,
         warping_approximate_grid,
-        warping_sub_division_factor) -> Image:
+        warping_sub_division_factor,
+
+        save_json,
+        load_json_file) -> Image:
     """Run CLEM-Reg end-to-end
 
     Parameters
@@ -285,6 +304,30 @@ def make_run_registration(
     from ..clemreg.warp_image_volume import warp_image_volume
     from napari.qt.threading import thread_worker
     from napari.layers.utils._link_layers import link_layers
+
+    if params_from_json and load_json_file.is_file():
+        f = open(str(load_json_file))
+
+        data = json.load(f)
+        try:
+            registration_algorithm = data["registration_algorithm"]
+            em_seg_axis = data["em_seg_axis"]
+            log_sigma = data["log_sigma"]
+            log_threshold = data["log_threshold"]
+            point_cloud_sampling_frequency = data["point_cloud_sampling_frequency"]
+            point_cloud_sigma = data["point_cloud_sigma"]
+            registration_voxel_size = data["registration_voxel_size"]
+            registration_every_k_points = data["registration_every_k_points"]
+            registration_max_iterations = data["registration_max_iterations"]
+            warping_interpolation_order = data["warping_interpolation_order"]
+            warping_approximate_grid = data["warping_approximate_grid"]
+            warping_sub_division_factor = data["warping_sub_division_factor"]
+        except KeyError:
+            warnings.warn("JSON file missing required param")
+            return
+    elif params_from_json and not load_json_file.is_file():
+        warnings.warn("Load from JSON selected but no JSON file selected or file path isn't real")
+        return
 
     @thread_worker
     def _run_moving_thread():
@@ -382,7 +425,8 @@ def make_run_registration(
             warnings.warn("WARNING: Your mask size exceeds the size of the image.")
             return
 
-    if save_json: _create_json_file()
+    if save_json and not params_from_json:
+        _create_json_file()
 
     joiner = RegistrationThreadJoiner(worker_function=_run_registration_thread)
 
