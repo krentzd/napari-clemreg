@@ -35,9 +35,6 @@ contributions:
   - id: napari-clemreg.get_reader
     title: Get Reader
     python_name: napari_clemreg._reader:napari_get_reader
-  - id: napari-clemreg.run_registration_from_json
-    title: Run Registration from JSON
-    python_name: napari_clemreg.widgets.run_registration_from_json:make_run_registration
   readers:
   - command: napari-clemreg.get_reader
     filename_patterns:
@@ -65,5 +62,3 @@ contributions:
     display_name: Register point clouds
   - command: napari-clemreg.make_image_warping
     display_name: Warp image volume
-  - command: napari-clemreg.run_registration_from_json
-    display_name: Run registration from JSON
