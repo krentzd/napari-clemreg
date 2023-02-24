@@ -5,7 +5,7 @@ import warnings
 import napari
 from magicgui import magic_factory
 from napari.layers import Image, Shapes, Labels, Points
-
+from napari.utils.notifications import show_error
 
 # Use as worker.join workaround --> Launch registration thread_worker from here
 class RegistrationThreadJoiner:
@@ -331,9 +331,14 @@ def make_run_registration(
 
     @thread_worker
     def _run_moving_thread():
+
         seg_volume = log_segmentation(input=Moving_Image,
                                       sigma=log_sigma,
                                       threshold=log_threshold)
+
+        if len(set(seg_volume.data.ravel())) <= 1:
+            return 'No segmentation'
+
         if Mask_ROI is not None:
             seg_volume_mask = mask_roi(input=seg_volume,
                                        crop_mask=Mask_ROI, z_min=z_min, z_max=z_max)
@@ -349,12 +354,21 @@ def make_run_registration(
     def _run_fixed_thread():
         seg_volume = empanada_segmentation(input=Fixed_Image.data,
                                            axis_prediction=em_seg_axis)
+
+        if len(set(seg_volume.ravel())) <= 1:
+            return 'No segmentation'
+
         point_cloud = point_cloud_sampling(input=Labels(seg_volume),
                                            sampling_frequency=point_cloud_sampling_frequency / 100,
                                            sigma=point_cloud_sigma)
         return point_cloud
 
     def _add_data(return_value):
+        if return_value == 'No segmentation':
+            print('WARNING: No mitochondria in Fixed Image or Moving Image')
+            show_error('WARNING: No mitochondria in Fixed Image or Moving Image')
+            return
+
         if isinstance(return_value, list):
             layers = []
             for image_data in return_value:
@@ -389,6 +403,9 @@ def make_run_registration(
 
     @thread_worker(connect={"returned": _add_data})
     def _run_registration_thread(moving_points, fixed_points):
+        if moving_points == 'No segmentation' or fixed_points == 'No segmentation':
+            return 'No segmentation'
+
         moving, fixed, transformed, kwargs = point_cloud_registration(moving_points.data, fixed_points.data,
                                                                       algorithm=registration_algorithm,
                                                                       voxel_size=registration_voxel_size,
