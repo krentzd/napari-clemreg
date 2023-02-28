@@ -428,9 +428,18 @@ def make_run_registration(
         warnings.warn("WARNING: You have not inputted both a fixed and moving image")
         return
 
-    if len(Moving_Image.data.shape) == 2 or len(Fixed_Image.data.shape) == 2:
-        warnings.warn(
-            "WARNING: Your input must be 3D, you're current input has a shape of {}".format(Moving_Image.data.shape))
+    if len(Moving_Image.data.shape) != 3:
+        warnings.warn("WARNING: Your moving_image must be 3D, you're current input has a shape of {}".format(Moving_Image.data.shape))
+        return
+    elif len(Moving_Image.data.shape) == 3 and Moving_Image.data.shape[2] == 3:
+        warnings.warn("WARNING: YOUR moving_image is RGB, your input must be grayscale and 3D")
+        return
+
+    if len(Fixed_Image.data.shape) != 3:
+        warnings.warn("WARNING: Your Fixed_Image must be 3D, you're current input has a shape of {}".format(Moving_Image.data.shape))
+        return
+    elif len(Fixed_Image.data.shape) == 3 and Fixed_Image.data.shape[2] == 3:
+        warnings.warn("WARNING: YOUR fixed_image is RGB, your input must be grayscale and 3D")
         return
 
     if Mask_ROI is not None:
