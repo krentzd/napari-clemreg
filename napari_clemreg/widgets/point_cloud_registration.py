@@ -1,16 +1,13 @@
 #!/usr/bin/env python3
 # coding: utf-8
-from probreg import cpd, bcpd, callbacks
+import time
+import napari
 import numpy as np
 import open3d as o3
-import transforms3d as t3d
-import time
-from napari.types import PointsData, ImageData
 from magicgui import magic_factory, widgets
-import napari
+from napari.types import PointsData, ImageData
 from typing_extensions import Annotated
-from math import cos, sin
-import math
+
 
 # TODO: Account for piecewise maxi iterations
 class RegistrationProgressCallback(object):
@@ -22,14 +19,31 @@ class RegistrationProgressCallback(object):
         self.counter += 1
         print('{}/{}'.format(self.counter, self.maxiter))
 
+
 def _write_transform_to_file(T):
-    """
-    Write transform T to file for use in warping
+    """ Write transform T to file for use in warping
+
+    Parameters
+    ----------
+    T : Transform
+        Transform to write to file for warping
     """
     pass
 
+
 def _make_matrix_from_rigid_params(rot, trans, s):
-    "Create homogenous transformation matrix from rigid parameters"
+    """ Create homogenous transformation matrix from rigid parameters
+
+    Parameters
+    ----------
+    rot
+    trans
+    s
+
+    Returns
+    -------
+
+    """
 
     T_a = np.array([[1., 0., 0., trans[0]],
                     [0., 1., 0., trans[1]],
@@ -46,10 +60,24 @@ def _make_matrix_from_rigid_params(rot, trans, s):
 
     return T_a @ T_rot @ T_s
 
+
 def prepare_source_and_target_nonrigid_3d(source_array,
                                           target_array,
                                           voxel_size=5,
                                           every_k_points=2):
+    """
+
+    Parameters
+    ----------
+    source_array
+    target_array
+    voxel_size
+    every_k_points
+
+    Returns
+    -------
+
+    """
     source = o3.geometry.PointCloud()
     target = o3.geometry.PointCloud()
     source.points = o3.utility.Vector3dVector(source_array)
@@ -60,8 +88,15 @@ def prepare_source_and_target_nonrigid_3d(source_array,
     target = target.voxel_down_sample(voxel_size=voxel_size)
     return source, target
 
+
 def on_init(widget):
-    """Initializes widget layout amd updates widget layout according to user input."""
+    """ Initializes widget layout amd updates widget layout according to user input.
+
+    Parameters
+    ----------
+    widget : magicgui.widgets.Widget
+        The parent widget of the plugin.
+    """
 
     for x in ['moving', 'fixed', 'algorithm', 'visualise', 'max_iterations', 'voxel_size', 'every_k_points']:
         setattr(getattr(widget, x), 'visible', True)
@@ -69,7 +104,7 @@ def on_init(widget):
         setattr(getattr(widget, x), 'visible', False)
 
     def toggle_registration_widget(registration_type: str):
-    # def toggle_registration_widget(event):
+        # def toggle_registration_widget(event):
         if registration_type == "BCPD":
             for x in ['voxel_size', 'every_k_points']:
                 setattr(getattr(widget, x), 'visible', True)
@@ -88,22 +123,49 @@ def on_init(widget):
 
     widget.algorithm.changed.connect(toggle_registration_widget)
 
+
 @magic_factory(widget_init=on_init, layout='vertical', call_button="Register")
 def make_point_cloud_registration(
-    viewer: "napari.viewer.Viewer",
-    algorithm: Annotated[str, {"choices": ["BCPD", "Rigid CPD", "Affine CPD"]}], # TODO: Make piecewise option boolean , "RANSAC", "Piecewise BCPD"
-    moving: PointsData,
-    fixed: PointsData,
-    fixed_image: ImageData,
-    sub_division_factor_x: Annotated[int, {"min": 1, "max": 10, "step": 1}] = 1,
-    sub_division_factor_y: Annotated[int, {"min": 1, "max": 10, "step": 1}] = 1,
-    sub_division_factor_z: Annotated[int, {"min": 1, "max": 10, "step": 1}] = 1,
-    voxel_size: Annotated[int, {"min": 1, "max": 1000, "step": 1}] = 5,
-    every_k_points: Annotated[int, {"min": 1, "max": 1000, "step": 1}] = 1,
-    max_iterations: Annotated[int, {"min": 1, "max": 1000, "step": 1}] = 50,
-    visualise: bool=False
-    ):
+        viewer: "napari.viewer.Viewer",
+        algorithm: Annotated[str, {"choices": ["BCPD", "Rigid CPD", "Affine CPD"]}],
+        # TODO: Make piecewise option boolean , "RANSAC", "Piecewise BCPD"
+        moving: PointsData,
+        fixed: PointsData,
+        fixed_image: ImageData,
+        sub_division_factor_x: Annotated[int, {"min": 1, "max": 10, "step": 1}] = 1,
+        sub_division_factor_y: Annotated[int, {"min": 1, "max": 10, "step": 1}] = 1,
+        sub_division_factor_z: Annotated[int, {"min": 1, "max": 10, "step": 1}] = 1,
+        voxel_size: Annotated[int, {"min": 1, "max": 1000, "step": 1}] = 5,
+        every_k_points: Annotated[int, {"min": 1, "max": 1000, "step": 1}] = 1,
+        max_iterations: Annotated[int, {"min": 1, "max": 1000, "step": 1}] = 50,
+        visualise: bool = False
+):
+    """
+    Make point cloud registration.
 
+    Parameters
+    ----------
+    viewer : napari.viewer.Viewer
+        Napari viewer allows addition of layer once thread_worker finished
+        executing
+    algorithm : str
+        Which point cloud registration algorithm to run
+    moving : Napari.layers.Points
+
+    fixed : napari.types.PointsData
+    fixed_image : napari.types.ImageData
+    sub_division_factor_x
+    sub_division_factor_y
+    sub_division_factor_z
+    voxel_size
+    every_k_points
+    max_iterations
+    visualise
+
+    Returns
+    -------
+
+    """
     from napari.qt import thread_worker
 
     pbar = widgets.ProgressBar()
@@ -131,11 +193,14 @@ def make_point_cloud_registration(
     @thread_worker(connect={"returned": _add_data})
     def _point_cloud_registration(moving: PointsData,
                                   fixed: PointsData,
-                                  algorithm: str='BCPD',
-                                  voxel_size: int=5,
-                                  every_k_points: int=1,
-                                  max_iterations: int=50,
-                                  visualise: bool=False):
+                                  algorithm: str = 'BCPD',
+                                  voxel_size: int = 5,
+                                  every_k_points: int = 1,
+                                  max_iterations: int = 50,
+                                  visualise: bool = False):
+        import transforms3d as t3d
+        from probreg import cpd, bcpd, callbacks
+
         start = time.time()
         source, target = prepare_source_and_target_nonrigid_3d(moving,
                                                                fixed,
@@ -219,23 +284,21 @@ def make_point_cloud_registration(
         #                   face_color='blue',
         #                   size=5)
 
-            return (np.vstack(source_out),
-                    np.asarray(target.points),
-                    np.vstack(transformed_out),
-                    kwargs)
+        # return (np.vstack(source_out),
+        #         np.asarray(target.points),
+        #         np.vstack(transformed_out),
+        #         kwargs)
 
         elapsed = time.time() - start
         print("time: ", elapsed)
 
         if algorithm == 'BCPD':
-            print("result: ", np.rad2deg(t3d.euler.mat2euler(tf_param.rigid_trans.rot)),
                   tf_param.rigid_trans.scale, tf_param.rigid_trans.t, tf_param.v)
             kwargs = dict(name='transformed_points',
                           face_color='blue',
                           size=5)
 
         elif algorithm == 'Rigid CPD':
-            print("result: ", tf_param.rot,
                   tf_param.scale, tf_param.t)
 
             mat = _make_matrix_from_rigid_params(tf_param.rot,
@@ -248,7 +311,6 @@ def make_point_cloud_registration(
                           size=5)
 
         elif algorithm == 'Affine CPD':
-            print("result: ", tf_param.b, tf_param.t)
             mat, off = tf_param.b, tf_param.t
 
             off = np.expand_dims(off, axis=0).T
@@ -257,7 +319,7 @@ def make_point_cloud_registration(
             kwargs = dict(name='transformed_points',
                           face_color='blue',
                           affine=mat,
-                          size=0.5) # Point sizes don't display correctly
+                          size=0.5)  # Point sizes don't display correctly
 
         return (np.asarray(source.points),
                 np.asarray(target.points),

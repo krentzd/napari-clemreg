@@ -1,18 +1,19 @@
 #!/usr/bin/env python3
 # coding: utf-8
-from scipy.ndimage import gaussian_filter1d
-import numpy as np
-from skimage import exposure
-from napari.qt.threading import thread_worker
-from magicgui import magic_factory, widgets
 import napari
-from napari.types import LabelsData
+from magicgui import magic_factory, widgets
 from napari.layers import Image
-from skimage import feature
 from typing_extensions import Annotated
 
+
 def on_init(widget):
-    """Initializes widget layout and updates widget layout according to user input."""
+    """ Initializes widget layout and updates widget layout according to user input.
+
+    Parameters
+    ----------
+    widget : magicgui.widgets.Widget
+        The parent widget of the plugin.
+    """
 
     widget.channel.visible = False
 
@@ -25,15 +26,38 @@ def on_init(widget):
 
     widget.input.changed.connect(change_channels)
 
+
 @magic_factory(widget_init=on_init, layout='vertical', call_button="Segment")
 def make_log_segmentation(
-    viewer: "napari.viewer.Viewer",
-    input: Image,
-    sigma: Annotated[float, {"min": 0.5, "max": 20, "step": 0.5}]=3,
-    threshold: Annotated[float, {"min": 0, "max": 20, "step": 0.1}]=1.2,
-    channel: int=0):
+        viewer: "napari.viewer.Viewer",
+        input: Image,
+        sigma: Annotated[float, {"min": 0.5, "max": 20, "step": 0.5}] = 3,
+        threshold: Annotated[float, {"min": 0, "max": 20, "step": 0.1}] = 1.2,
+        channel: int = 0):
+    """
 
+    Parameters
+    ----------
+    viewer : napari.viewer.Viewer
+        Napari viewer allows addition of layer once thread_worker finished
+        executing
+    input : napari.layers.Image
+        Image to perform log segmentation on.
+    sigma : int
+
+    threshold : int
+
+    channel : int
+
+
+    Returns
+    -------
+
+    """
+    import numpy as np
     from napari.qt import thread_worker
+    from skimage import exposure
+    from scipy.ndimage import gaussian_filter1d
 
     pbar = widgets.ProgressBar()
     pbar.range = (0, 0)  # unknown duration
@@ -83,9 +107,9 @@ def make_log_segmentation(
 
     @thread_worker(connect={"returned": _add_data})
     def _log_segmentation(input: np.ndarray,
-                         sigma: float=3,
-                         threshold: float=1.2,
-                         channel: int=0):
+                          sigma: float = 3,
+                          threshold: float = 1.2,
+                          channel: int = 0):
 
         if len(input.data.shape) == 4:
             input_arr = input.data[channel]
@@ -99,7 +123,7 @@ def make_log_segmentation(
         kwargs = dict(
             name=input.name + '_seg'
         )
-        return (seg_volume, kwargs)
+        return seg_volume, kwargs
 
     # start the thread
     _log_segmentation(input=input,
