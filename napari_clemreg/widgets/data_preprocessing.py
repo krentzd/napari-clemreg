@@ -1,15 +1,21 @@
 #!/usr/bin/env python3
 # coding: utf-8
-import numpy as np
 from magicgui import magic_factory, widgets
-from scipy import ndimage
 from napari.layers import Image
-from napari.qt import thread_worker
-import time
 from typing_extensions import Annotated
 
+
 def get_pixelsize(metadata: dict):
-    """ Parse pixelsizes from image metadata"""
+    """ Parse pixel sizes from image metadata
+
+    Parameters
+    ----------
+    metadata : dict
+        Metadata of user inputted image
+    Returns
+    -------
+        Pixel size
+    """
 
     try:
         x_pxlsz = 1 / metadata['XResolution']
@@ -23,7 +29,7 @@ def get_pixelsize(metadata: dict):
         # Parse ImageJ Metadata to get z pixelsize
         ij_metadata = metadata['ImageDescription'].split('\n')
         ij_metadata = [i for i in ij_metadata if i not in '=']
-        ij_dict = dict((k,v) for k,v in (i.rsplit('=') for i in ij_metadata))
+        ij_dict = dict((k, v) for k, v in (i.rsplit('=') for i in ij_metadata))
 
         z_pxlsz = ij_dict['spacing']
         unit = ij_dict['unit']
@@ -33,12 +39,19 @@ def get_pixelsize(metadata: dict):
         print('ImageJ metdata not recorded in metadata')
 
     return (eval(x_pxlsz) if isinstance(x_pxlsz, str) else x_pxlsz,
-           eval(y_pxlsz) if isinstance(y_pxlsz, str) else y_pxlsz,
-           eval(z_pxlsz) if isinstance(z_pxlsz, str) else z_pxlsz,
-           unit)
+            eval(y_pxlsz) if isinstance(y_pxlsz, str) else y_pxlsz,
+            eval(z_pxlsz) if isinstance(z_pxlsz, str) else z_pxlsz,
+            unit)
+
 
 def on_init(widget):
-    """Initializes widget layout and updates widget layout according to user input."""
+    """ Initializes widget layout and updates widget layout according to user input.
+
+    Parameters
+    ----------
+    widget : magicgui.widgets.Widget
+        The napari parent widget of the plugin.
+    """
 
     def change_moving_pixelsize(input_image: Image):
         x_pxlsz, y_pxlsz, z_pxlsz, unit = get_pixelsize(input_image.metadata)
@@ -99,20 +112,24 @@ def on_init(widget):
     widget.fixed.changed.connect(change_fixed_pixelsize)
     widget.unit.changed.connect(adjust_values_to_unit)
 
+
 @magic_factory(widget_init=on_init, layout='vertical', call_button="Preprocess")
 def make_data_preprocessing(
-    viewer: "napari.viewer.Viewer",
-    moving: Image,
-    fixed: Image,
-    unit: Annotated[str, {"choices": ["nm", "micron"]}],
-    moving_xy_pixelsize: float,
-    moving_z_pixelsize: float,
-    fixed_xy_pixelsize: float,
-    fixed_z_pixelsize: float):
+        viewer: "napari.viewer.Viewer",
+        moving: Image,
+        fixed: Image,
+        unit: Annotated[str, {"choices": ["nm", "micron"]}],
+        moving_xy_pixelsize: float,
+        moving_z_pixelsize: float,
+        fixed_xy_pixelsize: float,
+        fixed_z_pixelsize: float):
     """Generates widget for adjusting resolution of input and reference images
 
     Parameters
     ----------
+    unit
+    fixed
+    moving
     viewer : napari.viewer.Viewer
         Napari viewer allows addition of layer once thread_worker finished
         executing
@@ -127,12 +144,28 @@ def make_data_preprocessing(
     reference_z_pixelsize : float
         Pixelsize along z-axis of reference image volume
     """
+    import time
+    import numpy as np
+    from napari.qt import thread_worker
+    from scipy import ndimage
 
     pbar = widgets.ProgressBar()
     pbar.range = (0, 0)  # unknown duration
     make_data_preprocessing.insert(0, pbar)  # add progress bar to the top of widget
 
     def _add_data(return_value, self=make_data_preprocessing):
+        """
+        Add results to the napari image viewer
+
+        Parameters
+        ----------
+        return_value: Value to be added
+        self
+
+        Returns
+        -------
+            Image to the napari viewer.
+        """
         print('Adding new layer to viewer...')
         data, kwargs = return_value
         viewer.add_image(data, **kwargs)
@@ -195,7 +228,7 @@ def make_data_preprocessing(
         kwargs = dict(
             name=input.name + '_preprocessed'
         )
-        return (output, kwargs)
+        return output, kwargs
 
     _preprocess(input=moving,
                 input_xy_pixelsize=moving_xy_pixelsize,

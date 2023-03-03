@@ -1,14 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-from napari_plugin_engine import napari_hook_implementation
 import numpy as np
 import tifffile
-import os
 
-@napari_hook_implementation
 def napari_get_reader(path):
     if isinstance(path, str) and path.endswith((".tif", ".tiff")):
-      return tiff_reader
+        return tiff_reader
 
 # Adapted from: https://www.thepythoncode.com/article/extracting-image-metadata-in-python
 def read_metadata(path):
@@ -31,12 +28,13 @@ def read_metadata(path):
                 print(f"Could not decode {data}")
     return metadata
 
+
 def get_image_dims(metadata: dict):
     """ Parse image dimesnions from image metadata"""
 
     try:
-        width = metadata['ImageWidth'] #X
-        length = metadata['ImageLength'] #Y
+        width = metadata['ImageWidth']  # X
+        length = metadata['ImageLength']  # Y
     except KeyError:
         width = None
         length = None
@@ -46,7 +44,7 @@ def get_image_dims(metadata: dict):
         # Parse ImageJ Metadata to get z pixelsize
         ij_metadata = metadata['ImageDescription'].split('\n')
         ij_metadata = [i for i in ij_metadata if i not in '=']
-        ij_dict = dict((k,v) for k,v in (i.rsplit('=') for i in ij_metadata))
+        ij_dict = dict((k, v) for k, v in (i.rsplit('=') for i in ij_metadata))
 
         slices = eval(ij_dict['slices'])
         channels = eval(ij_dict['channels'])
@@ -57,6 +55,7 @@ def get_image_dims(metadata: dict):
 
     return (channels, slices, width, length)
 
+
 def to_czxy(img, metadata):
     m_dims = get_image_dims(metadata)
     if not img.shape[1:] == m_dims:
@@ -65,6 +64,7 @@ def to_czxy(img, metadata):
         return img
     elif img.shape[1:] == m_dims:
         return img
+
 
 def tiff_reader(path: str):
     tiff_image = tifffile.imread(path)

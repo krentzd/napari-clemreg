@@ -1,48 +1,61 @@
 #!/usr/bin/env python3
 # coding: utf-8
-from magicgui import magic_factory
+import time
+import numpy as np
 from napari.layers import Image, Shapes
+from skimage import draw
 from typing_extensions import Annotated
 
 
-def on_init(widget):
-    """Initializes widget layout and updates widget layout according to user input."""
+def mask_area(x, y):
+    """ Calculates the area of the mask
 
-    def change_z_max(input_image: Image):
-        if len(input_image.data.shape) == 3:
-            widget.z_max.max = input_image.data.shape[0]
-            widget.z_max.value = input_image.data.shape[0]
-        elif len(input_image.data.shape) == 4:
-            widget.z_max.max = input_image.data.shape[1]
-            widget.z_max.value = input_image.data.shape[1]
+    Parameters
+    ----------
+    x : int
+        The x dimension of the mask
+    y : int
+        The y dimension of the mask
 
-    def change_z_min(z_max_val: int):
-        widget.z_min.max = z_max_val
-
-    def change_z_max_from_z_min(z_min_val: int):
-        widget.z_max.min = z_min_val
-
-    widget.z_max.changed.connect(change_z_min)
-    widget.input.changed.connect(change_z_max)
-    widget.z_min.changed.connect(change_z_max_from_z_min)
+    Returns
+    -------
+    area : float
+        The area of the mask based on its x and y dimensions
+    """
+    return 0.5 * np.abs(np.dot(x, np.roll(y, 1)) - np.dot(y, np.roll(x, 1)))
 
 
-@magic_factory(widget_init=on_init, layout='vertical', call_button="Mask")
 def mask_roi(input: Image,
              crop_mask: Shapes,
              z_min: Annotated[int, {"min": 0, "max": 10, "step": 1}] = 0,
              z_max: Annotated[int, {"min": 10, "max": 100,
                                     "step": 1}] = 10) -> Image:  # Annotated[slice, {"start": 0, "stop": 10, "step": 1}]
+    """ Take crop_mask and mask input
+
+    Parameters
+    ----------
+    input : napari.layers.Image
+        Image to apply crop to
+    crop_mask : napari.layers.Shapes
+        Mask to be used to crop the image
+    z_min : int
+        Minimum z slice to apply masking to
+    z_max : int
+        Maximum z slice to apply masking to
+
+    Returns
+    -------
+    masked_input : napari.layers.Image
+        Masked image of the original inputted image
     """
-    Take crop_mask and mask input
-    """
-    import numpy as np
-    from skimage import draw
 
     # Need to add support for multi-channel images
     # Squeeze array
     # If 4 dimensions, assume dimension with smallest size is colour channel
     # Reshape stack to be [channel, z, x, y]
+
+    print(f'Masking {input.name} with {crop_mask.name} between {z_min} and {z_max}...')
+    start_time = time.time()
 
     if crop_mask.data[0].shape[-1] > 3:
         crop_mask.data = [mask[:, -3:] for mask in crop_mask.data]
@@ -56,8 +69,11 @@ def mask_roi(input: Image,
     bot_z = z_max
 
     input_arr = input.data  # np.squeeze(input.data)
+    print(input_arr.shape)
 
     temp_idx = 2 if len(input_arr.shape) == 4 else 1
+
+    print(input_arr.shape[temp_idx:])
 
     binary_mask = draw.polygon2mask(input_arr.shape[temp_idx:], crop_mask.data[top_idx][:, 1:])
     top_vol = [np.zeros(input_arr.shape[temp_idx:])] * top_z
@@ -76,7 +92,10 @@ def mask_roi(input: Image,
     masked_input = input_arr.data * binary_mask_full_vol
 
     if not masked_input.shape == input.data.shape:
+        print('Reshaped array')
         masked_input.reshape(input.data.shape)
+
+    print(f'Finished masking after {time.time() - start_time}s!')
 
     return Image(masked_input,
                  name=input.name + '_masked')

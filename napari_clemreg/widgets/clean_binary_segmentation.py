@@ -1,20 +1,16 @@
 #!/usr/bin/env python3
 # coding: utf-8
-import numpy as np
-# from napari.qt.threading import thread_worker
-from magicgui import magic_factory, widgets
 import napari
+from magicgui import magic_factory, widgets
 from napari.layers import Labels
 from typing_extensions import Annotated
-import cc3d
-from napari.qt import thread_worker
-import time
+
 
 @magic_factory
 def make_clean_binary_segmentation(
-    viewer: "napari.viewer.Viewer",
-    input: Labels,
-    percentile: Annotated[int, {"min": 0, "max": 100, "step": 1}]=95):
+        viewer: "napari.viewer.Viewer",
+        input: Labels,
+        percentile: Annotated[int, {"min": 0, "max": 100, "step": 1}] = 95):
     """Generates widget for binary segmentation cleaning function
 
     Parameters
@@ -28,6 +24,10 @@ def make_clean_binary_segmentation(
         Specifies threshold for filtering individual objects based on size
         determined as the number of True pixels
     """
+    import cc3d
+    import numpy as np
+    import time
+    from napari.qt import thread_worker
 
     pbar = widgets.ProgressBar()
     # Unknown duration
@@ -44,7 +44,7 @@ def make_clean_binary_segmentation(
 
     @thread_worker(connect={"returned": _add_data})
     def _clean_binary_segmentation(input: Labels,
-                                   percentile: int=95):
+                                   percentile: int = 95):
         """Filters binary segmentation based on size
 
         Parameters
