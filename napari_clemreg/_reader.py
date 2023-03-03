@@ -3,11 +3,9 @@
 import numpy as np
 import tifffile
 
-
 def napari_get_reader(path):
     if isinstance(path, str) and path.endswith((".tif", ".tiff")):
         return tiff_reader
-
 
 # Adapted from: https://www.thepythoncode.com/article/extracting-image-metadata-in-python
 def read_metadata(path):

@@ -418,7 +418,6 @@ def warp_image_volume(
             images.add(moving_image)
             # Include actual image in set --> only one layer added to viewer
             for image in images:
-                print(image)
                 img_wrp = _warp_image_volume_affine(image=image.data,
                                                     matrix=affine_matrix,
                                                     output_shape=fixed_image.data.shape,
