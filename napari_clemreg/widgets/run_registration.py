@@ -7,6 +7,7 @@ from magicgui import magic_factory
 from napari.layers import Image, Shapes, Labels, Points
 from napari.utils.notifications import show_error
 
+
 # Use as worker.join workaround --> Launch registration thread_worker from here
 class RegistrationThreadJoiner:
     def __init__(self, worker_function):
@@ -335,7 +336,6 @@ def make_run_registration(
         # Inplace operation, metadata extraction only works if TIFF file
         z_zoom = make_isotropic(input_image=Moving_Image)
 
-
         seg_volume = log_segmentation(input=Moving_Image,
                                       sigma=log_sigma,
                                       threshold=log_threshold)
@@ -351,6 +351,8 @@ def make_run_registration(
         else:
             seg_volume_mask = seg_volume
 
+        yield seg_volume_mask, 'lm'
+
         point_cloud = point_cloud_sampling(input=seg_volume_mask,
                                            sampling_frequency=point_cloud_sampling_frequency / 100,
                                            sigma=point_cloud_sigma)
@@ -364,6 +366,8 @@ def make_run_registration(
         if len(set(seg_volume.ravel())) <= 1:
             return 'No segmentation'
 
+        yield seg_volume, 'em'
+
         point_cloud = point_cloud_sampling(input=Labels(seg_volume),
                                            sampling_frequency=point_cloud_sampling_frequency / 100,
                                            sigma=point_cloud_sigma)
@@ -371,7 +375,6 @@ def make_run_registration(
 
     def _add_data(return_value):
         if return_value == 'No segmentation':
-            print('WARNING: No mitochondria in Fixed Image or Moving Image')
             show_error('WARNING: No mitochondria in Fixed Image or Moving Image')
             return
 
@@ -385,6 +388,16 @@ def make_run_registration(
         else:
             data, kwargs = return_value
             viewer.add_image(data, **kwargs)
+
+    def _yield_data(yield_value):
+
+        image = yield_value[0]
+        image_type = yield_value[1]
+
+        if image_type == 'lm':
+            viewer.add_labels(image.data, name=image_type)
+        else:
+            viewer.add_labels(image, name=image_type)
 
     def _create_json_file():
         dictionary = {
@@ -435,14 +448,16 @@ def make_run_registration(
         return
 
     if len(Moving_Image.data.shape) != 3:
-        warnings.warn("WARNING: Your moving_image must be 3D, you're current input has a shape of {}".format(Moving_Image.data.shape))
+        warnings.warn("WARNING: Your moving_image must be 3D, you're current input has a shape of {}".format(
+            Moving_Image.data.shape))
         return
     elif len(Moving_Image.data.shape) == 3 and Moving_Image.data.shape[2] == 3:
         warnings.warn("WARNING: YOUR moving_image is RGB, your input must be grayscale and 3D")
         return
 
     if len(Fixed_Image.data.shape) != 3:
-        warnings.warn("WARNING: Your Fixed_Image must be 3D, you're current input has a shape of {}".format(Moving_Image.data.shape))
+        warnings.warn("WARNING: Your Fixed_Image must be 3D, you're current input has a shape of {}".format(
+            Moving_Image.data.shape))
         return
     elif len(Fixed_Image.data.shape) == 3 and Fixed_Image.data.shape[2] == 3:
         warnings.warn("WARNING: YOUR fixed_image is RGB, your input must be grayscale and 3D")
@@ -477,9 +492,11 @@ def make_run_registration(
     worker_moving = _run_moving_thread()
     worker_moving.returned.connect(_class_setter_moving)
     worker_moving.finished.connect(_finished_moving_emitter)
+    worker_moving.yielded.connect(_yield_data)
     worker_moving.start()
 
     worker_fixed = _run_fixed_thread()
     worker_fixed.returned.connect(_class_setter_fixed)
     worker_fixed.finished.connect(_finished_fixed_emitter)
+    worker_fixed.yielded.connect(_yield_data)
     worker_fixed.start()
