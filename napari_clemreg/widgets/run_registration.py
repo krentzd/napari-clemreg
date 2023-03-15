@@ -62,7 +62,8 @@ def on_init(widget):
                          'warping_interpolation_order',
                          'warping_approximate_grid',
                          'warping_sub_division_factor',
-                         'save_json'
+                         'save_json',
+                         'visualise_intermediate_results'
                          ]
     json_settings = ['load_json_file']
 
@@ -220,7 +221,11 @@ def on_init(widget):
                load_json_file={'label': 'Select Parameter File',
                                'widget_type': 'FileEdit',
                                'mode': 'r',
-                               'filter': '*.json'}
+                               'filter': '*.json'},
+               visualise_intermediate_results={'label': 'Visualise Intermediate Results',
+                                               'widget_type': 'CheckBox',
+                                               'value': True
+                                               }
                )
 def make_run_registration(
         viewer: 'napari.viewer.Viewer',
@@ -256,6 +261,8 @@ def make_run_registration(
         warping_sub_division_factor,
 
         save_json,
+        visualise_intermediate_results,
+
         load_json_file) -> Image:
     """Run CLEM-Reg end-to-end
 
@@ -351,7 +358,8 @@ def make_run_registration(
         else:
             seg_volume_mask = seg_volume
 
-        yield seg_volume_mask, 'lm'
+        if visualise_intermediate_results:
+            yield seg_volume_mask, 'lm'
 
         point_cloud = point_cloud_sampling(input=seg_volume_mask,
                                            sampling_frequency=point_cloud_sampling_frequency / 100,
@@ -366,7 +374,8 @@ def make_run_registration(
         if len(set(seg_volume.ravel())) <= 1:
             return 'No segmentation'
 
-        yield seg_volume, 'em'
+        if visualise_intermediate_results:
+            yield seg_volume, 'em'
 
         point_cloud = point_cloud_sampling(input=Labels(seg_volume),
                                            sampling_frequency=point_cloud_sampling_frequency / 100,
@@ -389,7 +398,7 @@ def make_run_registration(
             data, kwargs = return_value
             viewer.add_image(data, **kwargs)
 
-    def _yield_data(yield_value):
+    def _yield_segmentation(yield_value):
 
         image = yield_value[0]
         image_type = yield_value[1]
@@ -398,6 +407,17 @@ def make_run_registration(
             viewer.add_labels(image.data, name=image_type)
         else:
             viewer.add_labels(image, name=image_type)
+
+    def _yield_point_clouds(yield_value):
+        mp = yield_value[0]
+        fp = yield_value[1]
+
+        viewer.add_points(mp.data,
+                          name='moving_points',
+                          face_color='red')
+        viewer.add_points(fp.data,
+                          name='fixed_points',
+                          face_color='blue')
 
     def _create_json_file():
         dictionary = {
@@ -420,10 +440,13 @@ def make_run_registration(
         with open("sample.json", "w") as outfile:
             outfile.write(json_object)
 
-    @thread_worker(connect={"returned": _add_data})
+    @thread_worker(connect={"returned": _add_data, "yielded": _yield_point_clouds})
     def _run_registration_thread(moving_points, fixed_points):
         if moving_points == 'No segmentation' or fixed_points == 'No segmentation':
             return 'No segmentation'
+
+        if visualise_intermediate_results:
+            yield moving_points, fixed_points
 
         moving, fixed, transformed, kwargs = point_cloud_registration(moving_points.data, fixed_points.data,
                                                                       algorithm=registration_algorithm,
@@ -492,11 +515,11 @@ def make_run_registration(
     worker_moving = _run_moving_thread()
     worker_moving.returned.connect(_class_setter_moving)
     worker_moving.finished.connect(_finished_moving_emitter)
-    worker_moving.yielded.connect(_yield_data)
+    worker_moving.yielded.connect(_yield_segmentation)
     worker_moving.start()
 
     worker_fixed = _run_fixed_thread()
     worker_fixed.returned.connect(_class_setter_fixed)
     worker_fixed.finished.connect(_finished_fixed_emitter)
-    worker_fixed.yielded.connect(_yield_data)
+    worker_fixed.yielded.connect(_yield_segmentation)
     worker_fixed.start()
