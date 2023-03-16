@@ -5,33 +5,6 @@ contributions:
   - id: napari-clemreg.make_run_registration
     title: Create Run registration
     python_name: napari_clemreg.widgets.run_registration:make_run_registration
-  - id: napari-clemreg.mask_roi
-    title: Create Mask ROI
-    python_name: napari_clemreg.widgets.utility:mask_roi
-  - id: napari-clemreg.make_data_preprocessing
-    title: Create Preprocess data
-    python_name: napari_clemreg.widgets.data_preprocessing:make_data_preprocessing
-  - id: napari-clemreg.make_log_segmentation
-    title: Create Segment FM data
-    python_name: napari_clemreg.widgets.log_segmentation:make_log_segmentation
-  - id: napari-clemreg.train_model
-    title: Create Train EM segmentation model
-    python_name: napari_clemreg.widgets.em_segmentation:train_model
-  - id: napari-clemreg.predict_from_model
-    title: Create Segment EM data
-    python_name: napari_clemreg.widgets.em_segmentation:predict_from_model
-  - id: napari-clemreg.make_clean_binary_segmentation
-    title: Create Clean segmentations
-    python_name: napari_clemreg.widgets.clean_binary_segmentation:make_clean_binary_segmentation
-  - id: napari-clemreg.make_point_cloud_sampling
-    title: Create Sample point clouds
-    python_name: napari_clemreg.widgets.point_cloud_sampling:make_point_cloud_sampling
-  - id: napari-clemreg.make_point_cloud_registration
-    title: Create Register point clouds
-    python_name: napari_clemreg.widgets.point_cloud_registration:make_point_cloud_registration
-  - id: napari-clemreg.make_image_warping
-    title: Create Warp image volume
-    python_name: napari_clemreg.widgets.warp_image_volume:make_image_warping
   - id: napari-clemreg.get_reader
     title: Get Reader
     python_name: napari_clemreg._reader:napari_get_reader
@@ -44,21 +17,3 @@ contributions:
   widgets:
   - command: napari-clemreg.make_run_registration
     display_name: Run registration
-  - command: napari-clemreg.mask_roi
-    display_name: Mask ROI
-  - command: napari-clemreg.make_data_preprocessing
-    display_name: Preprocess data
-  - command: napari-clemreg.make_log_segmentation
-    display_name: Segment FM data
-  - command: napari-clemreg.train_model
-    display_name: Train EM segmentation model
-  - command: napari-clemreg.predict_from_model
-    display_name: Segment EM data
-  - command: napari-clemreg.make_clean_binary_segmentation
-    display_name: Clean segmentations
-  - command: napari-clemreg.make_point_cloud_sampling
-    display_name: Sample point clouds
-  - command: napari-clemreg.make_point_cloud_registration
-    display_name: Register point clouds
-  - command: napari-clemreg.make_image_warping
-    display_name: Warp image volume
