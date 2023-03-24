@@ -3,8 +3,20 @@ schema_version: 0.1.0
 contributions:
   commands:
   - id: napari-clemreg.make_run_registration
-    title: Create Run registration
+    title: Run registration
     python_name: napari_clemreg.widgets.run_registration:make_run_registration
+  - id: napari-clemreg.fixed_segmentation
+    title: Run Fixed Segmentation
+    python_name: napari_clemreg.widgets.fixed_segmentation:fixed_segmentation_widget
+  - id: napari-clemreg.moving_segmentation
+    title: Run Moving Segmentation
+    python_name: napari_clemreg.widgets.moving_segmentation:moving_segmentation_widget
+  - id: napari-clemreg.point_cloud_sampling
+    title: Point Cloud Sampling
+    python_name: napari_clemreg.widgets.point_cloud_sampling:point_cloud_sampling_widget
+  - id: napari-clemreg.registration_warping
+    title: Point Cloud Registration & Warping
+    python_name: napari_clemreg.widgets.registration_warping:registration_warping_widget
   - id: napari-clemreg.get_reader
     title: Get Reader
     python_name: napari_clemreg._reader:napari_get_reader
@@ -17,3 +29,12 @@ contributions:
   widgets:
   - command: napari-clemreg.make_run_registration
     display_name: Run registration
+  - command: napari-clemreg.fixed_segmentation
+    display_name: 1) Fixed Segmentation
+  - command: napari-clemreg.moving_segmentation
+    display_name: 2) Moving Segmentation
+  - command: napari-clemreg.point_cloud_sampling
+    display_name: 3) Point Cloud Sampling
+  - command: napari-clemreg.registration_warping
+    display_name: 4) Point Cloud Registration & Warping
+
