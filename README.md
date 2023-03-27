@@ -44,6 +44,8 @@ which is the combination of four separate widgets, splitting each step of the CL
 
 ![Widget Options](https://github.com/krentzd/napari-clemreg/blob/main/docs/images/clemreg_widget_options.png)
 ### Full Run Registration
+![Run Registration](https://github.com/krentzd/napari-clemreg/blob/main/docs/images/full_run_registration_img.png)
+
 
 ### Split Run Registration
 
