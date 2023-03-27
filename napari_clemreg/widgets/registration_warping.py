@@ -63,6 +63,49 @@ def registration_warping_widget(viewer: 'napari.viewer.Viewer',
                                 warping_approximate_grid,
                                 warping_sub_division_factor
                                 ):
+    """
+    This widget registers the moving and fixed points and then uses
+    these registered points to warp the light microscopy moving image
+    in the process aligning the fixed and moving image.
+
+    Parameters
+    ----------
+    viewer : 'napari.viewer.Viewer'
+        napari Viewer
+    widget_header : str
+        Widget heading
+    Moving_Image : Image
+        The moving image to be warped
+    Fixed_Image : Image
+        The fixed image to reference the moving warping to.
+    Moving_Points : Points
+        The sampled moving points of the moving light microscopy image.
+    Fixed_points : Points
+        The sampled fixed points of the fixed electron microscopy image
+    registration_header : str
+        The registration heading
+    registration_algorithm : 'magicgui.widgets.ComboBox'
+        The algorithm to do the registration of the moving and fixed points.
+    registration_voxel_size : int
+        ?
+    registration_every_k_points : int
+        ?
+    registration_max_iterations : int
+        ?
+    warping_header : str
+        Warping headings
+    warping_interpolation_order : int
+        ?
+    warping_approximate_grid : int
+        ?
+    warping_sub_division_factor : int
+        ?
+
+    Returns
+    -------
+        napari Image layer containing the warping of the moving image to the
+        fixed image.
+    """
     from ..clemreg.point_cloud_registration import point_cloud_registration
     from ..clemreg.warp_image_volume import warp_image_volume
 

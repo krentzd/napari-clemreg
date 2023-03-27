@@ -56,9 +56,45 @@ def moving_segmentation_widget(viewer: 'napari.viewer.Viewer',
                                log_sigma,
                                log_threshold,
                                ):
+    """
+    This function performs segmentation of the mitochondria
+    of the inputted Light Microscopy Image. This is performed
+    using adaptive thresholding.
+
+    One can apply a mask to the LM image which restrict thresholding
+    to a user defined region.
+
+    One Can also define the layers in the Z stack to be segmented.
+
+    Parameters
+    ----------
+    viewer : 'Viewer'
+        napari viewer
+    widget_header : str
+        Heading of the widget
+    Moving_Image :
+        The LM image to be segmented
+    Mask_ROI :
+        Shapes Layer of the region to be segmented
+    z_min : int
+        Min Z layer to be segmented in z stack
+    z_max : int
+        Max Z layer to be segmented in z stack
+    log_sigma : float
+        Sigma value for 1D gaussian filter to be applied oto image before segmentation
+    log_threshold : int
+        Threshold value to apply to image
+
+
+    Returns
+    -------
+        Thresholding of the inputted light microscopy image using
+        adaptive thresholding.
+    """
     from ..clemreg.data_preprocessing import make_isotropic
     from ..clemreg.log_segmentation import log_segmentation
     from ..clemreg.mask_roi import mask_roi
+
     @thread_worker
     def _run_moving_thread():
         z_zoom = make_isotropic(input_image=Moving_Image)

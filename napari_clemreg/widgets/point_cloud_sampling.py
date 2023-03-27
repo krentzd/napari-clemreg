@@ -24,6 +24,30 @@ def point_cloud_sampling_widget(viewer: 'napari.viewer.Viewer',
                                 point_cloud_sampling_frequency,
                                 point_cloud_sigma,
                                 ):
+    """
+    This function point samples the segmentation of produced
+    by the Fixed and Moving segmentation widgets.
+
+    Parameters
+    ----------
+    viewer : 'napari.viewer.Viewer'
+        napari Viewer
+    widget_header : str
+        The widget header
+    Moving_Segmentation
+        The moving light microscopy image
+    Fixed_Segmentation
+        The fixed electron microscopy image
+    point_cloud_sampling_frequency : int
+        Frequency of cloud sampling
+    point_cloud_sigma : float
+        ?
+
+    Returns
+    -------
+        Two Points layers sampling the inputted moving
+        and fixed image
+    """
     from ..clemreg.point_cloud_sampling import point_cloud_sampling
 
     @thread_worker
