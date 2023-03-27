@@ -42,7 +42,7 @@ There are two means of running the CLEM-reg workflow, one is using the Run Regis
 also known as the Full Run Registration, alternatively you can use the Split Run Registration
 which is the combination of four separate widgets, splitting each step of the CLEM-reg workflow.
 
-[Widget Options](https://github.com/krentzd/napari-clemreg/blob/main/docs/images/clemreg_widget_options.png)
+![Widget Options](https://github.com/krentzd/napari-clemreg/blob/main/docs/images/clemreg_widget_options.png)
 ### Full Run Registration
 
 ### Split Run Registration
