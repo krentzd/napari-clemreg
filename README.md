@@ -37,6 +37,16 @@ When installing `napari-clemreg` on a Windows machine, the following error might
 error Microsoft Visual C++ 14.0 is required
 ```
 Ensure that [Visual Studios C++ 14.00](https://visualstudio.microsoft.com/thank-you-downloading-visual-studio/?sku=BuildTools&rel=16) is installed
+## Usage
+There are two means of running the CLEM-reg workflow, one is using the Run Registration
+also known as the Full Run Registration, alternatively you can use the Split Run Registration
+which is the combination of four separate widgets, splitting each step of the CLEM-reg workflow.
+
+[Widget Options](https://github.com/krentzd/napari-clemreg/blob/main/docs/images/clemreg_widget_options.png)
+### Full Run Registration
+
+### Split Run Registration
+
 
 ## Contributing
 
