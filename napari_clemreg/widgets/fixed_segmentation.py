@@ -16,12 +16,38 @@ from napari.qt.threading import thread_worker
 def fixed_segmentation_widget(viewer: 'napari.viewer.Viewer',
                               widget_header,
                               Fixed_Image: Image,
-                              em_seg_axis
+                              em_seg_axis: bool
                               ):
+    """
+    This widget takes an EM image as input and performs
+    segmentation of the mitochondria on it using the
+    Empanada MitoNet model.
+
+    Parameters
+    ----------
+    viewer : napari viewer
+    widget_header : Heading of the widget
+    Fixed_Image : The EM Image
+    em_seg_axis : Option to run segmentation across three axis
+
+    Returns
+    -------
+    napari Labels layer containing the segmentation of mitochondria
+    produced by the MitoNet model.
+
+    """
     from ..clemreg.empanada_segmentation import empanada_segmentation
 
     @thread_worker
     def _run_fixed_thread():
+        """
+        Thread worker function for the segmentation
+        of the fixed image.
+
+        Returns
+        -------
+        Segmentation of the fixed image as nd.array
+        """
         seg_volume = empanada_segmentation(input=Fixed_Image.data,
                                            axis_prediction=em_seg_axis)
 
@@ -31,6 +57,22 @@ def fixed_segmentation_widget(viewer: 'napari.viewer.Viewer',
         return seg_volume
 
     def _add_data(return_value):
+        """
+        Function that takes the return value of
+        a thread worker. If the return value is
+        a string this means MitoNet didn't manage
+        to produce any segmentation. Else this
+        will return segmentation as a labels layer.
+
+        Parameters
+        ----------
+        return_value : Return value of MitoNet
+
+        Returns
+        -------
+        Labels layer of the segmented mitochondria
+
+        """
         if isinstance(return_value, str):
             show_error('WARNING: No mitochondria in Fixed Image')
             return
