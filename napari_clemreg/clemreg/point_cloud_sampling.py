@@ -14,20 +14,25 @@ def point_cloud_sampling(input: Labels,
                          face_color: str = 'red',
                          point_size: int = 5):
     """
+    ?
 
     Parameters
     ----------
+    edge_color : str
+        ?
     input : napari.layers.Labels
+        ?
     sampling_frequency : float
         Frequency of cloud sampling
     sigma : float
+        ?
     face_color : str
+        ?
     point_size : int
-
-
+        ?
     Returns
     -------
-
+    #
     """
     print(f'Sampling point cloud from {input.name} with sigma={sigma} and sampling_frequency={sampling_frequency}...')
     start_time = time.time()

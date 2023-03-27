@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 # coding: utf-8
 from napari.layers import Image
-import time
-import numpy as np
-from scipy import ndimage
 from napari.layers.utils._link_layers import get_linked_layers
+from scipy import ndimage
+
 
 def get_pixelsize(metadata: dict):
     """ Parse pixel sizes from image metadata
@@ -45,13 +44,42 @@ def get_pixelsize(metadata: dict):
             eval(z_pxlsz) if isinstance(z_pxlsz, str) else z_pxlsz,
             unit)
 
+
 def _zoom_values(xy, z, xy_ref, z_ref):
+    """
+    ?
+    Parameters
+    ----------
+    xy : int
+        ?
+    z : int
+        ?
+    xy_ref : int
+        ?
+    z_ref : int
+        ?
+    Returns
+    -------
+    ?
+    """
     xy_zoom = xy / xy_ref
     z_zoom = z / z_ref
 
     return xy_zoom, z_zoom
 
+
 def _make_isotropic(image: Image):
+    """
+    ?
+
+    Parameters
+    ----------
+    image : Image
+        ?
+    Returns
+    -------
+    ?
+    """
     # Inplace operation
     moving_xy_pixelsize, __, moving_z_pixelsize, __ = get_pixelsize(image.metadata)
     z_zoom = moving_z_pixelsize / moving_xy_pixelsize
@@ -59,7 +87,19 @@ def _make_isotropic(image: Image):
     image.data = ndimage.zoom(image.data, (z_zoom, 1, 1))
     return z_zoom
 
+
 def make_isotropic(input_image: Image):
+    """
+    ?
+
+    Parameters
+    ----------
+    input_image : Image
+        ?
+    Returns
+    -------
+    ?
+    """
     # Inplace operation
     if len(get_linked_layers(input_image)) > 0:
         images = get_linked_layers(input_image)

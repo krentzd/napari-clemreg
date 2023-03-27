@@ -9,18 +9,25 @@ from scipy import ndimage
 from napari.layers.utils._link_layers import get_linked_layers
 from skimage import exposure
 
+
 def _make_inverse_warp(from_points, to_points, output_region, approximate_grid):
     """
+    ?
 
     Parameters
     ----------
-    from_points
-    to_points
-    output_region
-    approximate_grid
+    from_points : ?
+        ?
+    to_points : ?
+        ?
+    output_region : ?
+        ?
+    approximate_grid : ?
+        ?
 
     Returns
     -------
+    ?
 
     """
     print('Make inverse warp')
@@ -65,27 +72,41 @@ def _make_inverse_warp(from_points, to_points, output_region, approximate_grid):
 
 def _trilinear_interpolation(d, t, x0, y0, z0, x1, y1, z1, ix0, iy0, iz0, ix1, iy1, iz1):
     """
+    ?
 
     Parameters
     ----------
-    d
-    t
-    x0
-    y0
-    z0
-    x1
-    y1
-    z1
-    ix0
-    iy0
-    iz0
-    ix1
-    iy1
-    iz1
-
+    d : ?
+        ?
+    t : ?
+        ?
+    x0 : ?
+        ?
+    y0 : ?
+        ?
+    z0 : ?
+        ?
+    x1 : ?
+        ?
+    y1 : ?
+        ?
+    z1 : ?
+        ?
+    ix0 : ?
+        ?
+    iy0 : ?
+        ?
+    iz0 : ?
+        ?
+    ix1 : ?
+        ?
+    iy1 : ?
+        ?
+    iz1 : ?
+        ?
     Returns
     -------
-
+    ?
     """
     t000 = t[d][(ix0, iy0, iz0)]
     t001 = t[d][(ix0, iy0, iz1)]
@@ -101,14 +122,15 @@ def _trilinear_interpolation(d, t, x0, y0, z0, x1, y1, z1, ix0, iy0, iz0, ix1, i
 
 def _U(x):
     """
+    ?
 
     Parameters
     ----------
-    x
-
+    x : ?
+        ?
     Returns
     -------
-
+        ?
     """
     _small = 1e-100
     return (x ** 2) * np.where(x < _small, 0, np.log(x))
@@ -116,14 +138,15 @@ def _U(x):
 
 def _interpoint_distances(points):
     """
+    ?
 
     Parameters
     ----------
-    points
-
+    points : Points
+        ?
     Returns
     -------
-
+        ?
     """
     xd = np.subtract.outer(points[:, 0], points[:, 0])
     yd = np.subtract.outer(points[:, 1], points[:, 1])
@@ -133,14 +156,15 @@ def _interpoint_distances(points):
 
 def _make_L_matrix(points):
     """
+    ?
 
     Parameters
     ----------
-    points
-
+    points : ?
+        ?
     Returns
     -------
-
+    ?
     """
     print('making L matrix')
     n = len(points)
@@ -159,18 +183,23 @@ def _make_L_matrix(points):
 
 def _calculate_f(coeffs, points, x, y, z):
     """
+    ?
 
     Parameters
     ----------
-    coeffs
-    points
-    x
-    y
-    z
-
+    coeffs : ?
+        ?
+    points : ?
+        ?
+    x : ?
+        ?
+    y : ?
+        ?
+    z : ?
+        ?
     Returns
     -------
-
+    ?
     """
     w = coeffs[:-3]
     a1, ax, ay, az = coeffs[-4:]
@@ -183,18 +212,24 @@ def _calculate_f(coeffs, points, x, y, z):
 
 def _make_warp(from_points, to_points, x_vals, y_vals, z_vals):
     """
+    ?
 
     Parameters
     ----------
-    from_points
-    to_points
-    x_vals
-    y_vals
-    z_vals
+    from_points : ?
+        ?
+    to_points : ?
+        ?
+    x_vals : ?
+        ?
+    y_vals : ?
+        ?
+    z_vals : ?
+        ?
 
     Returns
     -------
-
+        ?
     """
     from_points, to_points = np.asarray(from_points), np.asarray(to_points)
     err = np.seterr(divide='ignore')
@@ -215,26 +250,35 @@ def _make_warp(from_points, to_points, x_vals, y_vals, z_vals):
     np.seterr(**err)
     return [x_warp, y_warp, z_warp]
 
+
 def _warp_images(from_points, to_points, image, output_region, interpolation_order=5, approximate_grid=10):
     """
+    ?
 
     Parameters
     ----------
-    from_points
-    to_points
-    image
-    output_region
-    interpolation_order
-    approximate_grid
+    from_points : ?
+        ?
+    to_points : ?
+        ?
+    image : Image
+        ?
+    output_region : ?
+        ?
+    interpolation_order : ?
+        ?
+    approximate_grid : ?
+        ?
 
     Returns
     -------
-
+    ?
     """
     print('Entered warp_images')
     transform = _make_inverse_warp(from_points, to_points, output_region, approximate_grid)
     print('Resampling image...')
     return ndimage.map_coordinates(np.asarray(image), transform, order=interpolation_order)
+
 
 def _warp_image_volume_affine(image,
                               matrix,
@@ -244,14 +288,17 @@ def _warp_image_volume_affine(image,
 
     Parameters
     ----------
-    image
-    matrix
-    output_shape
-    interpolation_order
-
+    image : Image
+        ?
+    matrix : ?
+        ?
+    output_shape : ?
+        ?
+    interpolation_order : ?
+        ?
     Returns
     -------
-
+        ?
     """
     image = exposure.rescale_intensity(image, out_range='uint8')
     inv_mat = np.linalg.inv(matrix)
@@ -267,23 +314,32 @@ def _warp_image_volume(moving_image: Image,
                        fixed_image: ImageData,
                        moving_points: PointsData,
                        transformed_points: PointsData,
-                       interpolation_order: int=1,
-                       approximate_grid: int=1,
-                       sub_division_factor: int=1):
+                       interpolation_order: int = 1,
+                       approximate_grid: int = 1,
+                       sub_division_factor: int = 1):
     """
+    ?
 
     Parameters
     ----------
-    moving_image
-    fixed_image
-    moving_points
-    transformed_points
-    interpolation_order
-    approximate_grid
-    sub_division_factor
+    moving_image : Image
+        ?
+    fixed_image : ImageData
+        ?
+    moving_points : PointsData
+        ?
+    transformed_points : PointsData
+        ?
+    interpolation_order : int
+        ?
+    approximate_grid : int
+        ?
+    sub_division_factor : ?
+        ?
 
     Returns
     -------
+    ?
 
     """
     print('Warping image volume')
@@ -382,21 +438,30 @@ def warp_image_volume(
         sub_division_factor: int = 1
 ):
     """
+    ?
 
     Parameters
     ----------
-    moving_image
-    fixed_image
-    transform_type
-    moving_points
-    transformed_points
-    interpolation_order
-    approximate_grid
-    sub_division_factor
+    moving_image : ?
+        ?
+    fixed_image : ?
+        ?
+    transform_type : ?
+        ?
+    moving_points : ?
+        ?
+    transformed_points : ?
+        ?
+    interpolation_order : ?
+        ?
+    approximate_grid : ?
+        ?
+    sub_division_factor : ?
+        ?
 
     Returns
     -------
-
+        ?
     """
 
     if transform_type == 'BCPD':

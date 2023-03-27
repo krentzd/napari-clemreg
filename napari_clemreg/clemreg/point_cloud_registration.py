@@ -23,13 +23,16 @@ def _make_matrix_from_rigid_params(rot, trans, s):
 
     Parameters
     ----------
-    rot
-    trans
-    s
+    rot : ?
+        ?
+    trans : ?
+        ?
+    s : ?
+        ?
 
     Returns
     -------
-
+    ?
     """
     T_a = np.array([[1., 0., 0., trans[0]],
                     [0., 1., 0., trans[1]],
@@ -52,17 +55,19 @@ def prepare_source_and_target_nonrigid_3d(source_array,
                                           voxel_size=5,
                                           every_k_points=2):
     """
+    ?
 
     Parameters
     ----------
-    source_array
-    target_array
-    voxel_size
-    every_k_points
-
+    source_array : ?
+    target_array : ?
+    voxel_size : int
+        ?
+    every_k_points : int
+        ?
     Returns
     -------
-
+        ?
     """
     source = o3.geometry.PointCloud()
     target = o3.geometry.PointCloud()
@@ -110,20 +115,28 @@ def point_cloud_registration(moving: PointsData,
                              max_iterations: int = 50,
                              visualise: bool = False):
     """
+    ?
 
     Parameters
     ----------
     moving : napari.types.PointsData
+        ?
     fixed : napari.types.PointsData
+        ?
     algorithm : str
+        ?
     voxel_size : int
+        ?
     every_k_points : int
+        ?
     max_iterations : int
+        ?
     visualise : bool
+        ?
 
     Returns
     -------
-
+    ?
     """
     start = time.time()
     source, target = prepare_source_and_target_nonrigid_3d(moving,

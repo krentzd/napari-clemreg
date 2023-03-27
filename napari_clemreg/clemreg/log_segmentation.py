@@ -11,14 +11,15 @@ from napari.layers import Labels
 
 def _min_max_scaling(data):
     """
+    ?
 
     Parameters
     ----------
-    data
-
+    data : ?
+        ?
     Returns
     -------
-
+        ?
     """
     n = data - np.min(data)
     d = np.max(data) - np.min(data)
