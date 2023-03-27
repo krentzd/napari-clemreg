@@ -3,7 +3,6 @@ from magicgui import magic_factory
 from napari.layers import Image
 from napari.utils.notifications import show_error
 from napari.qt.threading import thread_worker
-from ..clemreg.empanada_segmentation import empanada_segmentation
 
 
 @magic_factory(layout='vertical',
@@ -19,6 +18,8 @@ def fixed_segmentation_widget(viewer: 'napari.viewer.Viewer',
                               Fixed_Image: Image,
                               em_seg_axis
                               ):
+    from ..clemreg.empanada_segmentation import empanada_segmentation
+
     @thread_worker
     def _run_fixed_thread():
         seg_volume = empanada_segmentation(input=Fixed_Image.data,

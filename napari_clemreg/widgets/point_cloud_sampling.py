@@ -1,9 +1,7 @@
 import napari
 from magicgui import magic_factory
 from napari.layers import Labels
-from napari.utils.notifications import show_error
 from napari.qt.threading import thread_worker
-from ..clemreg.point_cloud_sampling import point_cloud_sampling
 
 
 @magic_factory(layout='vertical',
@@ -26,6 +24,8 @@ def point_cloud_sampling_widget(viewer: 'napari.viewer.Viewer',
                                 point_cloud_sampling_frequency,
                                 point_cloud_sigma,
                                 ):
+    from ..clemreg.point_cloud_sampling import point_cloud_sampling
+
     @thread_worker
     def _run_point_cloud_sampling_thread():
         moving_point_cloud = point_cloud_sampling(input=Moving_Segmentation,

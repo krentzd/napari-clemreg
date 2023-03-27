@@ -3,9 +3,6 @@ from magicgui import magic_factory
 from napari.layers import Image, Shapes
 from napari.utils.notifications import show_error
 from napari.qt.threading import thread_worker
-from ..clemreg.data_preprocessing import make_isotropic
-from ..clemreg.log_segmentation import log_segmentation
-from ..clemreg.mask_roi import mask_roi
 
 
 def on_init(widget):
@@ -59,6 +56,9 @@ def moving_segmentation_widget(viewer: 'napari.viewer.Viewer',
                                log_sigma,
                                log_threshold,
                                ):
+    from ..clemreg.data_preprocessing import make_isotropic
+    from ..clemreg.log_segmentation import log_segmentation
+    from ..clemreg.mask_roi import mask_roi
     @thread_worker
     def _run_moving_thread():
         z_zoom = make_isotropic(input_image=Moving_Image)

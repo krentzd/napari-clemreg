@@ -3,8 +3,6 @@ from magicgui import magic_factory
 from napari.layers import Points, Image
 from napari.qt.threading import thread_worker
 from napari.layers.utils._link_layers import link_layers
-from ..clemreg.point_cloud_registration import point_cloud_registration
-from ..clemreg.warp_image_volume import warp_image_volume
 
 
 @magic_factory(layout='vertical',
@@ -65,6 +63,9 @@ def registration_warping_widget(viewer: 'napari.viewer.Viewer',
                                 warping_approximate_grid,
                                 warping_sub_division_factor
                                 ):
+    from ..clemreg.point_cloud_registration import point_cloud_registration
+    from ..clemreg.warp_image_volume import warp_image_volume
+
     @thread_worker
     def _registration_thread():
         moving, fixed, transformed, kwargs = point_cloud_registration(Moving_Points.data,
