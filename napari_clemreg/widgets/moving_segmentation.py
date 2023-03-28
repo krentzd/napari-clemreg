@@ -93,7 +93,7 @@ def moving_segmentation_widget(viewer: 'napari.viewer.Viewer',
     """
     from ..clemreg.data_preprocessing import make_isotropic
     from ..clemreg.log_segmentation import log_segmentation
-    from ..clemreg.mask_roi import mask_roi
+    from ..clemreg.mask_roi import mask_roi, mask_area
 
     @thread_worker
     def _run_moving_thread():
@@ -123,6 +123,27 @@ def moving_segmentation_widget(viewer: 'napari.viewer.Viewer',
 
         viewer.add_labels(return_value.data,
                           name="Moving_Segmentation")
+
+    if Moving_Image is None:
+        show_error("WARNING: You have not inputted both a fixed and moving image")
+        return
+
+    if len(Moving_Image.data.shape) != 3:
+        show_error("WARNING: Your moving_image must be 3D, you're current input has a shape of {}".format(
+            Moving_Image.data.shape))
+        return
+    elif len(Moving_Image.data.shape) == 3 and (Moving_Image.data.shape[2] == 3 or Moving_Image.data.shape[2] == 4):
+        show_error("WARNING: YOUR moving_image is RGB, your input must be grayscale and 3D")
+        return
+
+    if Mask_ROI is not None:
+        if len(Mask_ROI.data) != 1:
+            show_error("WARNING: You must input only 1 Mask ROI, you have inputted {}.".format(len(Mask_ROI.data)))
+            return
+        if mask_area(Mask_ROI.data[0][:, 1], Mask_ROI.data[0][:, 2]) > Moving_Image.data.shape[1] * \
+                Moving_Image.data.shape[2]:
+            show_error("WARNING: Your mask size exceeds the size of the image.")
+            return
 
     worker_moving = _run_moving_thread()
     worker_moving.returned.connect(_add_data)
