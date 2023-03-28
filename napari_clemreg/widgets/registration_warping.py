@@ -3,7 +3,7 @@ from magicgui import magic_factory
 from napari.layers import Points, Image
 from napari.qt.threading import thread_worker
 from napari.layers.utils._link_layers import link_layers
-
+from napari.utils.notifications import show_error
 
 @magic_factory(layout='vertical',
                call_button='Register',
@@ -147,6 +147,26 @@ def registration_warping_widget(viewer: 'napari.viewer.Viewer',
         else:
             data, kwargs = return_value
             viewer.add_image(data, **kwargs)
+
+    if Moving_Image is None or Fixed_Image is None:
+        show_error("WARNING: You have not inputted both a fixed and moving image")
+        return
+
+    if len(Moving_Image.data.shape) != 3:
+        show_error("WARNING: Your moving_image must be 3D, you're current input has a shape of {}".format(
+            Moving_Image.data.shape))
+        return
+    elif len(Moving_Image.data.shape) == 3 and (Moving_Image.data.shape[2] == 3 or Moving_Image.data.shape[2] == 4):
+        show_error("WARNING: YOUR moving_image is RGB, your input must be grayscale and 3D")
+        return
+
+    if len(Fixed_Image.data.shape) != 3:
+        show_error("WARNING: Your Fixed_Image must be 3D, you're current input has a shape of {}".format(
+            Moving_Image.data.shape))
+        return
+    elif len(Fixed_Image.data.shape) == 3 and (Fixed_Image.data.shape[2] == 3 or Fixed_Image.data.shape[2] == 4):
+        show_error("WARNING: YOUR fixed_image is RGB, your input must be grayscale and 3D")
+        return
 
     worker_registration = _registration_thread()
     worker_registration.returned.connect(_add_data)
