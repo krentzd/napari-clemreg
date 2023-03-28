@@ -31,14 +31,16 @@ error Microsoft Visual C++ 14.0 is required
 ```
 Ensure that [Visual Studios C++ 14.00](https://visualstudio.microsoft.com/thank-you-downloading-visual-studio/?sku=BuildTools&rel=16) is installed
 ## Usage
-There are two means of running CLEM-reg, one is using the Run Registration which includes one
+CLEM-reg is the combination of 5 main steps, MitoNet segmentation,LoG segmentation,
+point cloud sampling, point cloud registration and lastly image warping. These 5 steps 
+can be run all at once using the run registration widget shown below with the tick next to it.
+Or alternatively, they can be run individually with the numbered widgets.
 
-alternatively you can use the Split Registration
-which is the combination of four separate widgets, splitting each step of the CLEM-reg workflow.
+![clemreg_widget_options.png](docs%2Fimages%2Fclemreg_widget_options.png)
 
-![Widget Options](https://github.com/krentzd/napari-clemreg/blob/main/docs/images/clemreg_widget_options.png)
 ### Run Registration
-![Run Registration](https://github.com/krentzd/napari-clemreg/blob/main/docs/images/Full_registration_labels.png)
+
+![registration_labels.png](docs%2Fimages%2Fregistration_labels.png)
 
 1. **Moving Image** - Here you select your light microscopy (LM) data which will
 be warped to align with the fixed electron microscopy (EM) image.
@@ -84,10 +86,20 @@ to a JSON file which can be kept for reproducibility as well as running the regi
 12. **Visualise Intermediate Results** - Here you can select to view the outputs of each step as they
 are completed.
 
-### Registering Multiple LM Layers
-![merged-channel-split-options.png](docs%2Fimages%2Fmerged-channel-split-options.png)
+### Registering Multiple LM Channels
+One can register multiple LM channels at once by doing the following.
 
+Start by splitting the LM channels into the separate layers by right-clicking on
+the layer and then selecting `Split Stack`.
+![merged-channel-split-options.png](docs%2Fimages%2Fmerged-channel-split-options.png)
+This will result in each of the channels having their own individual layer. 
+
+Once this is done we must link all the LM layers together, this is done 
+by selecting all the layers which will highlight them in blue, once again right-clicking
+on the layer and then selecting `Link Layers.`
 ![split-channels-link-layers.png](docs%2Fimages%2Fsplit-channels-link-layers.png)
+
+
 ## Contributing
 
 Contributions are very welcome. Tests can be run with [tox], please ensure
