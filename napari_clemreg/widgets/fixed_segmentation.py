@@ -60,6 +60,20 @@ def fixed_segmentation_widget(viewer: 'napari.viewer.Viewer',
         viewer.add_labels(return_value,
                           name="Fixed_Segmentation")
 
+    if Fixed_Image is None:
+        show_error("WARNING: You have not inputted both a fixed and moving image")
+        return
+
+    if len(Fixed_Image.data.shape) != 3:
+        show_error("WARNING: Your Fixed_Image must be 3D, you're current input has a shape of {}".format(
+            Fixed_Image.data.shape))
+        return
+    elif len(Fixed_Image.data.shape) == 3 and (Fixed_Image.data.shape[2] == 3 or Fixed_Image.data.shape[2] == 4):
+        show_error("WARNING: YOUR fixed_image is RGB, your input must be grayscale and 3D")
+        return
+
+    print(Fixed_Image.data.shape)
+
     worker_fixed = _run_fixed_thread()
     worker_fixed.returned.connect(_add_data)
     worker_fixed.start()
