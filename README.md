@@ -85,10 +85,9 @@ to a JSON file which can be kept for reproducibility as well as running the regi
 are completed.
 
 ### Registering Multiple LM Layers
-![afskml](https://github.com/krentzd/napari-clemreg/blob/main/docs/images/multi-channel-lm-merged.png) 
+![merged-channel-split-options.png](docs%2Fimages%2Fmerged-channel-split-options.png)
 
-![](https://github.com/krentzd/napari-clemreg/blob/main/docs/images/split-channels-menu-options.png)
-![split-channels-menu-options.png](docs%2Fimages%2Fsplit-channels-menu-options.png)
+![split-channels-link-layers.png](docs%2Fimages%2Fsplit-channels-link-layers.png)
 ## Contributing
 
 Contributions are very welcome. Tests can be run with [tox], please ensure
