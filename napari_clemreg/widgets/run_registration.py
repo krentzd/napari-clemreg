@@ -3,6 +3,7 @@
 import json
 import warnings
 import napari
+import numpy as np
 from magicgui import magic_factory
 from napari.layers import Image, Shapes, Labels, Points
 from napari.utils.notifications import show_error
@@ -404,7 +405,7 @@ def make_run_registration(
         image_type = yield_value[1]
 
         if image_type == 'lm':
-            viewer.add_labels(image.data, name=image_type)
+            viewer.add_labels(np.asarray(image.data, dtype=np.uint32), name=image_type)
         else:
             viewer.add_labels(image, name=image_type)
 
