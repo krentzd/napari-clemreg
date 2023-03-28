@@ -8,7 +8,7 @@ from napari.qt.threading import thread_worker
 @magic_factory(layout='vertical',
                call_button='Segment',
                widget_header={'widget_type': 'Label',
-                              'label': f'<h2 text-align="left">Fixed Segmentation</h2>'},
+                              'label': f'<h2 text-align="left">MitoNet Image Segmentation</h2>'},
                em_seg_axis={'text': 'Prediction Across Three Axis',
                             'widget_type': 'CheckBox',
                             'value': False},

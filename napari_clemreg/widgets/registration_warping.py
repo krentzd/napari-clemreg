@@ -8,7 +8,9 @@ from napari.layers.utils._link_layers import link_layers
 @magic_factory(layout='vertical',
                call_button='Register',
                widget_header={'widget_type': 'Label',
-                              'label': f'<h2 text-align="left">Registration and Warping</h2>'},
+                              'label': f'<h2 text-align="left">Point Cloud Registration</h2>'},
+               widget_header_2={'widget_type': 'Label',
+                            'label': f'<h2 text-align="middle">and Image Warping</h2>'},
                registration_algorithm={'label': 'Registration Algorithm',
                                        'widget_type': 'ComboBox',
                                        'choices': ["BCPD", "Rigid CPD", "Affine CPD"],
@@ -47,6 +49,8 @@ from napari.layers.utils._link_layers import link_layers
                )
 def registration_warping_widget(viewer: 'napari.viewer.Viewer',
                                 widget_header,
+                                widget_header_2,
+
                                 Moving_Image: Image,
                                 Fixed_Image: Image,
                                 Moving_Points: Points,

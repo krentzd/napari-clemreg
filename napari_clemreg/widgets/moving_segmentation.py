@@ -29,7 +29,7 @@ def on_init(widget):
                layout='vertical',
                call_button='Segment',
                widget_header={'widget_type': 'Label',
-                              'label': f'<h2 text-align="left">Moving Segmentation</h2>'},
+                              'label': f'<h2 text-align="left">LoG Image Segmentation</h2>'},
                log_sigma={'label': 'Sigma',
                           'widget_type': 'FloatSpinBox',
                           'min': 0.5, 'max': 20, 'step': 0.5,
