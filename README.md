@@ -84,7 +84,7 @@ to a JSON file which can be kept for reproducibility as well as running the regi
 12. **Visualise Intermediate Results** - Here you can select to view the outputs of each step as they
 are completed.
 
-### Split Registration
+### Registering Multiple LM Layers
 
 
 ## Contributing
