@@ -85,7 +85,7 @@ to a JSON file which can be kept for reproducibility as well as running the regi
 are completed.
 
 ### Registering Multiple LM Layers
-
+![afskml](https://github.com/krentzd/napari-clemreg/blob/main/docs/images/multi-channel-lm-merged.png) ![](https://github.com/krentzd/napari-clemreg/blob/main/docs/images/multi-channel-lm-merged.png)
 
 ## Contributing
 
