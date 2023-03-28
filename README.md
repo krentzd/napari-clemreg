@@ -1,13 +1,13 @@
 # napari-clemreg
+## An automated registration algorithm for correlative light and volume electron microscopy
 
-<!-- [![License](https://img.shields.io/pypi/l/napari-clemreg.svg?color=green)](https://github.com/krentzd/napari-clemreg/raw/master/LICENSE)
+
+[![License](https://img.shields.io/pypi/l/napari-clemreg.svg?color=green)](https://github.com/krentzd/napari-clemreg/raw/master/LICENSE)
 [![PyPI](https://img.shields.io/pypi/v/napari-clemreg.svg?color=green)](https://pypi.org/project/napari-clemreg)
 [![Python Version](https://img.shields.io/pypi/pyversions/napari-clemreg.svg?color=green)](https://python.org)
 [![tests](https://github.com/krentzd/napari-clemreg/workflows/tests/badge.svg)](https://github.com/krentzd/napari-clemreg/actions)
-[![codecov](https://codecov.io/gh/krentzd/napari-clemreg/branch/master/graph/badge.svg)](https://codecov.io/gh/krentzd/napari-clemreg) -->
+[![codecov](https://codecov.io/gh/krentzd/napari-clemreg/branch/master/graph/badge.svg)](https://codecov.io/gh/krentzd/napari-clemreg)
 
-An automated point-set based registration algorithm for correlative light and electron microscopy (CLEM) 
-----------------------------------
 ## Installation
 
 To install `napari-clemreg` it is recommended to create a fresh [conda] enviornment with Python 3.8:
@@ -31,7 +31,7 @@ error Microsoft Visual C++ 14.0 is required
 ```
 Ensure that [Visual Studios C++ 14.00](https://visualstudio.microsoft.com/thank-you-downloading-visual-studio/?sku=BuildTools&rel=16) is installed
 ## Usage
-CLEM-reg is the combination of 5 main steps, MitoNet segmentation,LoG segmentation,
+CLEM-reg is the combination of 5 main steps, MitoNet segmentation, LoG segmentation,
 point cloud sampling, point cloud registration and lastly image warping. These 5 steps 
 can be run all at once using the run registration widget shown below with the tick next to it.
 Or alternatively, they can be run individually with the numbered widgets.
@@ -86,6 +86,24 @@ to a JSON file which can be kept for reproducibility as well as running the regi
 12. **Visualise Intermediate Results** - Here you can select to view the outputs of each step as they
 are completed.
 
+### Split Registration
+As well as being able to run all the steps of CLEM-reg in one widget (the `Run registration` widget),
+you are also able to do all these steps independently using the `Split Registration` functionality. 
+
+There are four separate widgets that encapsulate the 5 steps of CLEM-reg each of which have
+their own unique input and output:
+1. `MitoNet Segmentation` 
+   - **Input**: EM Image
+   - **Output**: EM Segmentation
+2. `LoG Segmentation`
+   - **Input**: LM Image
+   - **Output**: LM Segmentation
+3. `Point Cloud Sampling`
+   - **Input**: LM Segmentation & EM Segmentation
+   - **Output**: LM Point Cloud & LM Point Cloud
+4. `Point Cloud Registration & Image Warping`
+   - **Input**: EM Image, LM Image, LM Point Cloud & EM Point Cloud
+
 ### Registering Multiple LM Channels
 One can register multiple LM channels at once by doing the following.
 
@@ -99,6 +117,8 @@ by selecting all the layers which will highlight them in blue, once again right-
 on the layer and then selecting `Link Layers.`
 ![split-channels-link-layers.png](docs%2Fimages%2Fsplit-channels-link-layers.png)
 
+And when you finally go to run CLEM-reg ensure that you for the `Moving Image`
+you select the LM layer that contains mitochondria.
 
 ## Contributing
 
