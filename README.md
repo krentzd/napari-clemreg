@@ -44,8 +44,33 @@ which is the combination of four separate widgets, splitting each step of the CL
 
 ![Widget Options](https://github.com/krentzd/napari-clemreg/blob/main/docs/images/clemreg_widget_options.png)
 ### Full Run Registration
-![Run Registration](https://github.com/krentzd/napari-clemreg/blob/main/docs/images/full_run_registration_img.png)
+![Run Registration](https://github.com/krentzd/napari-clemreg/blob/main/docs/images/Full_registration_labels.png)
 
+1. **Moving Image** -
+2. **Fixed Image**
+3. **Mask ROI**
+4. **Registration Algorithm**
+5. **Parameters**
+   1. Parameters from JSON
+   2. Parameters custom
+6. **MitoNet Segmentation Parameters**
+   1. Prediction Across Three Axis
+7. **LoG Segmentation Parameters**
+   1. Sigma
+   2. Threshold
+8. **Point Cloud Sampling**
+   1. Sampling Frequency
+   2. Sigma
+9. **Point Cloud Registration**
+   1. Interpolation Order
+   2. Subsampling
+   3. Maximum Iterations
+10. **Image Warping**
+    1. Interpolation Order
+    2. Aproximate Grid
+    3. Sub-division Factor
+11. **Save Parameters**
+12. **Visualise Intermediate Results**
 
 ### Split Run Registration
 
