@@ -483,7 +483,7 @@ def make_run_registration(
         warnings.warn("WARNING: Your Fixed_Image must be 3D, you're current input has a shape of {}".format(
             Moving_Image.data.shape))
         return
-    elif len(Fixed_Image.data.shape) == 3 and Fixed_Image.data.shape[2] == 3:
+    elif len(Fixed_Image.data.shape) == 3 and (Fixed_Image.data.shape[2] == 3 or Fixed_Image.data.shape[2] == 4):
         warnings.warn("WARNING: YOUR fixed_image is RGB, your input must be grayscale and 3D")
         return
 
