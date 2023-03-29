@@ -1,16 +1,16 @@
 # napari-clemreg
 ## An automated registration algorithm for correlative light and volume electron microscopy
 
-
 [![License](https://img.shields.io/pypi/l/napari-clemreg.svg?color=green)](https://github.com/krentzd/napari-clemreg/raw/master/LICENSE)
 [![PyPI](https://img.shields.io/pypi/v/napari-clemreg.svg?color=green)](https://pypi.org/project/napari-clemreg)
 [![Python Version](https://img.shields.io/pypi/pyversions/napari-clemreg.svg?color=green)](https://python.org)
-[![tests](https://github.com/krentzd/napari-clemreg/workflows/tests/badge.svg)](https://github.com/krentzd/napari-clemreg/actions)
 [![codecov](https://codecov.io/gh/krentzd/napari-clemreg/branch/master/graph/badge.svg)](https://codecov.io/gh/krentzd/napari-clemreg)
+
+[//]: # ([![tests]&#40;https://github.com/krentzd/napari-clemreg/workflows/tests/badge.svg&#41;]&#40;https://github.com/krentzd/napari-clemreg/actions&#41;)
 
 ## Installation
 
-To install `napari-clemreg` it is recommended to create a fresh [conda] enviornment with Python 3.8:
+To install `napari-clemreg` it is recommended to create a fresh [conda] environment with Python 3.8:
 
 ```
 conda create -n clemreg_env python=3.9
