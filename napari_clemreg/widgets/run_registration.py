@@ -333,10 +333,10 @@ def make_run_registration(
             warping_approximate_grid = data["warping_approximate_grid"]
             warping_sub_division_factor = data["warping_sub_division_factor"]
         except KeyError:
-            warnings.warn("JSON file missing required param")
+            show_error("JSON file missing required param")
             return
     elif params_from_json and not load_json_file.is_file():
-        warnings.warn("Load from JSON selected but no JSON file selected or file path isn't real")
+        show_error("Load from JSON selected but no JSON file selected or file path isn't real")
         return
 
     @thread_worker
@@ -468,32 +468,32 @@ def make_run_registration(
                                  sub_division_factor=warping_sub_division_factor)
 
     if Moving_Image is None or Fixed_Image is None:
-        warnings.warn("WARNING: You have not inputted both a fixed and moving image")
+        show_error("WARNING: You have not inputted both a fixed and moving image")
         return
 
     if len(Moving_Image.data.shape) != 3:
-        warnings.warn("WARNING: Your moving_image must be 3D, you're current input has a shape of {}".format(
+        show_error("WARNING: Your moving_image must be 3D, you're current input has a shape of {}".format(
             Moving_Image.data.shape))
         return
-    elif len(Moving_Image.data.shape) == 3 and Moving_Image.data.shape[2] == 3:
-        warnings.warn("WARNING: YOUR moving_image is RGB, your input must be grayscale and 3D")
+    elif len(Moving_Image.data.shape) == 3 and (Moving_Image.data.shape[2] == 3 or Fixed_Image.data.shape[2] == 4):
+        show_error("WARNING: YOUR moving_image is RGB, your input must be grayscale and 3D")
         return
 
     if len(Fixed_Image.data.shape) != 3:
-        warnings.warn("WARNING: Your Fixed_Image must be 3D, you're current input has a shape of {}".format(
+        show_error("WARNING: Your Fixed_Image must be 3D, you're current input has a shape of {}".format(
             Moving_Image.data.shape))
         return
     elif len(Fixed_Image.data.shape) == 3 and (Fixed_Image.data.shape[2] == 3 or Fixed_Image.data.shape[2] == 4):
-        warnings.warn("WARNING: YOUR fixed_image is RGB, your input must be grayscale and 3D")
+        show_error("WARNING: YOUR fixed_image is RGB, your input must be grayscale and 3D")
         return
 
     if Mask_ROI is not None:
         if len(Mask_ROI.data) != 1:
-            warnings.warn("WARNING: You must input only 1 Mask ROI, you have inputted {}.".format(len(Mask_ROI.data)))
+            show_error("WARNING: You must input only 1 Mask ROI, you have inputted {}.".format(len(Mask_ROI.data)))
             return
         if mask_area(Mask_ROI.data[0][:, 1], Mask_ROI.data[0][:, 2]) > Moving_Image.data.shape[1] * \
                 Moving_Image.data.shape[2]:
-            warnings.warn("WARNING: Your mask size exceeds the size of the image.")
+            show_error("WARNING: Your mask size exceeds the size of the image.")
             return
 
     if save_json and not params_from_json:
