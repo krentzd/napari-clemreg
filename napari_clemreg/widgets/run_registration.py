@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # coding: utf-8
 import json
-import warnings
+import os.path
 import napari
 import numpy as np
 from magicgui import magic_factory
@@ -214,8 +214,8 @@ def on_init(widget):
                                             'min': 1, 'max': 10, 'step': 1,
                                             'value': 1},
                save_json={'label': 'Save parameters',
-                          'widget_type': 'CheckBox',
-                          'value': False},
+                          'widget_type': 'LineEdit',
+                          'value': ''},
                params_from_json={'label': 'Parameters from JSON',
                                  'widget_type': 'CheckBox',
                                  'value': True},
@@ -305,6 +305,7 @@ def make_run_registration(
     -------
 
     """
+    from pathlib import Path
     from ..clemreg.empanada_segmentation import empanada_segmentation
     from ..clemreg.log_segmentation import log_segmentation
     from ..clemreg.mask_roi import mask_roi, mask_area
@@ -420,7 +421,7 @@ def make_run_registration(
                           name='fixed_points',
                           face_color='blue')
 
-    def _create_json_file():
+    def _create_json_file(path):
         dictionary = {
             "registration_algorithm": registration_algorithm,
             "em_seg_axis": em_seg_axis,
@@ -438,7 +439,7 @@ def make_run_registration(
 
         json_object = json.dumps(dictionary, indent=4)
 
-        with open("sample.json", "w") as outfile:
+        with open(path, "w") as outfile:
             outfile.write(json_object)
 
     @thread_worker(connect={"returned": _add_data, "yielded": _yield_point_clouds})
@@ -496,8 +497,16 @@ def make_run_registration(
             show_error("WARNING: Your mask size exceeds the size of the image.")
             return
 
-    if save_json and not params_from_json:
-        _create_json_file()
+    if save_json != '':
+        p = Path(save_json)
+        if os.path.isdir(str(p.parent)) and str(p).endswith('.json'):
+            _create_json_file(str(p))
+        elif os.path.isdir(str(p)):
+            _create_json_file(os.path.join(str(p), 'params.json'))
+        elif str(p).endswith('.json'):
+            _create_json_file(str(p))
+        else:
+            _create_json_file('params.json')
 
     joiner = RegistrationThreadJoiner(worker_function=_run_registration_thread)
 
