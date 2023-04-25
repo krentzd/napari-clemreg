@@ -68,7 +68,8 @@ def _zoom_values(xy, z, xy_ref, z_ref):
     return xy_zoom, z_zoom
 
 
-def _make_isotropic(image: Image):
+def _make_isotropic(image: Image,
+                    z_zoom_value: float):
     """
     ?
 
@@ -81,14 +82,17 @@ def _make_isotropic(image: Image):
     ?
     """
     # Inplace operation
-    moving_xy_pixelsize, __, moving_z_pixelsize, __ = get_pixelsize(image.metadata)
-    z_zoom = moving_z_pixelsize / moving_xy_pixelsize
-
+    if z_zoom_value == None:
+        moving_xy_pixelsize, __, moving_z_pixelsize, __ = get_pixelsize(image.metadata)
+        z_zoom = moving_z_pixelsize / moving_xy_pixelsize
+    else:
+        z_zoom = z_zoom_value
     image.data = ndimage.zoom(image.data, (z_zoom, 1, 1))
     return z_zoom
 
 
-def make_isotropic(input_image: Image):
+def make_isotropic(input_image: Image,
+                   z_zoom_value: float):
     """
     ?
 
@@ -105,7 +109,7 @@ def make_isotropic(input_image: Image):
         images = get_linked_layers(input_image)
         images.add(input_image)
         for image in images:
-            z_zoom = _make_isotropic(image)
+            z_zoom = _make_isotropic(image, z_zoom_value)
     else:
-        z_zoom = _make_isotropic(input_image)
+        z_zoom = _make_isotropic(input_image, z_zoom_value)
     return z_zoom
