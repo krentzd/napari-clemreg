@@ -97,16 +97,18 @@ def moving_segmentation_widget(viewer: 'napari.viewer.Viewer',
 
     @thread_worker
     def _run_moving_thread():
-        z_zoom = make_isotropic(input_image=Moving_Image)
-
+        print('Starting LoG segmentation...')
+        # z_zoom = make_isotropic(input_image=Moving_Image)
+        z_zoom = 1
         seg_volume = log_segmentation(input=Moving_Image,
                                       sigma=log_sigma,
                                       threshold=log_threshold)
-
+        print('Finished segmentation step!')
         if len(set(seg_volume.data.ravel())) <= 1:
             return 'No segmentation'
 
         if Mask_ROI is not None:
+            print('Applying Mask ROI...')
             seg_volume_mask = mask_roi(input=seg_volume,
                                        crop_mask=Mask_ROI,
                                        z_min=int(z_min * z_zoom),

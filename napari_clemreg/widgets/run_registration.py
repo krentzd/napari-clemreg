@@ -52,6 +52,7 @@ def on_init(widget):
                          'log_header',
                          'log_sigma',
                          'log_threshold',
+                         'custom_z_zoom',
                          'point_cloud_header',
                          'point_cloud_sampling_frequency',
                          'point_cloud_sigma',
@@ -64,13 +65,14 @@ def on_init(widget):
                          'warping_approximate_grid',
                          'warping_sub_division_factor',
                          'save_json',
-                         'visualise_intermediate_results'
-                         ]
+                         'visualise_intermediate_results']
+
     json_settings = ['load_json_file']
+    custom_z_zom_settings = ['z_zoom_value']
 
     for x in standard_settings:
         setattr(getattr(widget, x), 'visible', True)
-    for x in advanced_settings + ['z_min', 'z_max']:
+    for x in advanced_settings + ['z_min', 'z_max'] + custom_z_zom_settings:
         setattr(getattr(widget, x), 'visible', False)
     for x in json_settings:
         setattr(getattr(widget, x), 'visible', True)
@@ -94,7 +96,6 @@ def on_init(widget):
             toggle_json_widget(True)
 
     def toggle_json_widget(load_json: bool):
-
         if load_json:
             for x in json_settings:
                 setattr(getattr(widget, x), 'visible', True)
@@ -103,6 +104,14 @@ def on_init(widget):
         else:
             widget.advanced.value = True
             toggle_transform_widget(True)
+
+    def toggle_custom_z_zoom(custom_z_zoom: bool):
+        if custom_z_zoom:
+            for x in custom_z_zom_settings:
+                setattr(getattr(widget, x), 'visible', True)
+        else:
+            for x in custom_z_zom_settings:
+                setattr(getattr(widget, x), 'visible', False)
 
     def change_z_max(input_image: Image):
         if len(input_image.data.shape) == 3:
@@ -133,7 +142,7 @@ def on_init(widget):
     widget.Mask_ROI.changed.connect(reveal_z_min_and_z_max)
     widget.advanced.changed.connect(toggle_transform_widget)
     widget.params_from_json.changed.connect(toggle_json_widget)
-
+    widget.custom_z_zoom.changed.connect(toggle_custom_z_zoom)
 
 @magic_factory(widget_init=on_init, layout='vertical', call_button='Register',
                widget_header={'widget_type': 'Label',
@@ -172,7 +181,13 @@ def on_init(widget):
                               'widget_type': 'FloatSpinBox',
                               'min': 0, 'max': 20, 'step': 0.1,
                               'value': 1.2},
-
+               custom_z_zoom={'text': 'Custom z interpolation factor',
+                              'widget_type': 'CheckBox',
+                              'value': False},
+               z_zoom_value={'label': 'Z interpolation factor',
+                           'widget_type': 'FloatSpinBox',
+                           'min': 0, 'step': 0.01,
+                           'value': 1},
                point_cloud_header={'widget_type': 'Label',
                                    'label': f'<h3 text-align="left">Point Cloud Sampling</h3>'},
                point_cloud_sampling_frequency={'label': 'Sampling Frequency',
@@ -246,6 +261,8 @@ def make_run_registration(
         log_header,
         log_sigma,
         log_threshold,
+        custom_z_zoom,
+        z_zoom_value,
 
         point_cloud_header,
         point_cloud_sampling_frequency,
@@ -286,6 +303,7 @@ def make_run_registration(
     log_header
     log_sigma
     log_threshold
+    zoom_value
     white_space_2
     point_cloud_header
     point_cloud_sampling_frequency
@@ -342,7 +360,7 @@ def make_run_registration(
     @thread_worker
     def _run_moving_thread():
         # Inplace operation, metadata extraction only works if TIFF file
-        z_zoom = make_isotropic(input_image=Moving_Image)
+        z_zoom = make_isotropic(input_image=Moving_Image, z_zoom_value=z_zoom_value if custom_z_zoom else None)
 
         seg_volume = log_segmentation(input=Moving_Image,
                                       sigma=log_sigma,

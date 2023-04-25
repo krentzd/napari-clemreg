@@ -90,7 +90,8 @@ def mask_roi(input: Image,
     assert binary_mask_full_vol.shape == input_arr.shape, "Mask and image volume don't match!"
 
     masked_input = input_arr.data * binary_mask_full_vol
-
+    masked_input = masked_input.astype(int)
+    
     if not masked_input.shape == input.data.shape:
         print('Reshaped array')
         masked_input.reshape(input.data.shape)

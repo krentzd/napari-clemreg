@@ -134,9 +134,11 @@ def registration_warping_widget(viewer: 'napari.viewer.Viewer',
                                  transformed_points=transformed,
                                  interpolation_order=warping_interpolation_order,
                                  approximate_grid=warping_approximate_grid,
-                                 sub_division_factor=warping_sub_division_factor)
+                                 sub_division_factor=warping_sub_division_factor), transformed
 
-    def _add_data(return_value):
+    def _add_data(return_value_in):
+        return_value, points_layer = return_value_in
+        viewer.add_layer(points_layer)
         if isinstance(return_value, list):
             layers = []
             for image_data in return_value:
