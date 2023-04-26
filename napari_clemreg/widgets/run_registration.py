@@ -93,8 +93,6 @@ def on_init(widget):
                 setattr(getattr(widget, x), 'visible', True)
             for x in advanced_settings:
                 setattr(getattr(widget, x), 'visible', False)
-            widget.params_from_json.value = True
-            toggle_json_widget(True)
 
     def toggle_json_widget(load_json: bool):
         if load_json:
@@ -180,6 +178,13 @@ def on_init(widget):
                                        'choices': ["BCPD", "Rigid CPD", "Affine CPD"],
                                        'value': 'Rigid CPD',
                                        'tooltip': 'Speed: Rigid CPD > Affine CPD > BCPD'},
+               params_from_json={'label': 'Parameters from JSON',
+                                 'widget_type': 'CheckBox',
+                                 'value': False},
+               load_json_file={'label': 'Select Parameter File',
+                               'widget_type': 'FileEdit',
+                               'mode': 'r',
+                               'filter': '*.json'},
                advanced={'text': 'Parameters custom',
                          'widget_type': 'CheckBox',
                          'value': False},
@@ -261,13 +266,6 @@ def on_init(widget):
                               'widget_type': 'FileEdit',
                               'mode': 'w',
                               'filter': '*.json'},
-               params_from_json={'label': 'Parameters from JSON',
-                                 'widget_type': 'CheckBox',
-                                 'value': False},
-               load_json_file={'label': 'Select Parameter File',
-                               'widget_type': 'FileEdit',
-                               'mode': 'r',
-                               'filter': '*.json'},
                visualise_intermediate_results={'label': 'Visualise Intermediate Results',
                                                'widget_type': 'CheckBox',
                                                'value': True
@@ -283,6 +281,7 @@ def make_run_registration(
         z_max,
         registration_algorithm,
         params_from_json,
+        load_json_file,
         advanced,
 
         em_seg_header,
@@ -312,9 +311,7 @@ def make_run_registration(
 
         save_json,
         save_json_path,
-        visualise_intermediate_results,
-
-        load_json_file) -> Image:
+        visualise_intermediate_results) -> Image:
     """Run CLEM-Reg end-to-end
 
     Parameters
@@ -502,7 +499,10 @@ def make_run_registration(
         }
 
         json_object = json.dumps(dictionary, indent=4)
-        
+
+        if path_to_json == '':
+            path_to_json = 'parameters.json'
+
         with open(path_to_json, "w") as outfile:
             outfile.write(json_object)
 
