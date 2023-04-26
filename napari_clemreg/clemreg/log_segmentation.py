@@ -2,6 +2,7 @@
 # coding: utf-8
 from scipy.ndimage import gaussian_filter1d
 import numpy as np
+import cc3d
 from skimage import feature, exposure
 from napari.layers import Image
 from napari.qt.threading import thread_worker
@@ -117,3 +118,51 @@ def log_segmentation(input: Image,
     print(f'Finished segmenting after {time.time() - start_time}s!')
 
     return Labels(seg_volume, **kwargs)
+
+
+def filter_binary_segmentation(input: Labels,
+                               percentile: int=95):
+    """Filters binary segmentation based on size
+    Parameters
+    ----------
+    input : napari.layers.Labels
+        Binary segmentation volume
+    percentile : int
+        Specifies threshold for filtering individual objects based on size
+        determined as the number of True pixels. Indiviudal objects are
+        found with 3D connected components.
+    Returns
+    -------
+    clean_binary_volume : numpy.ndarray
+        A numpy array of the filtered binary volume
+    kwargs : dict
+        A dictionary of parameters for adding filtered binary volume to
+        napari viewer
+    """
+    start = time.time()
+
+    # Find connected components
+    labels_out = cc3d.connected_components(input.data)
+    print(f'Identified {labels_out.max()} connected components.')
+
+    # Count occurences of each connected component
+    num_of_occurences = np.bincount(labels_out.flatten())
+    threshold = np.percentile(num_of_occurences, percentile)
+    print(f'Objects with size below {threshold} will be removed.')
+
+    elements_below_thresh = num_of_occurences < threshold
+    idx_below_thresh = np.where(elements_below_thresh)[0]
+    print(f'Removing {len(idx_below_thresh)} objects...')
+
+    # Creates boolean array of components that will be removed
+    below_thresh_binary_volume = np.isin(labels_out, idx_below_thresh)
+    # Essentially binary subtraction of filtered from input array
+    clean_binary_volume = np.logical_xor(input.data, below_thresh_binary_volume)
+
+    elapsed = time.time() - start
+    print(f'Finished execution after {elapsed} seconds.')
+
+    kwargs = dict(
+        name=input.name + '_seg'
+    )
+    return Labels(clean_binary_volume, **kwargs)

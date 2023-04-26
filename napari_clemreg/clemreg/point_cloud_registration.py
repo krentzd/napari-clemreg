@@ -187,7 +187,7 @@ def point_cloud_registration(moving: PointsData,
                                              tf_param.scale)
 
         kwargs = dict(name='transformed_points',
-                      face_color='blue',
+                      face_color='yellow',
                       affine=mat,
                       size=5)
 
@@ -199,7 +199,7 @@ def point_cloud_registration(moving: PointsData,
         mat = np.vstack((np.hstack((mat, off)), np.array([0, 0, 0, 1])))
 
         kwargs = dict(name='transformed_points',
-                      face_color='blue',
+                      face_color='yellow',
                       affine=mat,
                       size=0.5)  # Point sizes don't display correctly
 
