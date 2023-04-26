@@ -29,7 +29,7 @@ def on_init(widget):
                layout='vertical',
                call_button='Segment',
                widget_header={'widget_type': 'Label',
-                              'label': f'<h2 text-align="left">LoG Image Segmentation</h2>'},
+                              'label': f'<h2 text-align="left">Moving Segmentation</h2>'},
                log_sigma={'label': 'Sigma',
                           'widget_type': 'FloatSpinBox',
                           'min': 0.5, 'max': 20, 'step': 0.5,
@@ -91,6 +91,7 @@ def moving_segmentation_widget(viewer: 'napari.viewer.Viewer',
         Thresholding of the inputted light microscopy image using
         adaptive thresholding.
     """
+    import numpy as np
     from ..clemreg.data_preprocessing import make_isotropic
     from ..clemreg.log_segmentation import log_segmentation
     from ..clemreg.mask_roi import mask_roi, mask_area
@@ -123,7 +124,7 @@ def moving_segmentation_widget(viewer: 'napari.viewer.Viewer',
             show_error('WARNING: No mitochondria in Fixed Image')
             return
 
-        viewer.add_labels(return_value.data,
+        viewer.add_labels(return_value.data.astype(np.int64),
                           name="Moving_Segmentation")
 
     if Moving_Image is None:

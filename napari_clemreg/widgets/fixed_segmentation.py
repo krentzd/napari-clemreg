@@ -8,7 +8,7 @@ from napari.qt.threading import thread_worker
 @magic_factory(layout='vertical',
                call_button='Segment',
                widget_header={'widget_type': 'Label',
-                              'label': f'<h2 text-align="left">MitoNet Image Segmentation</h2>'},
+                              'label': f'<h2 text-align="left">Fixed Segmentation</h2>'},
                em_seg_axis={'text': 'Prediction Across Three Axis',
                             'widget_type': 'CheckBox',
                             'value': False},
@@ -40,6 +40,7 @@ def fixed_segmentation_widget(viewer: 'napari.viewer.Viewer',
     produced by the MitoNet model.
 
     """
+    import numpy as np
     from ..clemreg.empanada_segmentation import empanada_segmentation
 
     @thread_worker
@@ -57,7 +58,7 @@ def fixed_segmentation_widget(viewer: 'napari.viewer.Viewer',
             show_error('WARNING: No mitochondria in Fixed Image')
             return
 
-        viewer.add_labels(return_value,
+        viewer.add_labels(return_value.astype(np.int64),
                           name="Fixed_Segmentation")
 
     if Fixed_Image is None:

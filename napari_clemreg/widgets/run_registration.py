@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # coding: utf-8
 import json
-import warnings
+import os.path
 import napari
 import numpy as np
 from magicgui import magic_factory
@@ -357,6 +357,7 @@ def make_run_registration(
     -------
 
     """
+    from pathlib import Path
     from ..clemreg.empanada_segmentation import empanada_segmentation
     from ..clemreg.log_segmentation import log_segmentation, filter_binary_segmentation
     from ..clemreg.mask_roi import mask_roi, mask_area
@@ -501,7 +502,7 @@ def make_run_registration(
         }
 
         json_object = json.dumps(dictionary, indent=4)
-
+        
         with open(path_to_json, "w") as outfile:
             outfile.write(json_object)
 
