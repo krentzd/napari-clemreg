@@ -53,6 +53,7 @@ def on_init(widget):
                          'log_sigma',
                          'log_threshold',
                          'custom_z_zoom',
+                         'filter_segmentation',
                          'point_cloud_header',
                          'point_cloud_sampling_frequency',
                          'point_cloud_sigma',
@@ -69,10 +70,12 @@ def on_init(widget):
 
     json_settings = ['load_json_file']
     custom_z_zom_settings = ['z_zoom_value']
+    filter_segmentation_settings = ['filter_size']
+    save_json_settings = ['save_json_path']
 
     for x in standard_settings:
         setattr(getattr(widget, x), 'visible', True)
-    for x in advanced_settings + ['z_min', 'z_max'] + custom_z_zom_settings:
+    for x in advanced_settings + ['z_min', 'z_max'] + custom_z_zom_settings + filter_segmentation_settings + save_json_settings:
         setattr(getattr(widget, x), 'visible', False)
     for x in json_settings:
         setattr(getattr(widget, x), 'visible', True)
@@ -113,6 +116,22 @@ def on_init(widget):
             for x in custom_z_zom_settings:
                 setattr(getattr(widget, x), 'visible', False)
 
+    def toggle_filter_segmentation(filter_segmentation: bool):
+        if filter_segmentation:
+            for x in filter_segmentation_settings:
+                setattr(getattr(widget, x), 'visible', True)
+        else:
+            for x in filter_segmentation_settings:
+                setattr(getattr(widget, x), 'visible', False)
+
+    def toggle_save_json(save_json: bool):
+        if save_json:
+            for x in save_json_settings:
+                setattr(getattr(widget, x), 'visible', True)
+        else:
+            for x in save_json_settings:
+                setattr(getattr(widget, x), 'visible', False)
+
     def change_z_max(input_image: Image):
         if len(input_image.data.shape) == 3:
             widget.z_max.max = input_image.data.shape[0]
@@ -143,6 +162,8 @@ def on_init(widget):
     widget.advanced.changed.connect(toggle_transform_widget)
     widget.params_from_json.changed.connect(toggle_json_widget)
     widget.custom_z_zoom.changed.connect(toggle_custom_z_zoom)
+    widget.filter_segmentation.changed.connect(toggle_filter_segmentation)
+    widget.save_json.changed.connect(toggle_save_json)
 
 @magic_factory(widget_init=on_init, layout='vertical', call_button='Register',
                widget_header={'widget_type': 'Label',
@@ -188,6 +209,13 @@ def on_init(widget):
                            'widget_type': 'FloatSpinBox',
                            'min': 0, 'step': 0.01,
                            'value': 1},
+               filter_segmentation={'text': 'Apply size filter to segmentation',
+                                'widget_type': 'CheckBox',
+                                'value': False},
+               filter_size={'label': 'Filter threshold (as percentile of size)',
+                                'widget_type': 'SpinBox',
+                                'min': 0, 'max': 100, 'step': 1,
+                                'value': 50},
                point_cloud_header={'widget_type': 'Label',
                                    'label': f'<h3 text-align="left">Point Cloud Sampling</h3>'},
                point_cloud_sampling_frequency={'label': 'Sampling Frequency',
@@ -231,6 +259,10 @@ def on_init(widget):
                save_json={'label': 'Save parameters',
                           'widget_type': 'CheckBox',
                           'value': False},
+               save_json_path={'label': 'Path to save parameters',
+                              'widget_type': 'FileEdit',
+                              'mode': 'w',
+                              'filter': '*.json'},
                params_from_json={'label': 'Parameters from JSON',
                                  'widget_type': 'CheckBox',
                                  'value': True},
@@ -263,6 +295,8 @@ def make_run_registration(
         log_threshold,
         custom_z_zoom,
         z_zoom_value,
+        filter_segmentation,
+        filter_size,
 
         point_cloud_header,
         point_cloud_sampling_frequency,
@@ -279,6 +313,7 @@ def make_run_registration(
         warping_sub_division_factor,
 
         save_json,
+        save_json_path,
         visualise_intermediate_results,
 
         load_json_file) -> Image:
@@ -304,6 +339,7 @@ def make_run_registration(
     log_sigma
     log_threshold
     zoom_value
+    filter_size
     white_space_2
     point_cloud_header
     point_cloud_sampling_frequency
@@ -324,7 +360,7 @@ def make_run_registration(
 
     """
     from ..clemreg.empanada_segmentation import empanada_segmentation
-    from ..clemreg.log_segmentation import log_segmentation
+    from ..clemreg.log_segmentation import log_segmentation, filter_binary_segmentation
     from ..clemreg.mask_roi import mask_roi, mask_area
     from ..clemreg.point_cloud_registration import point_cloud_registration
     from ..clemreg.point_cloud_sampling import point_cloud_sampling
@@ -342,6 +378,10 @@ def make_run_registration(
             em_seg_axis = data["em_seg_axis"]
             log_sigma = data["log_sigma"]
             log_threshold = data["log_threshold"]
+            custom_z_zoom = data["custom_z_zoom"],
+            z_zoom_value = ["z_zoom_value"],
+            filter_segmentation = ["filter_segmentation"],
+            filter_size = ["filter_size"],
             point_cloud_sampling_frequency = data["point_cloud_sampling_frequency"]
             point_cloud_sigma = data["point_cloud_sigma"]
             registration_voxel_size = data["registration_voxel_size"]
@@ -365,6 +405,10 @@ def make_run_registration(
         seg_volume = log_segmentation(input=Moving_Image,
                                       sigma=log_sigma,
                                       threshold=log_threshold)
+
+        if filter_segmentation:
+            seg_volume = filter_binary_segmentation(input=seg_volume,
+                                                    percentile=filter_size)
 
         if len(set(seg_volume.data.ravel())) <= 1:
             return 'No segmentation'
@@ -438,12 +482,16 @@ def make_run_registration(
                           name='fixed_points',
                           face_color='blue')
 
-    def _create_json_file():
+    def _create_json_file(path_to_json):
         dictionary = {
             "registration_algorithm": registration_algorithm,
             "em_seg_axis": em_seg_axis,
             "log_sigma": log_sigma,
             "log_threshold": log_threshold,
+            "custom_z_zoom": custom_z_zoom,
+            "z_zoom_value": z_zoom_value,
+            "filter_segmentation": filter_segmentation,
+            "filter_size": filter_size,
             "point_cloud_sampling_frequency": point_cloud_sampling_frequency,
             "point_cloud_sigma": point_cloud_sigma,
             "registration_voxel_size": registration_voxel_size,
@@ -456,7 +504,7 @@ def make_run_registration(
 
         json_object = json.dumps(dictionary, indent=4)
 
-        with open("sample.json", "w") as outfile:
+        with open(path_to_json, "w") as outfile:
             outfile.write(json_object)
 
     @thread_worker(connect={"returned": _add_data, "yielded": _yield_point_clouds})
@@ -515,7 +563,7 @@ def make_run_registration(
             return
 
     if save_json and not params_from_json:
-        _create_json_file()
+        _create_json_file(path_to_json=save_json_path)
 
     joiner = RegistrationThreadJoiner(worker_function=_run_registration_thread)
 
