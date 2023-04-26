@@ -75,10 +75,8 @@ def on_init(widget):
 
     for x in standard_settings:
         setattr(getattr(widget, x), 'visible', True)
-    for x in advanced_settings + ['z_min', 'z_max'] + custom_z_zom_settings + filter_segmentation_settings + save_json_settings:
+    for x in advanced_settings + ['z_min', 'z_max'] + json_settings + custom_z_zom_settings + filter_segmentation_settings + save_json_settings:
         setattr(getattr(widget, x), 'visible', False)
-    for x in json_settings:
-        setattr(getattr(widget, x), 'visible', True)
 
     def toggle_transform_widget(advanced: bool):
         if advanced:
@@ -105,8 +103,8 @@ def on_init(widget):
             if widget.advanced.value:
                 widget.advanced.value = False
         else:
-            widget.advanced.value = True
-            toggle_transform_widget(True)
+            for x in json_settings:
+                setattr(getattr(widget, x), 'visible', False)
 
     def toggle_custom_z_zoom(custom_z_zoom: bool):
         if custom_z_zoom:
@@ -265,7 +263,7 @@ def on_init(widget):
                               'filter': '*.json'},
                params_from_json={'label': 'Parameters from JSON',
                                  'widget_type': 'CheckBox',
-                                 'value': True},
+                                 'value': False},
                load_json_file={'label': 'Select Parameter File',
                                'widget_type': 'FileEdit',
                                'mode': 'r',
