@@ -1,16 +1,16 @@
-# napari-clemreg
-## An automated registration algorithm for correlative light and volume electron microscopy
+# napari-clemrerg
+### An automated point cloud based registration algorithm for correlative light and volume electron microscopy
 
 [![License](https://img.shields.io/pypi/l/napari-clemreg.svg?color=green)](https://github.com/krentzd/napari-clemreg/raw/master/LICENSE)
 [![PyPI](https://img.shields.io/pypi/v/napari-clemreg.svg?color=green)](https://pypi.org/project/napari-clemreg)
 [![Python Version](https://img.shields.io/pypi/pyversions/napari-clemreg.svg?color=green)](https://python.org)
-[![codecov](https://codecov.io/gh/krentzd/napari-clemreg/branch/master/graph/badge.svg)](https://codecov.io/gh/krentzd/napari-clemreg)
 
+[//]: # ([![codecov]&#40;https://codecov.io/gh/krentzd/napari-clemreg/branch/master/graph/badge.svg&#41;]&#40;https://codecov.io/gh/krentzd/napari-clemreg&#41;)
 [//]: # ([![tests]&#40;https://github.com/krentzd/napari-clemreg/workflows/tests/badge.svg&#41;]&#40;https://github.com/krentzd/napari-clemreg/actions&#41;)
 
 ## Installation
 
-To install `napari-clemreg` it is recommended to create a fresh [conda] environment with Python 3.8:
+To install `napari-clemreg` it is recommended to create a fresh [conda] environment with Python 3.9:
 
 ```
 conda create -n clemreg_env python=3.9
@@ -34,56 +34,47 @@ Ensure that [Visual Studios C++ 14.00](https://visualstudio.microsoft.com/thank-
 CLEM-reg is the combination of 5 main steps, MitoNet segmentation, LoG segmentation,
 point cloud sampling, point cloud registration and lastly image warping. These 5 steps 
 can be run all at once using the run registration widget shown below with the tick next to it.
-Or alternatively, they can be run individually with the numbered widgets.
+Alternatively, they can be run individually with the numbered widgets.
 
 ![clemreg_widget_options.png](docs%2Fimages%2Fclemreg_widget_options.png)
 
 ### Run Registration
 
-![registration_labels.png](docs%2Fimages%2Fregistration_labels.png)
+
+
+![registration_labels.png](docs%2Fimages%2FCLEMreg-fig.png)
 
 1. **Moving Image** - Here you select your light microscopy (LM) data which will
 be warped to align with the fixed electron microscopy (EM) image.
 2. **Fixed Image** - Here you select your EM data which will
 act as the reference point for the LM to be aligned to.
-3. **Mask ROI** - Here you can select a shapes layer where one can define what regions of
-the moving LM data will be segmented and subsequently sampled.
-4. **Registration Algorithm** - Here you can decide which type of registration algorith
+3. **Registration Algorithm** - Here you can decide which type of registration algorith
 will be used for the registration of inputted LM and EM. In terms of speed of each algorithm
 the following is the generally true, Rigid CPD > Affine CPD > BCPD.
-   1. BCPD - (EXPLAIN BCPD)
-   2. Rigid CPD - (EXPLAIN RIGID CPD)
-   3. Affine CPD - (EXPLAIN AFFINE CPD)
-5. **Parameters** - Here one can decide where the parameters of the algorithm should come
-from, either from a JSON file of from the napari interface.
-   1. Parameters from JSON - If you select this, you'll be prompted to select a JSON file from a file
-dialogue.
-   2. Parameters custom - If you select this, you'll be shown the advanced options of 
-CLEM-reg.
-6. **MitoNet Segmentation Parameters** - Here are the advanced options for the segmentation
-of the mitochondria in the fixed EM data.
+4. **MitoNet Segmentation Parameters** - Here are the advanced options for the segmentation
+of the mitochondria in the EM data.
    1. Prediction Across Three Axis - By selecting this option MitoNet will run segmentation
-across all three axis of the EM volume and then these three predictions will be aggregate. (MAY TAKE A WHILE)
-7. **LoG Segmentation Parameters**  - Here are the advanced options for the segmentation of 
-the mitochondria in the fixed LM data.
-   1. Sigma - (EXPLAIN SIGMA)
-   2. Threshold - (EXPLAIN THRESHOLD)
-8. **Point Cloud Sampling** - Here are the advanced options for the point cloud sampling of the 
+across all three axis of the EM volume and then these three predictions will be aggregate.
+5. **LoG Segmentation Parameters** - Here are the advanced options for the segmentation of 
+the mitochondria in the LM data.
+   1. Sigma - Sigma value for the Laplacian of Gaussian filter.
+   2. Threshold - Threshold value for the segmenting the LM data.
+6. **Point Cloud Sampling** - Here are the advanced options for the point cloud sampling of the 
 segmentations of the LM and EM data.
-   1. Sampling Frequency - Frequency of cloud sampling
-   2. Sigma - (EXPLAIN SIGMA)
-9. **Point Cloud Registration** - Here are the advanced options for the registration of the point clouds
+   1. Sampling Frequency - Frequency of point sampling from the fixed and moving segmentation. The greater the value the more points in the point cloud.
+   2. Sigma - Sigma value for the canny edge filter.
+7. **Point Cloud Registration** - Here are the advanced options for the registration of the point clouds
 of both the LM and EM data.
-   1. Interpolation Order - (EXPLAIN INTERPOLATION ORDER)
-   2. Subsampling - (EXPLAIN SUBSAMPLING)
-   3. Maximum Iterations - (EXPLAIN MAXIMUM ITERATIONS)
-10. **Image Warping** - Here are the advanced options for the image warping of the moving LM images.
-    1. Interpolation Order - (EXPLAIN INTERPOLATION ORDER)
-    2. Aproximate Grid - (EXPLAIN APROXIMATE GRID)
-    3. Sub-division Factor - (EXPLAIN SUB-DIVISION FACTOR)
-11. **Save Parameters** - Here you can select the option to save the advanced options you've selected
+   1. Voxel Size - The size voxel size of each point. Smaller the size the less memory consumption.
+   2. Subsampling - Downsampling of the point clouds to reduce memory consumption. Greater the number the fewer points in the point cloud.
+   3. Maximum Iterations - The number of round of point cloud registration. If too small it won't converge on an opitmal registration.
+8. **Image Warping** - Here are the advanced options for the image warping of the moving LM images.
+   1. Interpolation Order - The order of the spline interpolation.
+   2. Aproximate Grid - Controls the "resolution" of the grid onto which you're warping. A higher value reduces the step size between coordinates.
+   3. Sub-division Factor - Controls the size of the chunk when applying the warping.
+9. **Save Parameters** - Here you can select the option to save the advanced options you've selected
 to a JSON file which can be kept for reproducibility as well as running the registration again.
-12. **Visualise Intermediate Results** - Here you can select to view the outputs of each step as they
+10. **Visualise Intermediate Results** - Here you can select to view the outputs of each step as they
 are completed.
 
 ### Split Registration
@@ -103,21 +94,22 @@ their own unique input and output:
    - **Output**: LM Point Cloud & LM Point Cloud
 4. `Point Cloud Registration & Image Warping`
    - **Input**: EM Image, LM Image, LM Point Cloud & EM Point Cloud
+   - **Output**: Registered LM Image, Registered LM Point Cloud
 
 ### Registering Multiple LM Channels
 One can register multiple LM channels at once by doing the following.
 
-Start by splitting the LM channels into the separate layers by right-clicking on
+1. Start by splitting the LM channels into the separate layers by right-clicking on
 the layer and then selecting `Split Stack`.
 ![merged-channel-split-options.png](docs%2Fimages%2Fmerged-channel-split-options.png)
 This will result in each of the channels having their own individual layer. 
 
-Once this is done we must link all the LM layers together, this is done 
+2. Once this is done we must link all the LM layers together, this is done 
 by selecting all the layers which will highlight them in blue, once again right-clicking
 on the layer and then selecting `Link Layers.`
 ![split-channels-link-layers.png](docs%2Fimages%2Fsplit-channels-link-layers.png)
 
-And when you finally go to run CLEM-reg ensure that you for the `Moving Image`
+3. When you finally go to run CLEM-reg ensure that for the `Moving Image`
 you select the LM layer that contains mitochondria.
 
 ## Contributing
