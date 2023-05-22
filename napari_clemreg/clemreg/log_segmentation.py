@@ -30,7 +30,12 @@ def _min_max_scaling(data):
 
 def _diff_of_gauss(img, sigma_1=2.5, sigma_2=4):
     """ Calculates difference of gaussian of an inputted image
-    with two sigma values._
+    with two sigma values.
+
+    Sigma_1 is 2.5 and sigma_2 is 4 which is 1.6 times bigger than sigma_1.
+    This ratio was originally proposed by Marr and Hildreth (1980) [1]_ and is commonly
+    used when approximating the inverted Laplacian of Gaussian, which is used
+    in edge and blob detection.
 
     Parameters
     ----------
