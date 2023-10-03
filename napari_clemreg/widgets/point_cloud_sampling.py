@@ -16,6 +16,8 @@ from napari.qt.threading import thread_worker
                                   'widget_type': 'FloatSpinBox',
                                   'min': 0, 'max': 10, 'step': 0.1,
                                   'value': 1.0},
+                Moving_Segmentation={'label': 'Fluorescence Microscopy (FM) Segmentation'},
+                Fixed_Segmentation={'label': 'Electron Microscopy (EM) Segmentation'},
                )
 def point_cloud_sampling_widget(viewer: 'napari.viewer.Viewer',
                                 widget_header,

@@ -8,7 +8,6 @@ from magicgui import magic_factory
 from napari.layers import Image, Shapes, Labels, Points
 from napari.utils.notifications import show_error
 
-
 # Use as worker.join workaround --> Launch registration thread_worker from here
 class RegistrationThreadJoiner:
     def __init__(self, worker_function):
@@ -46,6 +45,8 @@ def on_init(widget):
     widget : magicgui.widgets.Widget
         The parent widget of the plugin.
     """
+    from ..clemreg.data_preprocessing import get_pixelsize
+
     standard_settings = ['widget_header', 'Moving_Image', 'Fixed_Image', 'Mask_ROI', 'advanced']
     advanced_settings = ['em_seg_header',
                          'em_seg_axis',
@@ -151,8 +152,23 @@ def on_init(widget):
             for x in ['z_min', 'z_max']:
                 setattr(getattr(widget, x), 'visible', False)
 
+    def change_moving_pixelsize(input_image: Image):
+        moving_xy_pixelsize, __, moving_z_pixelsize, unit = get_pixelsize(input_image.metadata)
+
+        if unit in ['nanometer', 'nm', 'um', 'micron', 'micrometer']:
+            if unit == 'um' or unit == 'micron':
+                unit = 'micrometer'
+            elif unit == 'nm':
+                unit = 'nanometer'
+        else:
+            unit = 'nanometer'
+
+        widget.moving_image_pixelsize_xy.value = str(moving_xy_pixelsize) + str(unit)
+        widget.moving_image_pixelsize_z.value = str(moving_z_pixelsize) + str(unit)
+
     widget.z_max.changed.connect(change_z_min)
     widget.Moving_Image.changed.connect(change_z_max)
+    widget.Moving_Image.changed.connect(change_moving_pixelsize)
     widget.z_min.changed.connect(change_z_max_from_z_min)
     widget.Mask_ROI.changed.connect(reveal_z_min_and_z_max)
     widget.advanced.changed.connect(toggle_transform_widget)
@@ -175,7 +191,8 @@ def on_init(widget):
                       'value': 0},
                registration_algorithm={'label': 'Registration Algorithm',
                                        'widget_type': 'ComboBox',
-                                       'choices': ["BCPD", "Rigid CPD", "Affine CPD"],
+                                       'choices': ["BCPD", "Rigid CPD"],
+                                       # 'choices': ["BCPD", "Rigid CPD", "Affine CPD"],
                                        'value': 'Rigid CPD',
                                        'tooltip': 'Speed: Rigid CPD > Affine CPD > BCPD'},
                params_from_json={'label': 'Parameters from JSON',
@@ -269,16 +286,37 @@ def on_init(widget):
                visualise_intermediate_results={'label': 'Visualise Intermediate Results',
                                                'widget_type': 'CheckBox',
                                                'value': True
-                                               }
+                                               },
+               moving_image_pixelsize_xy={'label': 'Pixel size (xy)',
+                                               'widget_type': 'QuantityEdit',
+                                               'value': '0 nanometer'
+                                               },
+               moving_image_pixelsize_z={'label': 'Pixel size (z)',
+                                               'widget_type': 'QuantityEdit',
+                                               'value': '0 nanometer'
+                                               },
+               registration_direction={'label': 'Registration direction',
+                                               'widget_type': 'RadioButtons',
+                                               'choices': [u'FM \u2192 EM', u'EM \u2192 FM'],
+                                               'value': u'FM \u2192 EM'
+                                               },
+               Moving_Image={'label': 'Fluorescence Microscopy Image (FM)'},
+               Fixed_Image={'label': 'Electron Microscopy Image (EM)'},
+
                )
 def make_run_registration(
         viewer: 'napari.viewer.Viewer',
         widget_header,
         Moving_Image: Image,
-        Fixed_Image: Image,
+
+        moving_image_pixelsize_xy,
+        moving_image_pixelsize_z,
         Mask_ROI: Shapes,
         z_min,
         z_max,
+
+        Fixed_Image: Image,
+
         registration_algorithm,
         params_from_json,
         load_json_file,
@@ -311,7 +349,10 @@ def make_run_registration(
 
         save_json,
         save_json_path,
-        visualise_intermediate_results) -> Image:
+        visualise_intermediate_results,
+
+        registration_direction
+        ) -> Image:
     """Run CLEM-Reg end-to-end
 
     Parameters
@@ -396,6 +437,10 @@ def make_run_registration(
     @thread_worker
     def _run_moving_thread():
         # Inplace operation, metadata extraction only works if TIFF file
+        if not custom_z_zoom:
+            # Need to verify units are the same in xy and z
+            z_zoom_value = moving_image_pixelsize_z.magnitude / moving_image_pixelsize_xy.magnitude
+
         z_zoom = make_isotropic(input_image=Moving_Image, z_zoom_value=z_zoom_value if custom_z_zoom else None)
 
         seg_volume = log_segmentation(input=Moving_Image,
@@ -514,7 +559,16 @@ def make_run_registration(
         if visualise_intermediate_results:
             yield moving_points, fixed_points
 
-        moving, fixed, transformed, kwargs = point_cloud_registration(moving_points.data, fixed_points.data,
+        #TODO Add registration direction choice here
+        if registration_direction == u'FM \u2192 EM':
+            moving_input_points = moving_points
+            fixed_input_points = fixed_points
+
+        elif registration_direction == u'EM \u2192 FM':
+            moving_input_points = fixed_points
+            fixed_input_points = moving_points
+
+        moving, fixed, transformed, kwargs = point_cloud_registration(moving_input_points.data, fixed_input_points.data,
                                                                       algorithm=registration_algorithm,
                                                                       voxel_size=registration_voxel_size,
                                                                       every_k_points=registration_every_k_points,
@@ -523,8 +577,16 @@ def make_run_registration(
         if registration_algorithm == 'Affine CPD' or registration_algorithm == 'Rigid CPD':
             transformed = Points(moving, **kwargs)
 
-        return warp_image_volume(moving_image=Moving_Image,
-                                 fixed_image=Fixed_Image.data,
+        if registration_direction == u'FM \u2192 EM':
+            moving_input_image = Moving_Image
+            fixed_input_image = Fixed_Image
+
+        elif registration_direction == u'EM \u2192 FM':
+            moving_input_image = Fixed_Image
+            fixed_input_image = Moving_Image
+
+        return warp_image_volume(moving_image=moving_input_image,
+                                 fixed_image=fixed_input_image.data,
                                  transform_type=registration_algorithm,
                                  moving_points=Points(moving),
                                  transformed_points=transformed,

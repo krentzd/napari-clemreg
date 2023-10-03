@@ -46,6 +46,10 @@ from napari.utils.notifications import show_error
                                             'widget_type': 'SpinBox',
                                             'min': 1, 'max': 10, 'step': 1,
                                             'value': 1},
+               Moving_Image={'label': 'Fluorescence Microscopy (FM) Image'},
+               Fixed_Image={'label': 'Electron Microscopy (EM) Image'},
+               Moving_Points={'label': 'Fluorescence Microscopy (FM) Point Cloud'},
+               Fixed_Points={'label': 'Electron Microscopy (EM) Point Cloud'},
                )
 def registration_warping_widget(viewer: 'napari.viewer.Viewer',
                                 widget_header,
@@ -54,7 +58,7 @@ def registration_warping_widget(viewer: 'napari.viewer.Viewer',
                                 Moving_Image: Image,
                                 Fixed_Image: Image,
                                 Moving_Points: Points,
-                                Fixed_points: Points,
+                                Fixed_Points: Points,
 
                                 registration_header,
                                 registration_algorithm,
@@ -84,7 +88,7 @@ def registration_warping_widget(viewer: 'napari.viewer.Viewer',
         The fixed image to reference the moving warping to.
     Moving_Points : Points
         The sampled moving points of the moving light microscopy image.
-    Fixed_points : Points
+    Fixed_Points : Points
         The sampled fixed points of the fixed electron microscopy image
     registration_header : str
         The registration heading
@@ -116,7 +120,7 @@ def registration_warping_widget(viewer: 'napari.viewer.Viewer',
     @thread_worker
     def _registration_thread():
         moving, fixed, transformed, kwargs = point_cloud_registration(Moving_Points.data,
-                                                                      Fixed_points.data,
+                                                                      Fixed_Points.data,
                                                                       algorithm=registration_algorithm,
                                                                       voxel_size=registration_voxel_size,
                                                                       every_k_points=registration_every_k_points,

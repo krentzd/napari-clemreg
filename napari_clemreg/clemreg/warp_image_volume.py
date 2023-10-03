@@ -30,7 +30,6 @@ def _make_inverse_warp(from_points, to_points, output_region, approximate_grid):
     ?
 
     """
-    print('Make inverse warp')
     x_min, y_min, z_min, x_max, y_max, z_max = output_region
     if approximate_grid is None: approximate_grid = 1
     x_steps = (x_max - x_min) // approximate_grid
@@ -39,7 +38,7 @@ def _make_inverse_warp(from_points, to_points, output_region, approximate_grid):
 
     x, y, z = np.mgrid[x_min:x_max:x_steps * 1j, y_min:y_max:y_steps * 1j, z_min:z_max:z_steps * 1j]
     transform = _make_warp(to_points, from_points, x, y, z)
-    print('Transform computed!')
+
     if approximate_grid != 1:
         # linearly interpolate the zoomed transform grid
         new_x, new_y, new_z = np.mgrid[x_min:x_max + 1, y_min:y_max + 1, z_min:z_max + 1]
@@ -166,18 +165,12 @@ def _make_L_matrix(points):
     -------
     ?
     """
-    print('making L matrix')
     n = len(points)
     K = _U(_interpoint_distances(points))
-    print('K matrix')
     P = np.ones((n, 4))
-    print('P matrix')
     P[:, 1:] = points
     O = np.zeros((4, 4))
-    print('Building block')
     L = np.block([[K, P], [P.transpose(), O]])
-    # L = np.asarray(np.bmat([[K, P],[P.transpose(), O]]))
-    print('Built L')
     return L
 
 
@@ -204,7 +197,6 @@ def _calculate_f(coeffs, points, x, y, z):
     w = coeffs[:-3]
     a1, ax, ay, az = coeffs[-4:]
     summation = np.zeros(x.shape)
-    print('Calculating f...')
     for wi, Pi in zip(w, points):
         summation += wi * _U(np.sqrt((x - Pi[0]) ** 2 + (y - Pi[1]) ** 2 + (z - Pi[2]) ** 2))
     return a1 + ax * x + ay * y + az * z + summation
@@ -236,14 +228,10 @@ def _make_warp(from_points, to_points, x_vals, y_vals, z_vals):
     L = _make_L_matrix(from_points)
     V = np.resize(to_points, (len(to_points) + 4, 3))
     V[-3:, :] = 0
-    print('Computing pseudoinverse of L...')
-    print(L.shape)
     # TODO: benchmark speed of numpy and scipy implementations of pinv
     # TODO: if piecewise non-linear transform only compute pseudoinverse once!
     L_pseudo_inverse = np.linalg.pinv(L)  # L increases with number of control points!
-    print('Done!')
     coeffs = np.dot(L_pseudo_inverse, V)
-    print('L, V, coeffs', L.shape, V.shape, coeffs.shape)
     x_warp = _calculate_f(coeffs[:, 0], from_points, x_vals, y_vals, z_vals)
     y_warp = _calculate_f(coeffs[:, 1], from_points, x_vals, y_vals, z_vals)
     z_warp = _calculate_f(coeffs[:, 2], from_points, x_vals, y_vals, z_vals)
@@ -274,9 +262,7 @@ def _warp_images(from_points, to_points, image, output_region, interpolation_ord
     -------
     ?
     """
-    print('Entered warp_images')
     transform = _make_inverse_warp(from_points, to_points, output_region, approximate_grid)
-    print('Resampling image...')
     return ndimage.map_coordinates(np.asarray(image), transform, order=interpolation_order)
 
 
@@ -342,7 +328,6 @@ def _warp_image_volume(moving_image: Image,
     ?
 
     """
-    print('Warping image volume')
     assert len(moving_points) == len(transformed_points), 'Moving and transformed points must be of same length.'
 
     x_chunk = math.ceil(fixed_image.shape[1] / sub_division_factor)
@@ -368,8 +353,6 @@ def _warp_image_volume(moving_image: Image,
 
                         z_min, x_min, y_min, z_max, x_max, y_max = output_region
 
-                        print('Output region:', output_region)
-
                         warped_region = _warp_images(from_points=moving_points,
                                                      to_points=transformed_points,
                                                      image=moving_image.data[c],
@@ -377,16 +360,12 @@ def _warp_image_volume(moving_image: Image,
                                                      interpolation_order=interpolation_order,
                                                      approximate_grid=approximate_grid)
 
-                        print('Warped region:', warped_region.shape)
-                        print('Warped region smaller:', warped_region[:-1, :-1, :-1].shape)
-
                         # Warping function returns images padded by one in each dimension
                         warped_image[z_min:z_max, x_min:x_max, y_min:y_max] = warped_region[:-1, :-1, :-1]
 
             warped_images.append(warped_image)
             kwargs_list.append(dict(name=moving_image.name + '_warped_ch_' + str(c)))
 
-        print('Finished warping')
         return (np.squeeze(np.stack(warped_images)), kwargs_list)
 
     else:
@@ -404,17 +383,12 @@ def _warp_image_volume(moving_image: Image,
 
                     z_min, x_min, y_min, z_max, x_max, y_max = output_region
 
-                    print('Output region:', output_region)
-
                     warped_region = _warp_images(from_points=moving_points,
                                                  to_points=transformed_points,
                                                  image=moving_image.data,
                                                  output_region=output_region,
                                                  interpolation_order=interpolation_order,
                                                  approximate_grid=approximate_grid)
-
-                    print('Warped region:', warped_region.shape)
-                    print('Warped region smaller:', warped_region[:-1, :-1, :-1].shape)
 
                     # Warping function returns images padded by one in each dimension
                     warped_image[z_min:z_max, x_min:x_max, y_min:y_max] = warped_region[:-1, :-1, :-1]
@@ -423,11 +397,91 @@ def _warp_image_volume(moving_image: Image,
         kwargs = dict(
             name=moving_image.name + '_warped'
         )
-        print('Finished warping')
         return warped_image, kwargs
 
-
 def warp_image_volume(
+        moving_image: Image,
+        fixed_image: ImageData,
+        transform_type: str,
+        moving_points: Points,
+        transformed_points: Points,
+        interpolation_order: int = 1,
+        approximate_grid: int = 1,
+        sub_division_factor: int = 1
+):
+    """
+    ?
+
+    Parameters
+    ----------
+    moving_image : ?
+        ?
+    fixed_image : ?
+        ?
+    transform_type : ?
+        ?
+    moving_points : ?
+        ?
+    transformed_points : ?
+        ?
+    interpolation_order : ?
+        ?
+    approximate_grid : ?
+        ?
+    sub_division_factor : ?
+        ?
+
+    Returns
+    -------
+        ?
+    """
+
+    if transform_type == 'BCPD':
+        warping_args = {'fixed_image': fixed_image.data,
+                        'moving_points': moving_points.data,
+                        'transformed_points': transformed_points.data,
+                        'interpolation_order': interpolation_order,
+                        'approximate_grid': approximate_grid,
+                        'sub_division_factor': sub_division_factor}
+
+    elif transform_type == 'Affine CPD' or transform_type == 'Rigid CPD':
+        affine_matrix = transformed_points.affine.affine_matrix
+        warping_args = {'matrix': affine_matrix,
+                        'output_shape': fixed_image.data.shape,
+                        'interpolation_order': interpolation_order}
+
+    # Get linked layers
+    if len(get_linked_layers(moving_image)) > 0:
+        img_wrp_list = []
+        images = get_linked_layers(moving_image)
+        images.add(moving_image)
+        # Include actual image in set --> only one layer added to viewer
+        for image in images:
+            if transform_type == 'Affine CPD' or transform_type == 'Rigid CPD':
+                img_wrp = _warp_image_volume_affine(moving_image=image.data, **warping_args)
+            elif transform_type == 'BCPD':
+                img_wrp, __ = _warp_image_volume(moving_image=image, **warping_args)
+
+            kwargs = dict(
+                name=image.name + '_warped',
+                colormap=image.colormap,
+                blending=image.blending
+            )
+            img_wrp_list.append((img_wrp, kwargs))
+        return img_wrp_list
+
+    else:
+        if transform_type == 'Affine CPD' or transform_type == 'Rigid CPD':
+            img_wrp = _warp_image_volume_affine(moving_image=image.data, **warping_args)
+        elif transform_type == 'BCPD':
+            img_wrp, __ = _warp_image_volume(moving_image=image, **warping_args)
+
+        kwargs = dict(
+            name=moving_image.name + '_warped'
+        )
+        return img_wrp, kwargs
+
+def warp_image_volume_deprecated(
         moving_image: Image,
         fixed_image: ImageData,
         transform_type: str,

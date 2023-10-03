@@ -6,7 +6,8 @@ import open3d as o3
 import transforms3d as t3d
 from napari.types import PointsData
 from probreg import cpd, bcpd, callbacks
-from tqdm import tqdm
+# from tqdm import tqdm
+from magicgui.tqdm import tqdm
 
 
 # TODO: Account for piecewise maxi iterations
