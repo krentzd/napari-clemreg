@@ -1,14 +1,13 @@
 #!/usr/bin/env python3
 # coding: utf-8
 from scipy.ndimage import gaussian_filter1d
-import numpy as np
 import cc3d
 from skimage import feature, exposure
 from napari.layers import Image
 from napari.qt.threading import thread_worker
 import time
 from napari.layers import Labels
-
+import numpy as np
 
 def _min_max_scaling(data):
     """
@@ -26,7 +25,6 @@ def _min_max_scaling(data):
     d = np.max(data) - np.min(data)
 
     return n / d
-
 
 def _diff_of_gauss(img, sigma_1=2.5, sigma_2=4):
     """ Calculates difference of gaussian of an inputted image
@@ -62,7 +60,6 @@ def _diff_of_gauss(img, sigma_1=2.5, sigma_2=4):
 
     return diff_of_gauss
 
-
 def _slice_adaptive_thresholding(img, thresh):
     """ Apply adaptive thresholding to the user inputted image stack
     based on the threshold value.
@@ -88,8 +85,6 @@ def _slice_adaptive_thresholding(img, thresh):
 
     return np.asarray(thresh_img)
 
-
-# @thread_worker
 def log_segmentation(input: Image,
                      sigma: float = 3,
                      threshold: float = 1.2):
@@ -123,7 +118,6 @@ def log_segmentation(input: Image,
     print(f'Finished segmenting after {time.time() - start_time}s!')
 
     return Labels(seg_volume, **kwargs)
-
 
 def filter_binary_segmentation(input: Labels,
                                percentile: int=95):

@@ -7,7 +7,7 @@ from napari.qt.threading import thread_worker
 def on_init(widget):
     from ..clemreg.data_preprocessing import get_pixelsize
 
-    custom_z_zom_settings = ['z_zoom_value']
+    custom_z_zom_settings = ['z_zoom']
     filter_segmentation_settings = ['filter_size']
 
     standard_settings = ['Moving_Image',
@@ -20,7 +20,7 @@ def on_init(widget):
                          'filter_segmentation']
     advanced_settings = ['z_min',
                          'z_max',
-                         'z_zoom_value',
+                         'z_zoom',
                          'filter_size']
 
     for x in standard_settings:
@@ -119,7 +119,7 @@ def on_init(widget):
                                                'widget_type': 'QuantityEdit',
                                                'value': '0 nanometer'
                                                },
-               z_zoom_value={'label': 'Z interpolation factor',
+               z_zoom={'label': 'Z interpolation factor',
                            'widget_type': 'FloatSpinBox',
                            'min': 0, 'step': 0.01,
                            'value': 1},
@@ -148,7 +148,7 @@ def moving_segmentation_widget(viewer: 'napari.viewer.Viewer',
                                log_sigma,
                                log_threshold,
                                custom_z_zoom,
-                               z_zoom_value,
+                               z_zoom,
                                filter_segmentation,
                                filter_size,
                                ):
@@ -189,15 +189,23 @@ def moving_segmentation_widget(viewer: 'napari.viewer.Viewer',
     """
     import numpy as np
     from ..clemreg.data_preprocessing import make_isotropic
-    from ..clemreg.log_segmentation import log_segmentation
+    from ..clemreg.log_segmentation import log_segmentation, filter_binary_segmentation
     from ..clemreg.mask_roi import mask_roi, mask_area
 
+    # z_zoom is private. Unclear why, need to investigate
+    z_zoom_in = z_zoom
+
     @thread_worker
-    def _run_moving_thread():
+    def _run_segmentation_thread():
         print('Starting LoG segmentation...')
         if not custom_z_zoom:
             # Need to verify units are the same in xy and z
-            z_zoom_value = moving_image_pixelsize_z.magnitude / moving_image_pixelsize_xy.magnitude
+            if  moving_image_pixelsize_xy.magnitude > 0:
+                z_zoom_value = moving_image_pixelsize_z.magnitude / moving_image_pixelsize_xy.magnitude
+            else:
+                z_zoom_value = 1
+        else:
+            z_zoom_value = z_zoom_in
 
         z_zoom = make_isotropic(input_image=Moving_Image, z_zoom_value=z_zoom_value if custom_z_zoom else None)
 
@@ -252,6 +260,6 @@ def moving_segmentation_widget(viewer: 'napari.viewer.Viewer',
             show_error("WARNING: Your mask size exceeds the size of the image.")
             return
 
-    worker_moving = _run_moving_thread()
+    worker_moving = _run_segmentation_thread()
     worker_moving.returned.connect(_add_data)
     worker_moving.start()

@@ -1,12 +1,10 @@
 #!/usr/bin/env python3
 # coding: utf-8
 import time
-import numpy as np
 from napari.layers import Labels, Points
 from skimage import feature
+import numpy as np
 
-
-# @thread_worker
 def point_cloud_sampling(input: Labels,
                          sampling_frequency: float = 0.01,
                          sigma: float = 1.0,

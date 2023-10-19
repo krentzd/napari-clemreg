@@ -2,13 +2,12 @@
 # coding: utf-8
 # Adapted from: https://github.com/zpincus/celltool/blob/master/celltool/numerics/image_warp.py
 import math
-import numpy as np
 from napari.layers import Points, Image
 from napari.types import PointsData, ImageData
 from scipy import ndimage
 from napari.layers.utils._link_layers import get_linked_layers
 from skimage import exposure
-
+import numpy as np
 
 def _make_inverse_warp(from_points, to_points, output_region, approximate_grid):
     """
@@ -458,7 +457,7 @@ def warp_image_volume(
         # Include actual image in set --> only one layer added to viewer
         for image in images:
             if transform_type == 'Affine CPD' or transform_type == 'Rigid CPD':
-                img_wrp = _warp_image_volume_affine(moving_image=image.data, **warping_args)
+                img_wrp = _warp_image_volume_affine(image=image.data, **warping_args)
             elif transform_type == 'BCPD':
                 img_wrp, __ = _warp_image_volume(moving_image=image, **warping_args)
 
@@ -472,9 +471,9 @@ def warp_image_volume(
 
     else:
         if transform_type == 'Affine CPD' or transform_type == 'Rigid CPD':
-            img_wrp = _warp_image_volume_affine(moving_image=image.data, **warping_args)
+            img_wrp = _warp_image_volume_affine(image=moving_image.data, **warping_args)
         elif transform_type == 'BCPD':
-            img_wrp, __ = _warp_image_volume(moving_image=image, **warping_args)
+            img_wrp, __ = _warp_image_volume(moving_image=moving_image, **warping_args)
 
         kwargs = dict(
             name=moving_image.name + '_warped'

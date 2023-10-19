@@ -20,12 +20,19 @@ contributions:
   - id: napari-clemreg.get_reader
     title: Get Reader
     python_name: napari_clemreg._reader:napari_get_reader
+  - id: napari-clemreg.sample_data
+    title: Sample Benchmark Data
+    python_name: napari_clemreg.clemreg.sample_data:make_sample_data
   readers:
   - command: napari-clemreg.get_reader
     filename_patterns:
     - '*.tif'
     - '*.tiff'
     accepts_directories: true
+  sample_data:
+  - command: napari-clemreg.sample_data
+    display_name: Sample Benchmark Data
+    key: benchmark_dataset.1
   widgets:
   - command: napari-clemreg.make_run_registration
     display_name: Run registration
