@@ -434,12 +434,19 @@ def make_run_registration(
         show_error("Load from JSON selected but no JSON file selected or file path isn't real")
         return
 
+    z_zoom_in = z_zoom_value
+
     @thread_worker
     def _run_moving_thread():
         # Inplace operation, metadata extraction only works if TIFF file
         if not custom_z_zoom:
             # Need to verify units are the same in xy and z
-            z_zoom_value = moving_image_pixelsize_z.magnitude / moving_image_pixelsize_xy.magnitude
+            if  moving_image_pixelsize_xy.magnitude > 0:
+                z_zoom_value = moving_image_pixelsize_z.magnitude / moving_image_pixelsize_xy.magnitude
+            else:
+                z_zoom_value = 1
+        else:
+            z_zoom_value = z_zoom_in
 
         z_zoom = make_isotropic(input_image=Moving_Image, z_zoom_value=z_zoom_value if custom_z_zoom else None)
 
