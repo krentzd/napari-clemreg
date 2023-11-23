@@ -34,7 +34,7 @@ def get_pixelsize(metadata: dict):
 
         z_pxlsz = ij_dict['spacing']
         unit = ij_dict['unit']
-    except KeyError:
+    except (KeyError, ValueError) as error:
         z_pxlsz = 1
         unit = 'micron'
         print('ImageJ metdata not recorded in metadata')

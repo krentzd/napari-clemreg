@@ -192,7 +192,7 @@ def on_init(widget):
                registration_algorithm={'label': 'Registration Algorithm',
                                        'widget_type': 'ComboBox',
                                        'choices': ["BCPD", "Rigid CPD"],
-                                       # 'choices': ["BCPD", "Rigid CPD", "Affine CPD"],
+                                       'choices': ["BCPD", "Rigid CPD", "Affine CPD"],
                                        'value': 'Rigid CPD',
                                        'tooltip': 'Speed: Rigid CPD > Affine CPD > BCPD'},
                params_from_json={'label': 'Parameters from JSON',
@@ -520,15 +520,8 @@ def make_run_registration(
             viewer.add_labels(image, name=image_type)
 
     def _yield_point_clouds(yield_value):
-        mp = yield_value[0]
-        fp = yield_value[1]
-
-        viewer.add_points(mp.data,
-                          name='moving_points',
-                          face_color='red')
-        viewer.add_points(fp.data,
-                          name='fixed_points',
-                          face_color='blue')
+        points, kwargs = yield_value[0], yield_value[1]
+        viewer.add_points(points.data, **kwargs)
 
     def _create_json_file(path_to_json):
         dictionary = {
@@ -564,9 +557,10 @@ def make_run_registration(
             return 'No segmentation'
 
         if visualise_intermediate_results:
-            yield moving_points, fixed_points
+            yield (moving_points, {'name': 'moving_points', 'face_color': 'red'})
+            yield (fixed_points, {'name': 'fixed_points', 'face_color': 'blue'})
 
-        #TODO Add registration direction choice here
+
         if registration_direction == u'FM \u2192 EM':
             moving_input_points = moving_points
             fixed_input_points = fixed_points
@@ -583,6 +577,9 @@ def make_run_registration(
 
         if registration_algorithm == 'Affine CPD' or registration_algorithm == 'Rigid CPD':
             transformed = Points(moving, **kwargs)
+
+        if visualise_intermediate_results:
+            yield ([transformed, {'name': 'transformed_points', 'face_color': 'yellow'}])
 
         if registration_direction == u'FM \u2192 EM':
             moving_input_image = Moving_Image

@@ -46,6 +46,13 @@ from napari.utils.notifications import show_error
                                             'widget_type': 'SpinBox',
                                             'min': 1, 'max': 10, 'step': 1,
                                             'value': 1},
+
+               registration_direction={'label': 'Registration direction',
+                                               'widget_type': 'RadioButtons',
+                                               'choices': [u'FM \u2192 EM', u'EM \u2192 FM'],
+                                               'value': u'FM \u2192 EM'
+                                               },
+
                Moving_Image={'label': 'Fluorescence Microscopy (FM) Image'},
                Fixed_Image={'label': 'Electron Microscopy (EM) Image'},
                Moving_Points={'label': 'Fluorescence Microscopy (FM) Point Cloud'},
@@ -69,7 +76,9 @@ def registration_warping_widget(viewer: 'napari.viewer.Viewer',
                                 warping_header,
                                 warping_interpolation_order,
                                 warping_approximate_grid,
-                                warping_sub_division_factor
+                                warping_sub_division_factor,
+
+                                registration_direction
                                 ):
     """
     This widget registers the moving and fixed points and then uses
@@ -119,6 +128,15 @@ def registration_warping_widget(viewer: 'napari.viewer.Viewer',
 
     @thread_worker
     def _registration_thread():
+
+        if registration_direction == u'FM \u2192 EM':
+            moving_input_points = moving_points
+            fixed_input_points = fixed_points
+
+        elif registration_direction == u'EM \u2192 FM':
+            moving_input_points = fixed_points
+            fixed_input_points = moving_points
+
         moving, fixed, transformed, kwargs = point_cloud_registration(Moving_Points.data,
                                                                       Fixed_Points.data,
                                                                       algorithm=registration_algorithm,
@@ -130,6 +148,14 @@ def registration_warping_widget(viewer: 'napari.viewer.Viewer',
             transformed = Points(moving, **kwargs)
         else:
             transformed = Points(transformed)
+
+        if registration_direction == u'FM \u2192 EM':
+            moving_input_image = Moving_Image
+            fixed_input_image = Fixed_Image
+
+        elif registration_direction == u'EM \u2192 FM':
+            moving_input_image = Fixed_Image
+            fixed_input_image = Moving_Image
 
         return warp_image_volume(moving_image=Moving_Image,
                                  fixed_image=Fixed_Image.data,
