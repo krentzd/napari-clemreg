@@ -4,7 +4,7 @@ import json
 import os.path
 import napari
 import numpy as np
-from magicgui import magic_factory
+from magicgui import magic_factory, widgets
 from napari.layers import Image, Shapes, Labels, Points
 from napari.utils.notifications import show_error
 
@@ -60,7 +60,6 @@ def on_init(widget):
                          'point_cloud_sigma',
                          'registration_header',
                          'registration_voxel_size',
-                         'registration_every_k_points',
                          'registration_max_iterations',
                          'warping_header',
                          'warping_interpolation_order',
@@ -253,10 +252,6 @@ def on_init(widget):
                                         'widget_type': 'SpinBox',
                                         'min': 1, 'max': 1000, 'step': 1,
                                         'value': 5},
-               registration_every_k_points={'label': 'Subsampling',
-                                            'widget_type': 'SpinBox',
-                                            'min': 1, 'max': 1000, 'step': 1,
-                                            'value': 1},
                registration_max_iterations={'label': 'Maximum Iterations',
                                             'widget_type': 'SpinBox',
                                             'min': 1, 'max': 1000, 'step': 1,
@@ -295,6 +290,14 @@ def on_init(widget):
                                                'widget_type': 'QuantityEdit',
                                                'value': '0 nanometer'
                                                },
+               fixed_image_pixelsize_xy={'label': 'Pixel size (xy)',
+                                               'widget_type': 'QuantityEdit',
+                                               'value': '0 nanometer'
+                                               },
+               fixed_image_pixelsize_z={'label': 'Pixel size (z)',
+                                               'widget_type': 'QuantityEdit',
+                                               'value': '0 nanometer'
+                                               },
                registration_direction={'label': 'Registration direction',
                                                'widget_type': 'RadioButtons',
                                                'choices': [u'FM \u2192 EM', u'EM \u2192 FM'],
@@ -303,6 +306,7 @@ def on_init(widget):
                Moving_Image={'label': 'Fluorescence Microscopy Image (FM)'},
                Fixed_Image={'label': 'Electron Microscopy Image (EM)'},
 
+               # pbar={'visible': False, 'max': 0, 'label': 'Running...'},
                )
 def make_run_registration(
         viewer: 'napari.viewer.Viewer',
@@ -316,6 +320,8 @@ def make_run_registration(
         z_max,
 
         Fixed_Image: Image,
+        fixed_image_pixelsize_xy,
+        fixed_image_pixelsize_z,
 
         registration_algorithm,
         params_from_json,
@@ -335,11 +341,10 @@ def make_run_registration(
 
         point_cloud_header,
         point_cloud_sampling_frequency,
+        registration_voxel_size,
         point_cloud_sigma,
 
         registration_header,
-        registration_voxel_size,
-        registration_every_k_points,
         registration_max_iterations,
 
         warping_header,
@@ -351,7 +356,9 @@ def make_run_registration(
         save_json_path,
         visualise_intermediate_results,
 
-        registration_direction
+        registration_direction,
+
+        # pbar: widgets.ProgressBar
         ) -> Image:
     """Run CLEM-Reg end-to-end
 
@@ -383,7 +390,6 @@ def make_run_registration(
     white_space_3
     registration_header
     registration_voxel_size
-    registration_every_k_points
     registration_max_iterations
     white_space_4
     warping_header
@@ -422,7 +428,6 @@ def make_run_registration(
             point_cloud_sampling_frequency = data["point_cloud_sampling_frequency"]
             point_cloud_sigma = data["point_cloud_sigma"]
             registration_voxel_size = data["registration_voxel_size"]
-            registration_every_k_points = data["registration_every_k_points"]
             registration_max_iterations = data["registration_max_iterations"]
             warping_interpolation_order = data["warping_interpolation_order"]
             warping_approximate_grid = data["warping_approximate_grid"]
@@ -472,8 +477,10 @@ def make_run_registration(
         if visualise_intermediate_results:
             yield seg_volume_mask, 'lm'
 
+        point_freq = point_cloud_sampling_frequency / 100
         point_cloud = point_cloud_sampling(input=seg_volume_mask,
-                                           sampling_frequency=point_cloud_sampling_frequency / 100,
+                                           every_k_points=1 // point_freq,
+                                           voxel_size=registration_voxel_size,
                                            sigma=point_cloud_sigma)
         return point_cloud
 
@@ -488,12 +495,16 @@ def make_run_registration(
         if visualise_intermediate_results:
             yield seg_volume, 'em'
 
+        point_freq = point_cloud_sampling_frequency / 100
         point_cloud = point_cloud_sampling(input=Labels(seg_volume),
-                                           sampling_frequency=point_cloud_sampling_frequency / 100,
+                                           every_k_points=1 // point_freq,
+                                           voxel_size=registration_voxel_size,
                                            sigma=point_cloud_sigma)
         return point_cloud
 
     def _add_data(return_value):
+        pbar.hide()
+
         if return_value == 'No segmentation':
             show_error('WARNING: No mitochondria in Fixed Image or Moving Image')
             return
@@ -536,7 +547,6 @@ def make_run_registration(
             "point_cloud_sampling_frequency": point_cloud_sampling_frequency,
             "point_cloud_sigma": point_cloud_sigma,
             "registration_voxel_size": registration_voxel_size,
-            "registration_every_k_points": registration_every_k_points,
             "registration_max_iterations": registration_max_iterations,
             "warping_interpolation_order": warping_interpolation_order,
             "warping_approximate_grid": warping_approximate_grid,
@@ -571,15 +581,13 @@ def make_run_registration(
 
         moving, fixed, transformed, kwargs = point_cloud_registration(moving_input_points.data, fixed_input_points.data,
                                                                       algorithm=registration_algorithm,
-                                                                      voxel_size=registration_voxel_size,
-                                                                      every_k_points=registration_every_k_points,
                                                                       max_iterations=registration_max_iterations)
 
         if registration_algorithm == 'Affine CPD' or registration_algorithm == 'Rigid CPD':
             transformed = Points(moving, **kwargs)
 
         if visualise_intermediate_results:
-            yield ([transformed, {'name': 'transformed_points', 'face_color': 'yellow'}])
+            yield (transformed, {'name': 'transformed_points', 'face_color': 'yellow'})
 
         if registration_direction == u'FM \u2192 EM':
             moving_input_image = Moving_Image
@@ -589,14 +597,15 @@ def make_run_registration(
             moving_input_image = Fixed_Image
             fixed_input_image = Moving_Image
 
-        return warp_image_volume(moving_image=moving_input_image,
-                                 fixed_image=fixed_input_image.data,
-                                 transform_type=registration_algorithm,
-                                 moving_points=Points(moving),
-                                 transformed_points=transformed,
-                                 interpolation_order=warping_interpolation_order,
-                                 approximate_grid=warping_approximate_grid,
-                                 sub_division_factor=warping_sub_division_factor)
+        warp_outputs = warp_image_volume(moving_image=moving_input_image,
+                                         fixed_image=fixed_input_image.data,
+                                         transform_type=registration_algorithm,
+                                         moving_points=Points(moving),
+                                         transformed_points=transformed,
+                                         interpolation_order=warping_interpolation_order,
+                                         approximate_grid=warping_approximate_grid,
+                                         sub_division_factor=warping_sub_division_factor)
+        return warp_outputs
 
     if Moving_Image is None or Fixed_Image is None:
         show_error("WARNING: You have not inputted both a fixed and moving image")
@@ -643,6 +652,8 @@ def make_run_registration(
 
     def _finished_fixed_emitter():
         joiner.finished_fixed()
+
+    # pbar.show()
 
     worker_moving = _run_moving_thread()
     worker_moving.returned.connect(_class_setter_moving)

@@ -12,6 +12,11 @@ from napari.qt.threading import thread_worker
                                                'widget_type': 'SpinBox',
                                                'min': 1, 'max': 100, 'step': 1,
                                                'value': 5},
+               voxel_size={'label': 'Voxel Size',
+                            'widget_type': 'SpinBox',
+                            'min': 1, 'max': 1000, 'step': 1,
+                            'value': 5},
+               # Is this really a necessary parameter?
                point_cloud_sigma={'label': 'Sigma',
                                   'widget_type': 'FloatSpinBox',
                                   'min': 0, 'max': 10, 'step': 0.1,
@@ -24,6 +29,7 @@ def point_cloud_sampling_widget(viewer: 'napari.viewer.Viewer',
                                 Moving_Segmentation: Labels,
                                 Fixed_Segmentation: Labels,
                                 point_cloud_sampling_frequency,
+                                voxel_size,
                                 point_cloud_sigma,
                                 ):
     """
@@ -54,12 +60,15 @@ def point_cloud_sampling_widget(viewer: 'napari.viewer.Viewer',
 
     @thread_worker
     def _run_point_cloud_sampling_thread():
+        point_freq = point_cloud_sampling_frequency / 100
         moving_point_cloud = point_cloud_sampling(input=Moving_Segmentation,
-                                                  sampling_frequency=point_cloud_sampling_frequency / 100,
+                                                  every_k_points=1 // point_freq,
+                                                  voxel_size=voxel_size,
                                                   sigma=point_cloud_sigma)
 
         fixed_point_cloud = point_cloud_sampling(input=Fixed_Segmentation,
-                                                 sampling_frequency=point_cloud_sampling_frequency / 100,
+                                                 every_k_points=1 // point_freq,
+                                                 voxel_size=voxel_size,
                                                  sigma=point_cloud_sigma)
 
         return moving_point_cloud, fixed_point_cloud

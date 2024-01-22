@@ -3,7 +3,7 @@
 from napari.layers import Image
 from napari.layers.utils._link_layers import get_linked_layers
 from scipy import ndimage
-
+import time
 
 def get_pixelsize(metadata: dict):
     """ Parse pixel sizes from image metadata
@@ -81,13 +81,21 @@ def _make_isotropic(image: Image,
     -------
     ?
     """
+
     # Inplace operation
     if z_zoom_value == None:
         moving_xy_pixelsize, __, moving_z_pixelsize, __ = get_pixelsize(image.metadata)
         z_zoom = moving_z_pixelsize / moving_xy_pixelsize
     else:
         z_zoom = z_zoom_value
+
+    print(f'Interpolating {image.name} with zoom_value={z_zoom}...')
+    start_time = time.time()
+
     image.data = ndimage.zoom(image.data, (z_zoom, 1, 1))
+
+    print(f'Finished interpolating after {time.time() - start_time}s!')
+
     return z_zoom
 
 

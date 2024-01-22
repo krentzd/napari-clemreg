@@ -285,7 +285,7 @@ def _warp_image_volume_affine(image,
     -------
         ?
     """
-    image = exposure.rescale_intensity(image, out_range='uint8')
+    # image = exposure.rescale_intensity(image, out_range='uint8')
     inv_mat = np.linalg.inv(matrix)
     img_wrp = ndimage.affine_transform(input=image,
                                        matrix=inv_mat,

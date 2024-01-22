@@ -8,7 +8,7 @@ def on_init(widget):
     from ..clemreg.data_preprocessing import get_pixelsize
 
     custom_z_zom_settings = ['z_zoom']
-    filter_segmentation_settings = ['filter_size']
+    filter_segmentation_settings = ['filter_size_lower', 'filter_size_upper']
 
     standard_settings = ['Moving_Image',
                          'moving_image_pixelsize_xy',
@@ -21,7 +21,8 @@ def on_init(widget):
     advanced_settings = ['z_min',
                          'z_max',
                          'z_zoom',
-                         'filter_size']
+                         'filter_size_lower',
+                         'filter_size_upper']
 
     for x in standard_settings:
         setattr(getattr(widget, x), 'visible', True)
@@ -129,10 +130,14 @@ def on_init(widget):
                filter_segmentation={'text': 'Apply size filter to segmentation',
                                 'widget_type': 'CheckBox',
                                 'value': False},
-               filter_size={'label': 'Filter threshold (as percentile of size)',
+               filter_size_lower={'label': 'Lower filter threshold',
                                 'widget_type': 'SpinBox',
                                 'min': 0, 'max': 100, 'step': 1,
-                                'value': 50},
+                                'value': 5},
+               filter_size_upper={'label': 'Upper filter threshold',
+                                'widget_type': 'SpinBox',
+                                'min': 0, 'max': 100, 'step': 1,
+                                'value': 95},
                )
 def moving_segmentation_widget(viewer: 'napari.viewer.Viewer',
                                widget_header,
@@ -150,7 +155,8 @@ def moving_segmentation_widget(viewer: 'napari.viewer.Viewer',
                                custom_z_zoom,
                                z_zoom,
                                filter_segmentation,
-                               filter_size,
+                               filter_size_lower,
+                               filter_size_upper,
                                ):
     """
     This function performs segmentation of the mitochondria
@@ -199,7 +205,7 @@ def moving_segmentation_widget(viewer: 'napari.viewer.Viewer',
     def _run_segmentation_thread():
         print('Starting LoG segmentation...')
         if not custom_z_zoom:
-            # Need to verify units are the same in xy and z
+            # TODO: Ensure that manually inputted metadata is correctly read
             if  moving_image_pixelsize_xy.magnitude > 0:
                 z_zoom_value = moving_image_pixelsize_z.magnitude / moving_image_pixelsize_xy.magnitude
             else:
@@ -207,7 +213,10 @@ def moving_segmentation_widget(viewer: 'napari.viewer.Viewer',
         else:
             z_zoom_value = z_zoom_in
 
-        z_zoom = make_isotropic(input_image=Moving_Image, z_zoom_value=z_zoom_value if custom_z_zoom else None)
+        if z_zoom_value != 1:
+            z_zoom = make_isotropic(input_image=Moving_Image, z_zoom_value=z_zoom_value if custom_z_zoom else None)
+        elif z_zoom_value == 1:
+            z_zoom = 1
 
         seg_volume = log_segmentation(input=Moving_Image,
                                       sigma=log_sigma,
@@ -215,7 +224,7 @@ def moving_segmentation_widget(viewer: 'napari.viewer.Viewer',
 
         if filter_segmentation:
             seg_volume = filter_binary_segmentation(input=seg_volume,
-                                                    percentile=filter_size)
+                                                    percentile=(filter_size_lower, filter_size_upper))
 
         if len(set(seg_volume.data.ravel())) <= 1:
             return 'No segmentation'

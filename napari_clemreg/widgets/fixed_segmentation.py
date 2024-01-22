@@ -46,6 +46,9 @@ def fixed_segmentation_widget(viewer: 'napari.viewer.Viewer',
 
     @thread_worker
     def _run_fixed_thread():
+
+        #Increasing levels of CLAHE
+
         seg_volume = empanada_segmentation(input=Fixed_Image.data,
                                            axis_prediction=em_seg_axis)
 
@@ -73,8 +76,6 @@ def fixed_segmentation_widget(viewer: 'napari.viewer.Viewer',
     elif len(Fixed_Image.data.shape) == 3 and (Fixed_Image.data.shape[2] == 3 or Fixed_Image.data.shape[2] == 4):
         show_error("WARNING: YOUR fixed_image is RGB, your input must be grayscale and 3D")
         return
-
-    print(Fixed_Image.data.shape)
 
     worker_fixed = _run_fixed_thread()
     worker_fixed.returned.connect(_add_data)
