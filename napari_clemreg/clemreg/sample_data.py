@@ -21,8 +21,11 @@ def make_sample_data():
     fm_metadata = {'ImageDescription': 'ImageJ=1.53t\nimages=112\nchannels=4\nslices=28\nhyperstack=true\nmode=grayscale\nunit=micron\nspacing=0.13\nloop=false\nmin=0.0\nmax=65535.0\n',
                    'XResolution': 28.349506,
                    'YResolution': 28.349506}
+    em_metadata = {'ImageDescription': '\nunit=micron\nspacing=0.02\n',
+                   'XResolution': 50,
+                   'YResolution': 50}
 
-    return [(em, {'name': 'EM'}),
+    return [(em, {'name': 'EM', 'metadata': em_metadata}),
             (fm[0, 7:], {'blending': 'additive', 'colormap': 'green', 'name': 'FM_TGN46', 'metadata': fm_metadata}),
             (fm[1, 7:], {'blending': 'additive', 'colormap': 'magenta', 'name': 'FM_Lysotracker', 'metadata': fm_metadata}),
             (fm[2, 7:], {'blending': 'additive', 'colormap': 'cyan', 'name': 'FM_Mitotracker', 'metadata': fm_metadata}),

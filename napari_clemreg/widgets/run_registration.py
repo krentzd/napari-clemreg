@@ -4,6 +4,7 @@ import json
 import os.path
 import napari
 import numpy as np
+import pint
 from magicgui import magic_factory, widgets
 from napari.layers import Image, Shapes, Labels, Points
 from napari.utils.notifications import show_error
@@ -17,11 +18,11 @@ class RegistrationThreadJoiner:
         self.moving_points = None
         self.worker_function = worker_function
 
-    def set_fixed_points(self, points):
-        self.fixed_points = points
+    def set_moving_kwargs(self, kwargs):
+        self.moving_kwargs = kwargs
 
-    def set_moving_points(self, points):
-        self.moving_points = points
+    def set_fixed_kwargs(self, kwargs):
+        self.fixed_kwargs = kwargs
 
     def finished_fixed(self):
         self.fixed_ready = True
@@ -34,7 +35,7 @@ class RegistrationThreadJoiner:
             self.launch_worker()
 
     def launch_worker(self):
-        self.worker_function(self.moving_points, self.fixed_points)
+        self.worker_function(**{**self.moving_kwargs,**self.fixed_kwargs})
 
 
 def on_init(widget):
@@ -165,9 +166,24 @@ def on_init(widget):
         widget.moving_image_pixelsize_xy.value = str(moving_xy_pixelsize) + str(unit)
         widget.moving_image_pixelsize_z.value = str(moving_z_pixelsize) + str(unit)
 
+    def change_fixed_pixelsize(input_image: Image):
+        fixed_xy_pixelsize, __, fixed_z_pixelsize, unit = get_pixelsize(input_image.metadata)
+
+        if unit in ['nanometer', 'nm', 'um', 'micron', 'micrometer']:
+            if unit == 'um' or unit == 'micron':
+                unit = 'micrometer'
+            elif unit == 'nm':
+                unit = 'nanometer'
+        else:
+            unit = 'nanometer'
+
+        widget.fixed_image_pixelsize_xy.value = str(fixed_xy_pixelsize) + str(unit)
+        widget.fixed_image_pixelsize_z.value = str(fixed_z_pixelsize) + str(unit)
+
     widget.z_max.changed.connect(change_z_min)
     widget.Moving_Image.changed.connect(change_z_max)
     widget.Moving_Image.changed.connect(change_moving_pixelsize)
+    widget.Fixed_Image.changed.connect(change_fixed_pixelsize)
     widget.z_min.changed.connect(change_z_max_from_z_min)
     widget.Mask_ROI.changed.connect(reveal_z_min_and_z_max)
     widget.advanced.changed.connect(toggle_transform_widget)
@@ -334,6 +350,7 @@ def make_run_registration(
         log_header,
         log_sigma,
         log_threshold,
+        # Remove this and replace by downsampling factor
         custom_z_zoom,
         z_zoom_value,
         filter_segmentation,
@@ -408,7 +425,7 @@ def make_run_registration(
     from ..clemreg.point_cloud_registration import point_cloud_registration
     from ..clemreg.point_cloud_sampling import point_cloud_sampling
     from ..clemreg.warp_image_volume import warp_image_volume
-    from ..clemreg.data_preprocessing import make_isotropic
+    from ..clemreg.data_preprocessing import make_isotropic, _make_isotropic
     from napari.qt.threading import thread_worker
     from napari.layers.utils._link_layers import link_layers
 
@@ -439,21 +456,33 @@ def make_run_registration(
         show_error("Load from JSON selected but no JSON file selected or file path isn't real")
         return
 
-    z_zoom_in = z_zoom_value
+    ureg = pint.UnitRegistry()
+
+    pxlsz_moving = (moving_image_pixelsize_z.to_preferred([ureg.nanometers]).magnitude, moving_image_pixelsize_xy.to_preferred([ureg.nanometers]).magnitude)
+    pxlsz_fixed = (fixed_image_pixelsize_z.to_preferred([ureg.nanometers]).magnitude, fixed_image_pixelsize_xy.to_preferred([ureg.nanometers]).magnitude)
+
 
     @thread_worker
-    def _run_moving_thread():
-        # Inplace operation, metadata extraction only works if TIFF file
-        if not custom_z_zoom:
-            # Need to verify units are the same in xy and z
-            if  moving_image_pixelsize_xy.magnitude > 0:
-                z_zoom_value = moving_image_pixelsize_z.magnitude / moving_image_pixelsize_xy.magnitude
-            else:
-                z_zoom_value = 1
-        else:
-            z_zoom_value = z_zoom_in
-
-        z_zoom = make_isotropic(input_image=Moving_Image, z_zoom_value=z_zoom_value if custom_z_zoom else None)
+    def _run_moving_thread(
+        Moving_Image=Moving_Image,
+        moving_image_pixelsize_xy=moving_image_pixelsize_xy,
+        moving_image_pixelsize_z=moving_image_pixelsize_z,
+        Mask_ROI=Mask_ROI,
+        z_min=z_min,
+        z_max=z_max,
+        log_sigma=log_sigma,
+        log_threshold=log_threshold,
+        custom_z_zoom=custom_z_zoom,
+        z_zoom_value=z_zoom_value,
+        filter_segmentation=filter_segmentation,
+        filter_size=filter_size,
+        point_cloud_sampling_frequency=point_cloud_sampling_frequency,
+        registration_voxel_size=registration_voxel_size,
+        point_cloud_sigma=point_cloud_sigma
+    ):
+        make_isotropic(input_image=Moving_Image,
+                       pxlsz_lm=pxlsz_moving,
+                       pxlsz_em=pxlsz_fixed)
 
         seg_volume = log_segmentation(input=Moving_Image,
                                       sigma=log_sigma,
@@ -467,10 +496,19 @@ def make_run_registration(
             return 'No segmentation'
 
         if Mask_ROI is not None:
+            # Convert Mask_ROI to new space
+            z_min = int(z_min * (pxlsz_moving[0] / pxlsz_fixed[0]))
+            z_max = min(int(z_max * (pxlsz_moving[0] / pxlsz_fixed[0])), seg_volume.data.shape[0])
+
+            m_z = np.expand_dims(Mask_ROI.data[0][:,0] * (pxlsz_moving[0] / pxlsz_fixed[0]), axis=1)
+            m_xy = Mask_ROI.data[0][:,1:] * (pxlsz_moving[1] / pxlsz_fixed[0])
+
+            Mask_ROI.data = np.hstack((m_z, m_xy))
+
             seg_volume_mask = mask_roi(input=seg_volume,
                                        crop_mask=Mask_ROI,
-                                       z_min=int(z_min * z_zoom),
-                                       z_max=int(z_max * z_zoom))
+                                       z_min=z_min,
+                                       z_max=z_max)
         else:
             seg_volume_mask = seg_volume
 
@@ -482,7 +520,7 @@ def make_run_registration(
                                            every_k_points=1 // point_freq,
                                            voxel_size=registration_voxel_size,
                                            sigma=point_cloud_sigma)
-        return point_cloud
+        return {'moving_points': point_cloud}
 
     @thread_worker
     def _run_fixed_thread():
@@ -495,15 +533,22 @@ def make_run_registration(
         if visualise_intermediate_results:
             yield seg_volume, 'em'
 
+        # Need to check for isotropic EM volume
+        if pxlsz_fixed[0] != pxlsz_fixed[1]:
+            seg_volume = _make_isotropic(seg_volume > 0,
+                                         pxlsz_lm=pxlsz_moving,
+                                         pxlsz_em=pxlsz_fixed,
+                                         ref_frame='EM')
+
         point_freq = point_cloud_sampling_frequency / 100
         point_cloud = point_cloud_sampling(input=Labels(seg_volume),
                                            every_k_points=1 // point_freq,
                                            voxel_size=registration_voxel_size,
                                            sigma=point_cloud_sigma)
-        return point_cloud
+        return {'fixed_points': point_cloud, 'output_shape': seg_volume.shape}
 
     def _add_data(return_value):
-        pbar.hide()
+        # pbar.hide()
 
         if return_value == 'No segmentation':
             show_error('WARNING: No mitochondria in Fixed Image or Moving Image')
@@ -562,7 +607,11 @@ def make_run_registration(
             outfile.write(json_object)
 
     @thread_worker(connect={"returned": _add_data, "yielded": _yield_point_clouds})
-    def _run_registration_thread(moving_points, fixed_points):
+    def _run_registration_thread(
+        moving_points,
+        fixed_points,
+        output_shape
+    ):
         if moving_points == 'No segmentation' or fixed_points == 'No segmentation':
             return 'No segmentation'
 
@@ -598,13 +647,26 @@ def make_run_registration(
             fixed_input_image = Moving_Image
 
         warp_outputs = warp_image_volume(moving_image=moving_input_image,
-                                         fixed_image=fixed_input_image.data,
+                                         output_shape=output_shape,
                                          transform_type=registration_algorithm,
                                          moving_points=Points(moving),
                                          transformed_points=transformed,
                                          interpolation_order=warping_interpolation_order,
                                          approximate_grid=warping_approximate_grid,
                                          sub_division_factor=warping_sub_division_factor)
+
+        if pxlsz_fixed[0] != pxlsz_fixed[1]:
+            if not isinstance(warp_outputs, list):
+                warp_outputs = [warp_outputs]
+            warp_outputs_temp = []
+            for warp_output in warp_outputs:
+                warp_outputs_temp.append((_make_isotropic(warp_output[0],
+                                                          (pxlsz_fixed[0], pxlsz_fixed[0]),
+                                                          pxlsz_fixed,
+                                                          inverse=True,
+                                                          ref_frame='EM'), warp_output[1]))
+            warp_outputs = warp_outputs_temp
+
         return warp_outputs
 
     if Moving_Image is None or Fixed_Image is None:
@@ -642,10 +704,10 @@ def make_run_registration(
     joiner = RegistrationThreadJoiner(worker_function=_run_registration_thread)
 
     def _class_setter_moving(x):
-        joiner.set_moving_points(x)
+        joiner.set_moving_kwargs(x)
 
     def _class_setter_fixed(x):
-        joiner.set_fixed_points(x)
+        joiner.set_fixed_kwargs(x)
 
     def _finished_moving_emitter():
         joiner.finished_moving()
@@ -655,7 +717,22 @@ def make_run_registration(
 
     # pbar.show()
 
-    worker_moving = _run_moving_thread()
+    worker_moving = _run_moving_thread(Moving_Image=Moving_Image,
+                                       moving_image_pixelsize_xy=moving_image_pixelsize_xy,
+                                       moving_image_pixelsize_z=moving_image_pixelsize_z,
+                                       Mask_ROI=Mask_ROI,
+                                       z_min=z_min,
+                                       z_max=z_max,
+                                       log_sigma=log_sigma,
+                                       log_threshold=log_threshold,
+                                       custom_z_zoom=custom_z_zoom,
+                                       z_zoom_value=z_zoom_value,
+                                       filter_segmentation=filter_segmentation,
+                                       filter_size=filter_size,
+                                       point_cloud_sampling_frequency=point_cloud_sampling_frequency,
+                                       registration_voxel_size=registration_voxel_size,
+                                       point_cloud_sigma=point_cloud_sigma)
+
     worker_moving.returned.connect(_class_setter_moving)
     worker_moving.finished.connect(_finished_moving_emitter)
     worker_moving.yielded.connect(_yield_segmentation)

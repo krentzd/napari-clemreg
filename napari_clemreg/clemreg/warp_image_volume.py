@@ -296,7 +296,7 @@ def _warp_image_volume_affine(image,
 
 
 def _warp_image_volume(moving_image: Image,
-                       fixed_image: ImageData,
+                       output_shape: tuple,
                        moving_points: PointsData,
                        transformed_points: PointsData,
                        interpolation_order: int = 1,
@@ -329,26 +329,26 @@ def _warp_image_volume(moving_image: Image,
     """
     assert len(moving_points) == len(transformed_points), 'Moving and transformed points must be of same length.'
 
-    x_chunk = math.ceil(fixed_image.shape[1] / sub_division_factor)
-    y_chunk = math.ceil(fixed_image.shape[2] / sub_division_factor)
-    z_chunk = math.ceil(fixed_image.shape[0] / sub_division_factor)
+    x_chunk = math.ceil(output_shape[1] / sub_division_factor)
+    y_chunk = math.ceil(output_shape[2] / sub_division_factor)
+    z_chunk = math.ceil(output_shape[0] / sub_division_factor)
 
-    if len(moving_image.data.shape) == 1 + len(fixed_image.shape):
+    if len(moving_image.data.shape) == 1 + len(output_shape):
         warped_images = []
         kwargs_list = []
 
         for c in range(moving_image.data.shape[0]):
-            warped_image = np.empty(fixed_image.shape)
+            warped_image = np.empty(output_shape)
 
-            for x in range(math.ceil(fixed_image.shape[1] / x_chunk)):
-                for y in range(math.ceil(fixed_image.shape[2] / y_chunk)):
-                    for z in range(math.ceil(fixed_image.shape[0] / z_chunk)):
+            for x in range(math.ceil(output_shape[1] / x_chunk)):
+                for y in range(math.ceil(output_shape[2] / y_chunk)):
+                    for z in range(math.ceil(output_shape[0] / z_chunk)):
                         output_region = (z * z_chunk,
                                          x * x_chunk,
                                          y * y_chunk,
-                                         min((z * z_chunk + z_chunk), fixed_image.shape[0]),
-                                         min((x * x_chunk + x_chunk), fixed_image.shape[1]),
-                                         min((y * y_chunk + y_chunk), fixed_image.shape[2]))
+                                         min((z * z_chunk + z_chunk), output_shape[0]),
+                                         min((x * x_chunk + x_chunk), output_shape[1]),
+                                         min((y * y_chunk + y_chunk), output_shape[2]))
 
                         z_min, x_min, y_min, z_max, x_max, y_max = output_region
 
@@ -368,17 +368,17 @@ def _warp_image_volume(moving_image: Image,
         return (np.squeeze(np.stack(warped_images)), kwargs_list)
 
     else:
-        warped_image = np.empty(fixed_image.shape)
+        warped_image = np.empty(output_shape)
 
-        for x in range(math.ceil(fixed_image.shape[1] / x_chunk)):
-            for y in range(math.ceil(fixed_image.shape[2] / y_chunk)):
-                for z in range(math.ceil(fixed_image.shape[0] / z_chunk)):
+        for x in range(math.ceil(output_shape[1] / x_chunk)):
+            for y in range(math.ceil(output_shape[2] / y_chunk)):
+                for z in range(math.ceil(output_shape[0] / z_chunk)):
                     output_region = (z * z_chunk,
                                      x * x_chunk,
                                      y * y_chunk,
-                                     min((z * z_chunk + z_chunk), fixed_image.shape[0]),
-                                     min((x * x_chunk + x_chunk), fixed_image.shape[1]),
-                                     min((y * y_chunk + y_chunk), fixed_image.shape[2]))
+                                     min((z * z_chunk + z_chunk), output_shape[0]),
+                                     min((x * x_chunk + x_chunk), output_shape[1]),
+                                     min((y * y_chunk + y_chunk), output_shape[2]))
 
                     z_min, x_min, y_min, z_max, x_max, y_max = output_region
 
@@ -400,7 +400,7 @@ def _warp_image_volume(moving_image: Image,
 
 def warp_image_volume(
         moving_image: Image,
-        fixed_image: ImageData,
+        output_shape: tuple,
         transform_type: str,
         moving_points: Points,
         transformed_points: Points,
@@ -436,7 +436,7 @@ def warp_image_volume(
     """
 
     if transform_type == 'BCPD':
-        warping_args = {'fixed_image': fixed_image.data,
+        warping_args = {'output_shape': output_shape,
                         'moving_points': moving_points.data,
                         'transformed_points': transformed_points.data,
                         'interpolation_order': interpolation_order,
@@ -446,7 +446,7 @@ def warp_image_volume(
     elif transform_type == 'Affine CPD' or transform_type == 'Rigid CPD':
         affine_matrix = transformed_points.affine.affine_matrix
         warping_args = {'matrix': affine_matrix,
-                        'output_shape': fixed_image.data.shape,
+                        'output_shape': output_shape,
                         'interpolation_order': interpolation_order}
 
     # Get linked layers

@@ -5,7 +5,7 @@ import numpy as np
 from napari.layers import Image, Shapes
 from skimage import draw
 from typing_extensions import Annotated
-
+from ..clemreg.data_preprocessing import _make_isotropic
 
 def mask_area(x, y):
     """ Calculates the area of the mask
@@ -91,7 +91,7 @@ def mask_roi(input: Image,
 
     masked_input = input_arr.data * binary_mask_full_vol
     masked_input = masked_input.astype(int)
-    
+
     if not masked_input.shape == input.data.shape:
         print('Reshaped array')
         masked_input.reshape(input.data.shape)
