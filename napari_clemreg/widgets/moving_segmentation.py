@@ -4,6 +4,8 @@ from napari.layers import Image, Shapes
 from napari.utils.notifications import show_error
 from napari.qt.threading import thread_worker
 
+from ..clemreg.on_init_specs import specs
+
 def on_init(widget):
     from ..clemreg.data_preprocessing import get_pixelsize
 
@@ -11,16 +13,16 @@ def on_init(widget):
     filter_segmentation_settings = ['filter_size_lower', 'filter_size_upper']
 
     standard_settings = ['Moving_Image',
-                         'moving_image_pixelsize_xy',
-                         'moving_image_pixelsize_z',
+                         # 'moving_image_pixelsize_xy',
+                         # 'moving_image_pixelsize_z',
+                         # 'fixed_image_pixelsize_z',
+                         # 'fixed_image_pixelsize_z',
                          'Mask_ROI',
                          'log_sigma',
                          'log_threshold',
-                         'custom_z_zoom',
                          'filter_segmentation']
     advanced_settings = ['z_min',
                          'z_max',
-                         'z_zoom',
                          'filter_size_lower',
                          'filter_size_upper']
 
@@ -51,27 +53,19 @@ def on_init(widget):
             for x in ['z_min', 'z_max']:
                 setattr(getattr(widget, x), 'visible', False)
 
-    def change_moving_pixelsize(input_image: Image):
-        moving_image_pixelsize_xy, __, moving_image_pixelsize_z, unit = get_pixelsize(input_image.metadata)
-
-        if unit in ['nanometer', 'nm', 'um', 'micron', 'micrometer']:
-            if unit == 'um' or unit == 'micron':
-                unit = 'micrometer'
-            elif unit == 'nm':
-                unit = 'nanometer'
-        else:
-            unit = 'nanometer'
-
-        widget.moving_image_pixelsize_xy.value = str(moving_image_pixelsize_xy) + str(unit)
-        widget.moving_image_pixelsize_z.value = str(moving_image_pixelsize_z) + str(unit)
-
-    def toggle_custom_z_zoom(custom_z_zoom: bool):
-        if custom_z_zoom:
-            for x in custom_z_zom_settings:
-                setattr(getattr(widget, x), 'visible', True)
-        else:
-            for x in custom_z_zom_settings:
-                setattr(getattr(widget, x), 'visible', False)
+    # def change_moving_pixelsize(input_image: Image):
+    #     moving_image_pixelsize_xy, __, moving_image_pixelsize_z, unit = get_pixelsize(input_image.metadata)
+    #
+    #     if unit in ['nanometer', 'nm', 'um', 'micron', 'micrometer']:
+    #         if unit == 'um' or unit == 'micron':
+    #             unit = 'micrometer'
+    #         elif unit == 'nm':
+    #             unit = 'nanometer'
+    #     else:
+    #         unit = 'nanometer'
+    #
+    #     widget.moving_image_pixelsize_xy.value = str(moving_image_pixelsize_xy) + str(unit)
+    #     widget.moving_image_pixelsize_z.value = str(moving_image_pixelsize_z) + str(unit)
 
     def toggle_filter_segmentation(filter_segmentation: bool):
         if filter_segmentation:
@@ -85,66 +79,28 @@ def on_init(widget):
     widget.Moving_Image.changed.connect(change_z_max)
     widget.z_min.changed.connect(change_z_max_from_z_min)
     widget.Mask_ROI.changed.connect(reveal_z_min_and_z_max)
-    widget.Moving_Image.changed.connect(change_moving_pixelsize)
-    widget.custom_z_zoom.changed.connect(toggle_custom_z_zoom)
+    # widget.Moving_Image.changed.connect(change_moving_pixelsize)
     widget.filter_segmentation.changed.connect(toggle_filter_segmentation)
 
-
-@magic_factory(widget_init=on_init,
-               layout='vertical',
-               call_button='Segment',
+@magic_factory(widget_init=on_init, layout='vertical', call_button='Segment',
                widget_header={'widget_type': 'Label',
                               'label': f'<h2 text-align="left">Fluorescence Microscopy Segmentation</h2>'},
-               log_sigma={'label': 'Sigma',
-                          'widget_type': 'FloatSpinBox',
-                          'min': 0.5, 'max': 20, 'step': 0.5,
-                          'value': 3},
-               log_threshold={'label': 'Threshold',
-                              'widget_type': 'FloatSpinBox',
-                              'min': 0, 'max': 20, 'step': 0.1,
-                              'value': 1.2},
-               z_min={'widget_type': 'SpinBox',
-                      'label': 'Minimum z value for masking',
-                      "min": 0, "max": 10, "step": 1,
-                      'value': 0},
-               z_max={'widget_type': 'SpinBox',
-                      'label': 'Maximum z value for masking',
-                      "min": 0, "max": 10, "step": 1,
-                      'value': 0},
-               Moving_Image={'label': 'Fluorescence Microscopy Image (FM)'},
-               moving_image_pixelsize_xy={'label': 'Pixel size (xy)',
-                                               'widget_type': 'QuantityEdit',
-                                               'value': '0 nanometer'
-                                               },
-               moving_image_pixelsize_z={'label': 'Pixel size (z)',
-                                               'widget_type': 'QuantityEdit',
-                                               'value': '0 nanometer'
-                                               },
-               z_zoom={'label': 'Z interpolation factor',
-                           'widget_type': 'FloatSpinBox',
-                           'min': 0, 'step': 0.01,
-                           'value': 1},
-               custom_z_zoom={'text': 'Custom z interpolation factor',
-                              'widget_type': 'CheckBox',
-                              'value': False},
-               filter_segmentation={'text': 'Apply size filter to segmentation',
-                                'widget_type': 'CheckBox',
-                                'value': False},
-               filter_size_lower={'label': 'Lower filter threshold',
-                                'widget_type': 'SpinBox',
-                                'min': 0, 'max': 100, 'step': 1,
-                                'value': 5},
-               filter_size_upper={'label': 'Upper filter threshold',
-                                'widget_type': 'SpinBox',
-                                'min': 0, 'max': 100, 'step': 1,
-                                'value': 95},
+
+               Moving_Image=specs['Moving_Image'],
+
+               z_min=specs['z_min'],
+               z_max=specs['z_max'],
+
+               log_sigma=specs['log_sigma'],
+               log_threshold=specs['log_threshold'],
+
+               filter_segmentation=specs['filter_segmentation'],
+               filter_size_lower=specs['filter_size_lower'],
+               filter_size_upper=specs['filter_size_upper']
                )
 def moving_segmentation_widget(viewer: 'napari.viewer.Viewer',
                                widget_header,
                                Moving_Image: Image,
-
-                               moving_image_pixelsize_xy,
-                               moving_image_pixelsize_z,
 
                                Mask_ROI: Shapes,
                                z_min,
@@ -152,8 +108,7 @@ def moving_segmentation_widget(viewer: 'napari.viewer.Viewer',
 
                                log_sigma,
                                log_threshold,
-                               custom_z_zoom,
-                               z_zoom,
+
                                filter_segmentation,
                                filter_size_lower,
                                filter_size_upper,
@@ -194,59 +149,38 @@ def moving_segmentation_widget(viewer: 'napari.viewer.Viewer',
         adaptive thresholding.
     """
     import numpy as np
-    from ..clemreg.data_preprocessing import make_isotropic
-    from ..clemreg.log_segmentation import log_segmentation, filter_binary_segmentation
-    from ..clemreg.mask_roi import mask_roi, mask_area
-
-    # z_zoom is private. Unclear why, need to investigate
-    z_zoom_in = z_zoom
+    from ..clemreg.widget_components import run_moving_segmentation
 
     @thread_worker
-    def _run_segmentation_thread():
-        print('Starting LoG segmentation...')
-        if not custom_z_zoom:
-            # TODO: Ensure that manually inputted metadata is correctly read
-            if  moving_image_pixelsize_xy.magnitude > 0:
-                z_zoom_value = moving_image_pixelsize_z.magnitude / moving_image_pixelsize_xy.magnitude
-            else:
-                z_zoom_value = 1
-        else:
-            z_zoom_value = z_zoom_in
+    def _run_segmentation_thread(Moving_Image,
+                                 Mask_ROI,
+                                 z_min,
+                                 z_max,
+                                 log_sigma,
+                                 log_threshold,
+                                 filter_segmentation,
+                                 filter_size_lower,
+                                 filter_size_upper,
+    ):
+        seg_volume_mask = run_moving_segmentation(Moving_Image=Moving_Image,
+                                                  Mask_ROI=Mask_ROI,
+                                                  z_min=z_min,
+                                                  z_max=z_max,
+                                                  log_sigma=log_sigma,
+                                                  log_threshold=log_threshold,
+                                                  filter_segmentation=filter_segmentation,
+                                                  filter_size_lower=filter_size_lower,
+                                                  filter_size_upper=filter_size_upper)
 
-        if z_zoom_value != 1:
-            z_zoom = make_isotropic(input_image=Moving_Image, z_zoom_value=z_zoom_value if custom_z_zoom else None)
-        elif z_zoom_value == 1:
-            z_zoom = 1
-
-        seg_volume = log_segmentation(input=Moving_Image,
-                                      sigma=log_sigma,
-                                      threshold=log_threshold)
-
-        if filter_segmentation:
-            seg_volume = filter_binary_segmentation(input=seg_volume,
-                                                    percentile=(filter_size_lower, filter_size_upper))
-
-        if len(set(seg_volume.data.ravel())) <= 1:
-            return 'No segmentation'
-
-        if Mask_ROI is not None:
-            print('Applying Mask ROI...')
-            seg_volume_mask = mask_roi(input=seg_volume,
-                                       crop_mask=Mask_ROI,
-                                       z_min=int(z_min * z_zoom),
-                                       z_max=int(z_max * z_zoom))
-        else:
-            seg_volume_mask = seg_volume
-
-        return seg_volume_mask
+        return seg_volume_mask, {'name': 'FM_segmentation', 'metadata': Moving_Image.metadata}
 
     def _add_data(return_value):
         if isinstance(return_value, str):
             show_error('WARNING: No mitochondria in Fixed Image')
             return
 
-        viewer.add_labels(return_value.data.astype(np.int64),
-                          name="Moving_Segmentation")
+        labels, kwargs = return_value
+        viewer.add_labels(labels.data.astype(np.int64), **kwargs)
 
     if Moving_Image is None:
         show_error("WARNING: You have not inputted both a fixed and moving image")
@@ -269,6 +203,14 @@ def moving_segmentation_widget(viewer: 'napari.viewer.Viewer',
             show_error("WARNING: Your mask size exceeds the size of the image.")
             return
 
-    worker_moving = _run_segmentation_thread()
+    worker_moving = _run_segmentation_thread(Moving_Image=Moving_Image,
+                                             Mask_ROI=Mask_ROI,
+                                             z_min=z_min,
+                                             z_max=z_max,
+                                             log_sigma=log_sigma,
+                                             log_threshold=log_threshold,
+                                             filter_segmentation=filter_segmentation,
+                                             filter_size_lower=filter_size_lower,
+                                             filter_size_upper=filter_size_upper)
     worker_moving.returned.connect(_add_data)
     worker_moving.start()

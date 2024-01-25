@@ -24,7 +24,7 @@ from napari.utils.notifications import show_error
                                             'widget_type': 'SpinBox',
                                             'min': 1, 'max': 1000, 'step': 1,
                                             'value': 50},
-                                            
+
                warping_header={'widget_type': 'Label',
                                'label': f'<h3 text-align="left">Image Warping</h3>'},
                warping_interpolation_order={'label': 'Interpolation Order',
@@ -123,6 +123,8 @@ def registration_warping_widget(viewer: 'napari.viewer.Viewer',
         elif registration_direction == u'EM \u2192 FM':
             moving_input_points = Fixed_Points.data
             fixed_input_points = Moving_Points.data
+
+        # After registration convert LM images to isotropic and back to EM space
 
         moving, fixed, transformed, kwargs = point_cloud_registration(moving_input_points,
                                                                       fixed_input_points,

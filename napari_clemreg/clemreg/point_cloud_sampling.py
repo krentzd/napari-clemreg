@@ -56,13 +56,6 @@ def point_cloud_sampling(input: Labels,
     # Add point filtering steps and stretching
     point_cloud, __ = point_cloud.remove_statistical_outlier(**filter_kwargs)
 
-    kwargs = dict(
-        edge_color=edge_color,
-        face_color=face_color,
-        size=point_size,
-        name=input.name + '_points'
-    )
-
     print(f'Finished point cloud sampling after {time.time() - start_time}s!')
 
-    return Points(np.asarray(point_cloud.points), **kwargs)
+    return np.asarray(point_cloud.points)
