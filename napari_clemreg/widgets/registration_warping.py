@@ -110,62 +110,39 @@ def registration_warping_widget(viewer: 'napari.viewer.Viewer',
         napari Image layer containing the warping of the moving image to the
         fixed image.
     """
-    from ..clemreg.point_cloud_registration import point_cloud_registration
-    from ..clemreg.warp_image_volume import warp_image_volume
 
     @thread_worker
     def _registration_thread():
 
-        if registration_direction == u'FM \u2192 EM':
-            moving_input_points = Moving_Points.data
-            fixed_input_points = Fixed_Points.data
-
-        elif registration_direction == u'EM \u2192 FM':
-            moving_input_points = Fixed_Points.data
-            fixed_input_points = Moving_Points.data
-
-        # After registration convert LM images to isotropic and back to EM space
-
-        moving, fixed, transformed, kwargs = point_cloud_registration(moving_input_points,
-                                                                      fixed_input_points,
-                                                                      algorithm=registration_algorithm,
-                                                                      max_iterations=registration_max_iterations)
-
-        if registration_algorithm == 'Affine CPD' or registration_algorithm == 'Rigid CPD':
-            transformed = Points(moving, **kwargs)
-        else:
-            transformed = Points(transformed)
+        from ..clemreg.widget_components import run_point_cloud_registration_and_warping
 
         if registration_direction == u'FM \u2192 EM':
-            moving_input_image = Moving_Image
-            fixed_input_image = Fixed_Image
+            moving_input_points = Moving_Points
+            fixed_input_points = Fixed_Points
 
         elif registration_direction == u'EM \u2192 FM':
-            moving_input_image = Fixed_Image
-            fixed_input_image = Moving_Image
+            moving_input_points = Fixed_Points
+            fixed_input_points = Moving_Points
 
-        return warp_image_volume(moving_image=moving_input_image,
-                                 fixed_image=fixed_input_image.data,
-                                 transform_type=registration_algorithm,
-                                 moving_points=moving,
-                                 transformed_points=transformed,
-                                 interpolation_order=warping_interpolation_order,
-                                 approximate_grid=warping_approximate_grid,
-                                 sub_division_factor=warping_sub_division_factor), transformed
+        warp_outputs, transformed = run_point_cloud_registration_and_warping(Moving_Points,
+                                                                             Fixed_Points,
+                                                                             Moving_Image,
+                                                                             registration_algorithm,
+                                                                             registration_max_iterations,
+                                                                             warping_interpolation_order,
+                                                                             warping_approximate_grid,
+                                                                             warping_sub_division_factor)
+        return warp_outputs, transformed
 
-    def _add_data(return_value_in):
-        return_value, points_layer = return_value_in
+    def _add_data(return_value):
+        image_layers, points_layer = return_value
         viewer.add_layer(points_layer)
-        if isinstance(return_value, list):
-            layers = []
-            for image_data in return_value:
-                data, kwargs = image_data
-                viewer.add_image(data, **kwargs)
-                layers.append(viewer.layers[kwargs['name']])
-            link_layers(layers)
-        else:
-            data, kwargs = return_value
-            viewer.add_image(data, **kwargs)
+
+        layers = []
+        for image_layer in image_layers:
+            viewer.add_layer(image_layer)
+            layers.append(viewer.layers[image_layer.name])
+        link_layers(layers)
 
     if Moving_Image is None or Fixed_Image is None:
         show_error("WARNING: You have not inputted both a fixed and moving image")

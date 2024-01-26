@@ -398,6 +398,46 @@ def _warp_image_volume(moving_image: Image,
         )
         return warped_image, kwargs
 
+def warp_image_volume_from_list(
+        moving_image_list: list,
+        output_shape: tuple,
+        transform_type: str,
+        moving_points: Points,
+        transformed_points: Points,
+        interpolation_order: int=1,
+        approximate_grid: int=1,
+        sub_division_factor: int=1
+):
+    if transform_type == 'BCPD':
+        warping_args = {'output_shape': output_shape,
+                        'moving_points': moving_points.data,
+                        'transformed_points': transformed_points.data,
+                        'interpolation_order': interpolation_order,
+                        'approximate_grid': approximate_grid,
+                        'sub_division_factor': sub_division_factor}
+
+    elif transform_type == 'Affine CPD' or transform_type == 'Rigid CPD':
+        affine_matrix = transformed_points.affine.affine_matrix
+        warping_args = {'matrix': affine_matrix,
+                        'output_shape': output_shape,
+                        'interpolation_order': interpolation_order}
+
+    img_wrp_list = []
+    for image in moving_image_list:
+        if transform_type == 'Affine CPD' or transform_type == 'Rigid CPD':
+            img_wrp = _warp_image_volume_affine(image=image.data, **warping_args)
+        elif transform_type == 'BCPD':
+            img_wrp, __ = _warp_image_volume(moving_image=image, **warping_args)
+
+        kwargs = dict(
+            name=image.name + '_warped',
+            colormap=image.colormap,
+            blending=image.blending
+        )
+        img_wrp_list.append(Image(img_wrp, **kwargs))
+
+    return img_wrp_list
+
 def warp_image_volume(
         moving_image: Image,
         output_shape: tuple,

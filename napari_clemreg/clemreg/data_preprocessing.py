@@ -5,6 +5,7 @@ from napari.layers.utils._link_layers import get_linked_layers
 from scipy import ndimage
 import numpy as np
 import time
+import copy
 
 def get_pixelsize(metadata: dict):
     """ Parse pixel sizes from image metadata
@@ -133,6 +134,51 @@ def _make_isotropic(im_arr: np.ndarray, pxlsz_lm: tuple, pxlsz_em: tuple, invers
     if inverse:
         zoom_vals = tuple(1 / x for x in zoom_vals)
     return ndimage.zoom(im_arr, zoom_vals, order=order)
+
+def return_isotropic_image_list(input_image: Image,
+                                pxlsz_lm: tuple,
+                                pxlsz_em: tuple,
+                                **kwargs):
+    """ Returns list of isotropic images based on pixelsizes for all linked layers
+
+    Parameters
+    ----------
+    im_arr : np.ndarray
+        Input image array
+    pxlsz_lm : tuple
+        LM image pixelsizes
+    pxlsz_em : tuple
+        EM image pixelsizes
+    """
+    # Inplace operation
+    image_iso_list = []
+    print(f'Resampling {input_image.name}')
+    if len(get_linked_layers(input_image)) > 0:
+        images = get_linked_layers(input_image)
+        images.add(input_image)
+        for image in images:
+            target_image_iso = copy.deepcopy(image)
+            image_iso = _make_isotropic(image.data,
+                                        pxlsz_lm,
+                                        pxlsz_em,
+                                        inverse=kwargs.get('inverse', False),
+                                        ref_frame=kwargs.get('ref_frame', 'LM'),
+                                        order=kwargs.get('order', 0))
+
+            target_image_iso.data = image_iso
+            image_iso_list.append(target_image_iso)
+    else:
+        target_image_iso = copy.deepcopy(input_image)
+        image_iso = _make_isotropic(input_image.data,
+                                    pxlsz_lm,
+                                    pxlsz_em,
+                                    inverse=kwargs.get('inverse', False),
+                                    ref_frame=kwargs.get('ref_frame', 'LM'),
+                                    order=kwargs.get('order', 0))
+        target_image_iso.data = image_iso
+        image_iso_list.append(target_image_iso)
+
+    return image_iso_list
 
 def make_isotropic(input_image: Image,
                    pxlsz_lm: tuple,

@@ -13,10 +13,6 @@ def on_init(widget):
     filter_segmentation_settings = ['filter_size_lower', 'filter_size_upper']
 
     standard_settings = ['Moving_Image',
-                         # 'moving_image_pixelsize_xy',
-                         # 'moving_image_pixelsize_z',
-                         # 'fixed_image_pixelsize_z',
-                         # 'fixed_image_pixelsize_z',
                          'Mask_ROI',
                          'log_sigma',
                          'log_threshold',
@@ -53,20 +49,6 @@ def on_init(widget):
             for x in ['z_min', 'z_max']:
                 setattr(getattr(widget, x), 'visible', False)
 
-    # def change_moving_pixelsize(input_image: Image):
-    #     moving_image_pixelsize_xy, __, moving_image_pixelsize_z, unit = get_pixelsize(input_image.metadata)
-    #
-    #     if unit in ['nanometer', 'nm', 'um', 'micron', 'micrometer']:
-    #         if unit == 'um' or unit == 'micron':
-    #             unit = 'micrometer'
-    #         elif unit == 'nm':
-    #             unit = 'nanometer'
-    #     else:
-    #         unit = 'nanometer'
-    #
-    #     widget.moving_image_pixelsize_xy.value = str(moving_image_pixelsize_xy) + str(unit)
-    #     widget.moving_image_pixelsize_z.value = str(moving_image_pixelsize_z) + str(unit)
-
     def toggle_filter_segmentation(filter_segmentation: bool):
         if filter_segmentation:
             for x in filter_segmentation_settings:
@@ -79,8 +61,8 @@ def on_init(widget):
     widget.Moving_Image.changed.connect(change_z_max)
     widget.z_min.changed.connect(change_z_max_from_z_min)
     widget.Mask_ROI.changed.connect(reveal_z_min_and_z_max)
-    # widget.Moving_Image.changed.connect(change_moving_pixelsize)
     widget.filter_segmentation.changed.connect(toggle_filter_segmentation)
+    # Change state of call button once clicked and allow clicking when function finishes running
 
 @magic_factory(widget_init=on_init, layout='vertical', call_button='Segment',
                widget_header={'widget_type': 'Label',

@@ -68,7 +68,6 @@ def run_moving_segmentation(Moving_Image,
 """
 Fixed segmentation
 """
-
 def run_fixed_segmentation(Fixed_Image,
                            em_seg_axis
 
@@ -157,98 +156,55 @@ def run_point_cloud_sampling(Moving_Segmentation,
 """
 Point cloud registration
 """
-def point_cloud_registration():
-    moving, fixed, transformed, kwargs = point_cloud_registration(moving_input_points.data, fixed_input_points.data,
+def run_point_cloud_registration_and_warping(Moving_Points,
+                                             Fixed_Points,
+                                             Moving_Image,
+                                             registration_algorithm,
+                                             registration_max_iterations,
+                                             warping_interpolation_order,
+                                             warping_approximate_grid,
+                                             warping_sub_division_factor
+):
+    from ..clemreg.point_cloud_registration import point_cloud_registration
+    from ..clemreg.data_preprocessing import return_isotropic_image_list, _make_isotropic
+    from ..clemreg.warp_image_volume import warp_image_volume_from_list
+
+    moving, fixed, transformed, kwargs = point_cloud_registration(moving=Moving_Points.data,
+                                                                  fixed=Fixed_Points.data,
                                                                   algorithm=registration_algorithm,
                                                                   max_iterations=registration_max_iterations)
 
-"""
-Image warping
-"""
+    if registration_algorithm == 'Affine CPD' or registration_algorithm == 'Rigid CPD':
+        transformed = Points(moving, **kwargs)
+    # Make images isotropic for linked layers
+    moving_image_list = return_isotropic_image_list(input_image=Moving_Image,
+                                                    pxlsz_lm=Moving_Points.metadata['pxlsz'],
+                                                    pxlsz_em=Fixed_Points.metadata['pxlsz'])
 
-def image_warping(
-    moving_points,
-    fixed_points,
-    output_shape
-):
-    import numpy as np
-    from ..clemreg.data_preprocessing import make_isotropic
-    from ..clemreg.log_segmentation import log_segmentation, filter_binary_segmentation
-    from ..clemreg.mask_roi import mask_roi, mask_area
+    warp_outputs = warp_image_volume_from_list(moving_image_list=moving_image_list,
+                                               output_shape=Fixed_Points.metadata['output_shape'],
+                                               transform_type=registration_algorithm,
+                                               moving_points=Points(moving),
+                                               transformed_points=transformed,
+                                               interpolation_order=warping_interpolation_order,
+                                               approximate_grid=warping_approximate_grid,
+                                               sub_division_factor=warping_sub_division_factor)
 
-    warp_outputs = warp_image_volume(moving_image=moving_input_image,
-                                     output_shape=output_shape,
-                                     transform_type=registration_algorithm,
-                                     moving_points=Points(moving),
-                                     transformed_points=transformed,
-                                     interpolation_order=warping_interpolation_order,
-                                     approximate_grid=warping_approximate_grid,
-                                     sub_division_factor=warping_sub_division_factor)
+    if Fixed_Points.metadata['pxlsz'][0] != Fixed_Points.metadata['pxlsz'][1]:
 
-    if pxlsz_fixed[0] != pxlsz_fixed[1]:
-        if not isinstance(warp_outputs, list):
-            warp_outputs = [warp_outputs]
-        warp_outputs_temp = []
+        src_pxlsz = (Fixed_Points.metadata['pxlsz'][0], Fixed_Points.metadata['pxlsz'][0])
         for warp_output in warp_outputs:
-            warp_outputs_temp.append((_make_isotropic(warp_output[0],
-                                                      (pxlsz_fixed[0], pxlsz_fixed[0]),
-                                                      pxlsz_fixed,
-                                                      inverse=True,
-                                                      ref_frame='EM'), warp_output[1]))
-        warp_outputs = warp_outputs_temp
+            warp_output.data = _make_isotropic(warp_output.data,
+                                                src_pxlsz,
+                                                Fixed_Points.metadata['pxlsz'],
+                                                inverse=True,
+                                                ref_frame='EM')
 
-    return warp_outputs
+    return warp_outputs, transformed
 
 """
 Helper functions
 """
-
-def _add_data(return_value):
-    # pbar.hide()
-
-    # if return_value == 'No segmentation':
-    #     show_error('WARNING: No mitochondria in Fixed Image or Moving Image')
-    #     return
-    #
-    # if isinstance(return_value, list):
-    #     layers = []
-    #     for image_data in return_value:
-    #         data, kwargs = image_data
-    #         viewer.add_image(data, **kwargs)
-    #         layers.append(viewer.layers[kwargs['name']])
-    #     link_layers(layers)
-    # else:
-    data, layer_type, kwargs = return_value
-
-    if layer_type == 'image':
-        viewer.add_image(data, **kwargs)
-
-    elif layer_type == 'labels':
-        viewer.add_labels(data, **kwargs)
-
-
-    # def _add_data(return_value):
-    #     if isinstance(return_value, str):
-    #         show_error('WARNING: No mitochondria in Fixed Image')
-    #         return
-    #
-    #     viewer.add_labels(return_value.data.astype(np.int64),
-    #                       name="Moving_Segmentation")
-
-def _yield_segmentation(yield_value):
-
-    image = yield_value[0]
-    image_type = yield_value[1]
-
-    if image_type == 'lm':
-        viewer.add_labels(np.asarray(image.data, dtype=np.uint32), name=image_type)
-    else:
-        viewer.add_labels(image, name=image_type)
-
-def _yield_point_clouds(yield_value):
-    points, kwargs = yield_value[0], yield_value[1]
-    viewer.add_points(points.data, **kwargs)
-
 def _create_json_file(path_to_json):
     dictionary = {
         "registration_algorithm": registration_algorithm,
@@ -275,37 +231,3 @@ def _create_json_file(path_to_json):
 
     with open(path_to_json, "w") as outfile:
         outfile.write(json_object)
-
-
-
-    if Moving_Image is None or Fixed_Image is None:
-        show_error("WARNING: You have not inputted both a fixed and moving image")
-        return
-
-    if len(Moving_Image.data.shape) != 3:
-        show_error("WARNING: Your moving_image must be 3D, you're current input has a shape of {}".format(
-            Moving_Image.data.shape))
-        return
-    elif len(Moving_Image.data.shape) == 3 and (Moving_Image.data.shape[2] == 3 or Fixed_Image.data.shape[2] == 4):
-        show_error("WARNING: YOUR moving_image is RGB, your input must be grayscale and 3D")
-        return
-
-    if len(Fixed_Image.data.shape) != 3:
-        show_error("WARNING: Your Fixed_Image must be 3D, you're current input has a shape of {}".format(
-            Moving_Image.data.shape))
-        return
-    elif len(Fixed_Image.data.shape) == 3 and (Fixed_Image.data.shape[2] == 3 or Fixed_Image.data.shape[2] == 4):
-        show_error("WARNING: YOUR fixed_image is RGB, your input must be grayscale and 3D")
-        return
-
-    if Mask_ROI is not None:
-        if len(Mask_ROI.data) != 1:
-            show_error("WARNING: You must input only 1 Mask ROI, you have inputted {}.".format(len(Mask_ROI.data)))
-            return
-        if mask_area(Mask_ROI.data[0][:, 1], Mask_ROI.data[0][:, 2]) > Moving_Image.data.shape[1] * \
-                Moving_Image.data.shape[2]:
-            show_error("WARNING: Your mask size exceeds the size of the image.")
-            return
-
-    if save_json and not params_from_json:
-        _create_json_file(path_to_json=save_json_path)
