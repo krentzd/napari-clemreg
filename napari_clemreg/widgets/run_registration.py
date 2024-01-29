@@ -8,7 +8,7 @@ import pint
 from magicgui import magic_factory, widgets
 from napari.layers import Image, Shapes, Labels, Points
 from napari.utils.notifications import show_error
-
+from napari.qt.threading import GeneratorWorker
 from ..clemreg.on_init_specs import specs
 
 # Use as worker.join workaround --> Launch registration thread_worker from here
@@ -42,7 +42,8 @@ class RegistrationThreadJoiner:
 
         worker = self.worker_function(**{**self.init_kwargs, **self.moving_kwargs,**self.fixed_kwargs})
         worker.returned.connect(self.returned)
-        worker.yielded.connect(self.yielded)
+        if isinstance(worker, GeneratorWorker):
+            worker.yielded.connect(self.yielded)
         worker.start()
 
 def on_init(widget):
@@ -340,33 +341,6 @@ def make_run_registration(
     from napari.qt.threading import thread_worker
     from napari.layers.utils._link_layers import link_layers
 
-    # if params_from_json and load_json_file.is_file():
-    #     f = open(str(load_json_file))
-    #
-    #     data = json.load(f)
-    #     try:
-    #         registration_algorithm = data["registration_algorithm"]
-    #         em_seg_axis = data["em_seg_axis"]
-    #         log_sigma = data["log_sigma"]
-    #         log_threshold = data["log_threshold"]
-    #         custom_z_zoom = data["custom_z_zoom"],
-    #         z_zoom_value = ["z_zoom_value"],
-    #         filter_segmentation = ["filter_segmentation"],
-    #         filter_size = ["filter_size"],
-    #         point_cloud_sampling_frequency = data["point_cloud_sampling_frequency"]
-    #         point_cloud_sigma = data["point_cloud_sigma"]
-    #         registration_voxel_size = data["registration_voxel_size"]
-    #         registration_max_iterations = data["registration_max_iterations"]
-    #         warping_interpolation_order = data["warping_interpolation_order"]
-    #         warping_approximate_grid = data["warping_approximate_grid"]
-    #         warping_sub_division_factor = data["warping_sub_division_factor"]
-    #     except KeyError:
-    #         show_error("JSON file missing required param")
-    #         return
-    # elif params_from_json and not load_json_file.is_file():
-    #     show_error("Load from JSON selected but no JSON file selected or file path isn't real")
-    #     return
-
     def _add_data(return_value):
         if isinstance(return_value, str):
             show_error('WARNING: No mitochondria in Moving Image')
@@ -418,7 +392,6 @@ def make_run_registration(
 
         return {'Fixed_Segmentation': seg_volume}
 
-
     @thread_worker
     def _run_registration_thread(**kwargs):
         from ..clemreg.widget_components import run_point_cloud_sampling
@@ -433,6 +406,7 @@ def make_run_registration(
                             'point_cloud_sampling_frequency',
                             'voxel_size',
                             'point_cloud_sigma']
+
         point_cloud_kwargs = dict((k, kwargs[k]) for k in point_cloud_keys if k in kwargs)
         moving_points, fixed_points = run_point_cloud_sampling(**point_cloud_kwargs)
 
@@ -448,43 +422,16 @@ def make_run_registration(
                                 'warping_approximate_grid',
                                 'warping_sub_division_factor',
                                 'registration_direction']
+
         reg_and_warping_kwargs = dict((k, kwargs[k]) for k in reg_and_warping_keys if k in kwargs)
         point_cloud_return_kwargs = dict(Moving_Points=moving_points, Fixed_Points=fixed_points)
         point_cloud_reg_and_warping_kwargs = {**point_cloud_return_kwargs, **reg_and_warping_kwargs}
         warp_outputs, transformed = run_point_cloud_registration_and_warping(**point_cloud_reg_and_warping_kwargs)
 
-        # if visualise_intermediate_results:
-        #     yield (transformed, {'name': 'transformed_points', 'face_color': 'yellow'})
-        #
+        if visualise_intermediate_results:
+            yield (transformed, {'name': 'transformed_points', 'face_color': 'yellow'})
 
         return warp_outputs
-
-    def _create_json_file(path_to_json):
-        dictionary = {
-            "registration_algorithm": registration_algorithm,
-            "em_seg_axis": em_seg_axis,
-            "log_sigma": log_sigma,
-            "log_threshold": log_threshold,
-            # "custom_z_zoom": custom_z_zoom,
-            "z_zoom_value": z_zoom_value,
-            "filter_segmentation": filter_segmentation,
-            "filter_size": filter_size,
-            "point_cloud_sampling_frequency": point_cloud_sampling_frequency,
-            "point_cloud_sigma": point_cloud_sigma,
-            "registration_voxel_size": registration_voxel_size,
-            "registration_max_iterations": registration_max_iterations,
-            "warping_interpolation_order": warping_interpolation_order,
-            "warping_approximate_grid": warping_approximate_grid,
-            "warping_sub_division_factor": warping_sub_division_factor
-        }
-
-        json_object = json.dumps(dictionary, indent=4)
-
-        if path_to_json == '':
-            path_to_json = 'parameters.json'
-
-        with open(path_to_json, "w") as outfile:
-            outfile.write(json_object)
 
     if Moving_Image is None or Fixed_Image is None:
         show_error("WARNING: You have not inputted both a fixed and moving image")

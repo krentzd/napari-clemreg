@@ -1,8 +1,7 @@
 import napari
 from magicgui import magic_factory
-from napari.layers import Labels
+from napari.layers import Labels, Image, Layer
 from napari.qt.threading import thread_worker
-
 from ..clemreg.on_init_specs import specs
 
 def on_init(widget):

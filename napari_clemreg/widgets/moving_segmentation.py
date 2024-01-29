@@ -1,6 +1,6 @@
 import napari
 from magicgui import magic_factory
-from napari.layers import Image, Shapes
+from napari.layers import Image, Shapes, Labels
 from napari.utils.notifications import show_error
 from napari.qt.threading import thread_worker
 
