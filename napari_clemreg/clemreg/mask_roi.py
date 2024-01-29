@@ -2,7 +2,7 @@
 # coding: utf-8
 import time
 import numpy as np
-from napari.layers import Image, Shapes
+from napari.layers import Image, Shapes, Labels
 from skimage import draw
 from typing_extensions import Annotated
 from ..clemreg.data_preprocessing import _make_isotropic
@@ -25,7 +25,7 @@ def mask_area(x, y):
     return 0.5 * np.abs(np.dot(x, np.roll(y, 1)) - np.dot(y, np.roll(x, 1)))
 
 
-def mask_roi(input: Image,
+def mask_roi(input: Labels,
              crop_mask: Shapes,
              z_min: Annotated[int, {"min": 0, "max": 10, "step": 1}] = 0,
              z_max: Annotated[int, {"min": 10, "max": 100,
@@ -98,5 +98,8 @@ def mask_roi(input: Image,
 
     print(f'Finished masking after {time.time() - start_time}s!')
 
-    return Image(masked_input,
-                 name=input.name + '_masked')
+    kwargs = dict(
+        name=input.name
+    )
+
+    return Labels(masked_input, **kwargs)

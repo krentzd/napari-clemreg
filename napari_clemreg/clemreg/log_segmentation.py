@@ -254,6 +254,6 @@ def filter_binary_segmentation_v1(input: Labels,
     print(f'Finished execution after {elapsed} seconds.')
 
     kwargs = dict(
-        name=input.name + '_seg'
+        name=input.name
     )
     return Labels(clean_binary_volume, **kwargs)

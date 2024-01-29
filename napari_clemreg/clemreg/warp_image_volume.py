@@ -424,6 +424,7 @@ def warp_image_volume_from_list(
 
     img_wrp_list = []
     for image in moving_image_list:
+        print(f'Warping {image.name} with {transform_type}...')
         if transform_type == 'Affine CPD' or transform_type == 'Rigid CPD':
             img_wrp = _warp_image_volume_affine(image=image.data, **warping_args)
         elif transform_type == 'BCPD':

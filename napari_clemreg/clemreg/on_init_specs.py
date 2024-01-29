@@ -46,15 +46,6 @@ specs = {
                    'min': 0, 'max': 20, 'step': 0.1,
                    'value': 1.2},
 
-    'custom_z_zoom':{'text': 'Custom z interpolation factor',
-                   'widget_type': 'CheckBox',
-                   'value': False},
-
-    'z_zoom_value':{'label': 'Z interpolation factor',
-                'widget_type': 'FloatSpinBox',
-                'min': 0, 'step': 0.01,
-                'value': 1},
-
     'filter_segmentation':{'text': 'Apply size filter to segmentation',
                      'widget_type': 'CheckBox',
                      'value': False},
@@ -72,7 +63,7 @@ specs = {
     'point_cloud_sampling_frequency':{'label': 'Sampling Frequency',
                                     'widget_type': 'SpinBox',
                                     'min': 1, 'max': 100, 'step': 1,
-                                    'value': 5},
+                                    'value': 3},
 
     'point_cloud_sigma':{'label': 'Sigma',
                        'widget_type': 'FloatSpinBox',
@@ -82,7 +73,7 @@ specs = {
     'registration_voxel_size':{'label': 'Voxel Size',
                              'widget_type': 'SpinBox',
                              'min': 1, 'max': 1000, 'step': 1,
-                             'value': 5},
+                             'value': 15},
 
     'registration_max_iterations':{'label': 'Maximum Iterations',
                                  'widget_type': 'SpinBox',
@@ -149,6 +140,10 @@ specs = {
     'Fixed_Image':{'label': 'Electron Microscopy Image (EM)'},
 
     'Moving_Segmentation':{'label': 'Fluorescence Microscopy (FM) Segmentation'},
-    
-    'Fixed_Segmentation':{'label': 'Electron Microscopy (EM) Segmentation'}
+
+    'Fixed_Segmentation':{'label': 'Electron Microscopy (EM) Segmentation'},
+
+    'Moving_Points':{'label': 'Fluorescence Microscopy (FM) Point Cloud'},
+
+    'Fixed_Points':{'label': 'Electron Microscopy (EM) Point Cloud'}
 }

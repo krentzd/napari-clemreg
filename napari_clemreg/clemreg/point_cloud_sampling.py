@@ -36,7 +36,7 @@ def point_cloud_sampling(input: Labels,
     -------
     Points layer containing points sampled from edges of binary segmentations with sepcified kwargs
     """
-    print(f'Sampling point cloud from {input.name} with sigma={sigma} and sampling_frequency={1 / every_k_points}...')
+    print(f'Sampling point cloud from {input.name} with voxel_size={voxel_size} and sampling_frequency={1 / every_k_points}...')
     start_time = time.time()
 
     canny_img_list = []

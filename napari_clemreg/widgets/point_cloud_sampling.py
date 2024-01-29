@@ -98,25 +98,9 @@ def point_cloud_sampling_widget(viewer: 'napari.viewer.Viewer',
     from ..clemreg.widget_components import run_point_cloud_sampling
 
     @thread_worker
-    def _run_point_cloud_sampling_thread(Moving_Segmentation,
-                                         Fixed_Segmentation,
-                                         moving_image_pixelsize_xy,
-                                         moving_image_pixelsize_z,
-                                         fixed_image_pixelsize_xy,
-                                         fixed_image_pixelsize_z,
-                                         point_cloud_sampling_frequency,
-                                         voxel_size,
-                                         point_cloud_sigma):
+    def _run_point_cloud_sampling_thread(**kwargs):
 
-        moving_point_cloud, fixed_point_cloud = run_point_cloud_sampling(Moving_Segmentation=Moving_Segmentation,
-                                                                         Fixed_Segmentation=Fixed_Segmentation,
-                                                                         moving_image_pixelsize_xy=moving_image_pixelsize_xy,
-                                                                         moving_image_pixelsize_z=moving_image_pixelsize_z,
-                                                                         fixed_image_pixelsize_xy=fixed_image_pixelsize_xy,
-                                                                         fixed_image_pixelsize_z=fixed_image_pixelsize_z,
-                                                                         point_cloud_sampling_frequency=point_cloud_sampling_frequency,
-                                                                         voxel_size=voxel_size,
-                                                                         point_cloud_sigma=point_cloud_sigma)
+        moving_point_cloud, fixed_point_cloud = run_point_cloud_sampling(**kwargs)
 
         return moving_point_cloud, fixed_point_cloud
 

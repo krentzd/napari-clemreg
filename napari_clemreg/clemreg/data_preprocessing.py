@@ -152,11 +152,12 @@ def return_isotropic_image_list(input_image: Image,
     """
     # Inplace operation
     image_iso_list = []
-    print(f'Resampling {input_image.name}')
+    # print(f'Resampling {input_image.name}')
     if len(get_linked_layers(input_image)) > 0:
         images = get_linked_layers(input_image)
         images.add(input_image)
         for image in images:
+            print(f'Resampling {image.name}')
             target_image_iso = copy.deepcopy(image)
             image_iso = _make_isotropic(image.data,
                                         pxlsz_lm,

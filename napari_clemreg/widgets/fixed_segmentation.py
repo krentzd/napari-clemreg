@@ -43,23 +43,20 @@ def fixed_segmentation_widget(viewer: 'napari.viewer.Viewer',
     from ..clemreg.empanada_segmentation import empanada_segmentation
 
     @thread_worker
-    def _run_fixed_thread(Fixed_Image,
-                          em_seg_axis):
+    def _run_fixed_thread(**kwargs):
         from ..clemreg.widget_components import run_fixed_segmentation
         #Increasing levels of CLAHE
 
-        seg_volume = run_fixed_segmentation(Fixed_Image=Fixed_Image,
-                                            em_seg_axis=em_seg_axis)
-                                            
-        return seg_volume, {'name': 'EM_segmentation', 'metadata': Fixed_Image.metadata}
+        seg_volume = run_fixed_segmentation(**kwargs)
+
+        return Labels(seg_volume.astype(np.int64), **{'name': 'EM_segmentation', 'metadata': Fixed_Image.metadata})
 
     def _add_data(return_value):
         if isinstance(return_value, str):
             show_error('WARNING: No mitochondria in Fixed Image')
             return
 
-        labels, kwargs = return_value
-        viewer.add_labels(labels.astype(np.int64), **kwargs)
+        viewer.add_layer(return_value)
 
     if Fixed_Image is None:
         show_error("WARNING: You have not inputted both a fixed and moving image")

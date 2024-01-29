@@ -29,7 +29,7 @@ def run_moving_segmentation(Moving_Image,
                             log_threshold,
                             filter_segmentation,
                             filter_size_lower,
-                            filter_size_upper,
+                            filter_size_upper
 ):
 
     from ..clemreg.log_segmentation import log_segmentation, filter_binary_segmentation
@@ -107,7 +107,6 @@ def run_point_cloud_sampling(Moving_Segmentation,
     moving_seg = _make_isotropic(Moving_Segmentation.data > 0,
                                  pxlsz_lm=pxlsz_moving,
                                  pxlsz_em=pxlsz_fixed)
-    # Check for EM or LM volume
     # Need to check for isotropic EM volume
     if pxlsz_fixed[0] != pxlsz_fixed[1]:
         fixed_seg = _make_isotropic(Fixed_Segmentation.data,
@@ -159,15 +158,21 @@ Point cloud registration
 def run_point_cloud_registration_and_warping(Moving_Points,
                                              Fixed_Points,
                                              Moving_Image,
+                                             Fixed_Image,
                                              registration_algorithm,
                                              registration_max_iterations,
                                              warping_interpolation_order,
                                              warping_approximate_grid,
-                                             warping_sub_division_factor
+                                             warping_sub_division_factor,
+                                             registration_direction
 ):
     from ..clemreg.point_cloud_registration import point_cloud_registration
     from ..clemreg.data_preprocessing import return_isotropic_image_list, _make_isotropic
     from ..clemreg.warp_image_volume import warp_image_volume_from_list
+
+    if registration_direction == u'EM \u2192 FM':
+        Fixed_Points, Moving_Points = Moving_Points, Fixed_Points
+        Fixed_Image, Moving_Image = Moving_Image, Fixed_Image
 
     moving, fixed, transformed, kwargs = point_cloud_registration(moving=Moving_Points.data,
                                                                   fixed=Fixed_Points.data,
@@ -180,7 +185,7 @@ def run_point_cloud_registration_and_warping(Moving_Points,
     moving_image_list = return_isotropic_image_list(input_image=Moving_Image,
                                                     pxlsz_lm=Moving_Points.metadata['pxlsz'],
                                                     pxlsz_em=Fixed_Points.metadata['pxlsz'])
-
+    print('Returned isotropic images')
     warp_outputs = warp_image_volume_from_list(moving_image_list=moving_image_list,
                                                output_shape=Fixed_Points.metadata['output_shape'],
                                                transform_type=registration_algorithm,
@@ -189,9 +194,8 @@ def run_point_cloud_registration_and_warping(Moving_Points,
                                                interpolation_order=warping_interpolation_order,
                                                approximate_grid=warping_approximate_grid,
                                                sub_division_factor=warping_sub_division_factor)
-
+    print('Finished warping images')
     if Fixed_Points.metadata['pxlsz'][0] != Fixed_Points.metadata['pxlsz'][1]:
-
         src_pxlsz = (Fixed_Points.metadata['pxlsz'][0], Fixed_Points.metadata['pxlsz'][0])
         for warp_output in warp_outputs:
             warp_output.data = _make_isotropic(warp_output.data,
@@ -199,7 +203,6 @@ def run_point_cloud_registration_and_warping(Moving_Points,
                                                 Fixed_Points.metadata['pxlsz'],
                                                 inverse=True,
                                                 ref_frame='EM')
-
     return warp_outputs, transformed
 
 """

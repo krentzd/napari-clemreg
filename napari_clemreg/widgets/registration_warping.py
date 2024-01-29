@@ -5,51 +5,35 @@ from napari.qt.threading import thread_worker
 from napari.layers.utils._link_layers import link_layers
 from napari.utils.notifications import show_error
 
+from ..clemreg.on_init_specs import specs
+
 @magic_factory(layout='vertical',
                call_button='Register',
                widget_header={'widget_type': 'Label',
                               'label': f'<h2 text-align="left">Point Cloud Registration</h2>'},
                widget_header_2={'widget_type': 'Label',
                             'label': f'<h2 text-align="middle">and Image Warping</h2>'},
-               registration_algorithm={'label': 'Registration Algorithm',
-                                       'widget_type': 'ComboBox',
-                                       'choices': ["BCPD", "Rigid CPD", "Affine CPD"],
-                                       'value': 'Rigid CPD',
-                                       'tooltip': 'Speed: Rigid CPD > Affine CPD > BCPD'},
+
+               Moving_Image=specs['Moving_Image'],
+               Fixed_Image=specs['Fixed_Image'],
+               Moving_Points=specs['Moving_Points'],
+               Fixed_Points=specs['Fixed_Points'],
+
+               registration_algorithm=specs['registration_algorithm'],
 
                registration_header={'widget_type': 'Label',
                                     'label': f'<h3 text-align="left">Point Cloud Registration</h3>'},
 
-               registration_max_iterations={'label': 'Maximum Iterations',
-                                            'widget_type': 'SpinBox',
-                                            'min': 1, 'max': 1000, 'step': 1,
-                                            'value': 50},
+               registration_max_iterations=specs['registration_max_iterations'],
 
                warping_header={'widget_type': 'Label',
                                'label': f'<h3 text-align="left">Image Warping</h3>'},
-               warping_interpolation_order={'label': 'Interpolation Order',
-                                            'widget_type': 'SpinBox',
-                                            'min': 0, 'max': 5, 'step': 1,
-                                            'value': 1},
-               warping_approximate_grid={'label': 'Approximate Grid',
-                                         'widget_type': 'SpinBox',
-                                         'min': 1, 'max': 10, 'step': 1,
-                                         'value': 5},
-               warping_sub_division_factor={'label': 'Sub-division Factor',
-                                            'widget_type': 'SpinBox',
-                                            'min': 1, 'max': 10, 'step': 1,
-                                            'value': 1},
 
-               registration_direction={'label': 'Registration direction',
-                                               'widget_type': 'RadioButtons',
-                                               'choices': [u'FM \u2192 EM', u'EM \u2192 FM'],
-                                               'value': u'FM \u2192 EM'
-                                               },
+               warping_interpolation_order=specs['warping_interpolation_order'],
+               warping_approximate_grid=specs['warping_approximate_grid'],
+               warping_sub_division_factor=specs['warping_sub_division_factor'],
 
-               Moving_Image={'label': 'Fluorescence Microscopy (FM) Image'},
-               Fixed_Image={'label': 'Electron Microscopy (EM) Image'},
-               Moving_Points={'label': 'Fluorescence Microscopy (FM) Point Cloud'},
-               Fixed_Points={'label': 'Electron Microscopy (EM) Point Cloud'},
+               registration_direction=specs['registration_direction'],
                )
 def registration_warping_widget(viewer: 'napari.viewer.Viewer',
                                 widget_header,
@@ -112,26 +96,10 @@ def registration_warping_widget(viewer: 'napari.viewer.Viewer',
     """
 
     @thread_worker
-    def _registration_thread():
-
+    def _registration_thread(**kwargs):
         from ..clemreg.widget_components import run_point_cloud_registration_and_warping
+        warp_outputs, transformed = run_point_cloud_registration_and_warping(**kwargs)
 
-        if registration_direction == u'FM \u2192 EM':
-            moving_input_points = Moving_Points
-            fixed_input_points = Fixed_Points
-
-        elif registration_direction == u'EM \u2192 FM':
-            moving_input_points = Fixed_Points
-            fixed_input_points = Moving_Points
-
-        warp_outputs, transformed = run_point_cloud_registration_and_warping(Moving_Points,
-                                                                             Fixed_Points,
-                                                                             Moving_Image,
-                                                                             registration_algorithm,
-                                                                             registration_max_iterations,
-                                                                             warping_interpolation_order,
-                                                                             warping_approximate_grid,
-                                                                             warping_sub_division_factor)
         return warp_outputs, transformed
 
     def _add_data(return_value):
@@ -164,6 +132,15 @@ def registration_warping_widget(viewer: 'napari.viewer.Viewer',
         show_error("WARNING: YOUR fixed_image is RGB, your input must be grayscale and 3D")
         return
 
-    worker_registration = _registration_thread()
+    worker_registration = _registration_thread(Moving_Points=Moving_Points,
+                                               Fixed_Points=Fixed_Points,
+                                               Moving_Image=Moving_Image,
+                                               Fixed_Image=Fixed_Image,
+                                               registration_algorithm=registration_algorithm,
+                                               registration_max_iterations=registration_max_iterations,
+                                               warping_interpolation_order=warping_interpolation_order,
+                                               warping_approximate_grid=warping_approximate_grid,
+                                               warping_sub_division_factor=warping_sub_division_factor,
+                                               registration_direction=registration_direction)
     worker_registration.returned.connect(_add_data)
     worker_registration.start()

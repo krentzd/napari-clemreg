@@ -134,35 +134,18 @@ def moving_segmentation_widget(viewer: 'napari.viewer.Viewer',
     from ..clemreg.widget_components import run_moving_segmentation
 
     @thread_worker
-    def _run_segmentation_thread(Moving_Image,
-                                 Mask_ROI,
-                                 z_min,
-                                 z_max,
-                                 log_sigma,
-                                 log_threshold,
-                                 filter_segmentation,
-                                 filter_size_lower,
-                                 filter_size_upper,
-    ):
-        seg_volume_mask = run_moving_segmentation(Moving_Image=Moving_Image,
-                                                  Mask_ROI=Mask_ROI,
-                                                  z_min=z_min,
-                                                  z_max=z_max,
-                                                  log_sigma=log_sigma,
-                                                  log_threshold=log_threshold,
-                                                  filter_segmentation=filter_segmentation,
-                                                  filter_size_lower=filter_size_lower,
-                                                  filter_size_upper=filter_size_upper)
+    def _run_segmentation_thread(**kwargs):
+        seg_volume_mask = run_moving_segmentation(**kwargs)
 
-        return seg_volume_mask, {'name': 'FM_segmentation', 'metadata': Moving_Image.metadata}
+        return Labels(seg_volume_mask, **{'name': 'FM_segmentation', 'metadata': Moving_Image.metadata})
+
 
     def _add_data(return_value):
         if isinstance(return_value, str):
-            show_error('WARNING: No mitochondria in Fixed Image')
+            show_error('WARNING: No mitochondria in Moving Image')
             return
 
-        labels, kwargs = return_value
-        viewer.add_labels(labels.data.astype(np.int64), **kwargs)
+        viewer.add_layer(return_value)
 
     if Moving_Image is None:
         show_error("WARNING: You have not inputted both a fixed and moving image")
@@ -195,4 +178,7 @@ def moving_segmentation_widget(viewer: 'napari.viewer.Viewer',
                                              filter_size_lower=filter_size_lower,
                                              filter_size_upper=filter_size_upper)
     worker_moving.returned.connect(_add_data)
+    # Connect to button to release it
+    # worker_moving.finished.connect(_add_data)
+
     worker_moving.start()
