@@ -1,4 +1,4 @@
-# napari-clemrerg
+# napari-clemreg
 ### An automated point cloud based registration algorithm for correlative light and volume electron microscopy
 
 [![License](https://img.shields.io/pypi/l/napari-clemreg.svg?color=green)](https://github.com/krentzd/napari-clemreg/raw/master/LICENSE)
