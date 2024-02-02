@@ -3,10 +3,9 @@
 from scipy.ndimage import gaussian_filter1d
 import cc3d
 from skimage import feature, exposure, filters
-from napari.layers import Image
+from napari.layers import Image, Labels
 from napari.qt.threading import thread_worker
 import time
-from napari.layers import Labels
 import numpy as np
 from tqdm import tqdm
 
@@ -153,13 +152,9 @@ def log_segmentation(input: Image,
     log_iso_volume = _diff_of_gauss(volume, sigma, sigma_2)
     seg_volume = _slice_adaptive_thresholding(log_iso_volume, threshold)
 
-    kwargs = dict(
-        name=input.name + '_seg'
-    )
-
     print(f'Finished segmenting after {time.time() - start_time}s!')
 
-    return Labels(seg_volume, **kwargs)
+    return seg_volume
 
 def filter_binary_segmentation(input: Labels,
                                percentile: tuple=(5,95)):
@@ -204,10 +199,7 @@ def filter_binary_segmentation(input: Labels,
     elapsed = time.time() - start
     print(f'Finished execution after {elapsed} seconds.')
 
-    kwargs = dict(
-        name=input.name + '_seg'
-    )
-    return Labels(within_thresh_binary_volume, **kwargs)
+    return within_thresh_binary_volume
 
 def filter_binary_segmentation_v1(input: Labels,
                                percentile: tuple=(0,95)):

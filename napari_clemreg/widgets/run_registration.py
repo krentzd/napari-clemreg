@@ -368,7 +368,7 @@ def make_run_registration(
         from ..clemreg.widget_components import run_moving_segmentation
 
         seg_volume_mask = run_moving_segmentation(**kwargs)
-        seg_volume_mask = Labels(seg_volume_mask.data.astype(np.uint32),
+        seg_volume_mask = Labels(seg_volume_mask.astype(np.uint32),
                                  name='FM_segmentation',
                                  metadata=Moving_Image.metadata)
 

@@ -43,7 +43,7 @@ def run_moving_segmentation(Moving_Image,
         seg_volume = filter_binary_segmentation(input=seg_volume,
                                                 percentile=(filter_size_lower, filter_size_upper))
 
-    if len(set(seg_volume.data.ravel())) <= 1:
+    if len(set(seg_volume.ravel())) <= 1:
         return 'No segmentation'
 
     if Mask_ROI is not None:

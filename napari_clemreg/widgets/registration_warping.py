@@ -4,10 +4,30 @@ from napari.layers import Points, Image
 from napari.qt.threading import thread_worker
 from napari.layers.utils._link_layers import link_layers
 from napari.utils.notifications import show_error
+import pint
 
 from ..clemreg.on_init_specs import specs
 
-@magic_factory(layout='vertical',
+
+def on_init(widget):
+
+    def change_moving_pixelsize(input_points: Points):
+        moving_image_pixelsize_z, moving_image_pixelsize_xy = input_points.metadata['pxlsz']
+
+        widget.moving_image_pixelsize_xy.value = str(moving_image_pixelsize_xy) + 'nanometer'
+        widget.moving_image_pixelsize_z.value = str(moving_image_pixelsize_z) + 'nanometer'
+
+    def change_fixed_pixelsize(input_points: Points):
+        fixed_image_pixelsize_z, fixed_image_pixelsize_xy = input_points.metadata['pxlsz']
+
+        widget.fixed_image_pixelsize_xy.value = str(fixed_image_pixelsize_xy) + 'nanometer'
+        widget.fixed_image_pixelsize_z.value = str(fixed_image_pixelsize_z) + 'nanometer'
+
+    widget.Moving_Points.changed.connect(change_moving_pixelsize)
+    widget.Fixed_Points.changed.connect(change_fixed_pixelsize)
+
+
+@magic_factory(widget_init=on_init, layout='vertical',
                call_button='Register',
                widget_header={'widget_type': 'Label',
                               'label': f'<h2 text-align="left">Point Cloud Registration</h2>'},
@@ -15,7 +35,13 @@ from ..clemreg.on_init_specs import specs
                             'label': f'<h2 text-align="middle">and Image Warping</h2>'},
 
                Moving_Image=specs['Moving_Image'],
+               moving_image_pixelsize_xy=specs['moving_image_pixelsize_xy'],
+               moving_image_pixelsize_z=specs['moving_image_pixelsize_z'],
+
                Fixed_Image=specs['Fixed_Image'],
+               fixed_image_pixelsize_xy=specs['fixed_image_pixelsize_xy'],
+               fixed_image_pixelsize_z=specs['fixed_image_pixelsize_z'],
+
                Moving_Points=specs['Moving_Points'],
                Fixed_Points=specs['Fixed_Points'],
 
@@ -40,7 +66,13 @@ def registration_warping_widget(viewer: 'napari.viewer.Viewer',
                                 widget_header_2,
 
                                 Moving_Image: Image,
+                                moving_image_pixelsize_xy,
+                                moving_image_pixelsize_z,
+
                                 Fixed_Image: Image,
+                                fixed_image_pixelsize_xy,
+                                fixed_image_pixelsize_z,
+
                                 Moving_Points: Points,
                                 Fixed_Points: Points,
 
@@ -94,6 +126,13 @@ def registration_warping_widget(viewer: 'napari.viewer.Viewer',
         napari Image layer containing the warping of the moving image to the
         fixed image.
     """
+    ureg = pint.UnitRegistry()
+
+    pxlsz_moving = (moving_image_pixelsize_z.to_preferred([ureg.nanometers]).magnitude, moving_image_pixelsize_xy.to_preferred([ureg.nanometers]).magnitude)
+    pxlsz_fixed = (fixed_image_pixelsize_z.to_preferred([ureg.nanometers]).magnitude, fixed_image_pixelsize_xy.to_preferred([ureg.nanometers]).magnitude)
+
+    Moving_Points.metadata['pxlsz'] = pxlsz_moving
+    Fixed_Points.metadata['pxlsz'] = pxlsz_fixed
 
     @thread_worker
     def _registration_thread(**kwargs):
