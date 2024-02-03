@@ -47,15 +47,6 @@ def run_moving_segmentation(Moving_Image,
         return 'No segmentation'
 
     if Mask_ROI is not None:
-        # Convert Mask_ROI to new space
-        # z_min = int(z_min * (pxlsz_moving[0] / pxlsz_fixed[0]))
-        # z_max = min(int(z_max * (pxlsz_moving[0] / pxlsz_fixed[0])), seg_volume.data.shape[0])
-        #
-        # m_z = np.expand_dims(Mask_ROI.data[0][:,0] * (pxlsz_moving[0] / pxlsz_fixed[0]), axis=1)
-        # m_xy = Mask_ROI.data[0][:,1:] * (pxlsz_moving[1] / pxlsz_fixed[0])
-        #
-        # Mask_ROI.data = np.hstack((m_z, m_xy))
-
         seg_volume = mask_roi(input_arr=seg_volume,
                               crop_mask=Mask_ROI,
                               z_min=z_min,
