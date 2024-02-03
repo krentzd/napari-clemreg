@@ -205,10 +205,10 @@ def run_point_cloud_registration_and_warping(Moving_Points,
         src_pxlsz = (Fixed_Points.metadata['pxlsz'][0], Fixed_Points.metadata['pxlsz'][0])
         for warp_output in warp_outputs:
             warp_output.data = _make_isotropic(warp_output.data,
-                                                src_pxlsz,
-                                                Fixed_Points.metadata['pxlsz'],
-                                                inverse=True,
-                                                ref_frame='EM')
+                                               src_pxlsz,
+                                               Fixed_Points.metadata['pxlsz'],
+                                               inverse=True,
+                                               ref_frame='EM')
     if benchmarking_mode:
         return warp_outputs, transformed, elapsed
     else:
