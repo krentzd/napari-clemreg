@@ -25,7 +25,7 @@ def mask_area(x, y):
     return 0.5 * np.abs(np.dot(x, np.roll(y, 1)) - np.dot(y, np.roll(x, 1)))
 
 
-def mask_roi(input: Labels,
+def mask_roi(input_arr: np.ndarray,
              crop_mask: Shapes,
              z_min: Annotated[int, {"min": 0, "max": 10, "step": 1}] = 0,
              z_max: Annotated[int, {"min": 10, "max": 100,
@@ -54,7 +54,7 @@ def mask_roi(input: Labels,
     # If 4 dimensions, assume dimension with smallest size is colour channel
     # Reshape stack to be [channel, z, x, y]
 
-    print(f'Masking {input.name} with {crop_mask.name} between {z_min} and {z_max}...')
+    print(f'Masking with {crop_mask.name} between {z_min} and {z_max}...')
     start_time = time.time()
 
     if crop_mask.data[0].shape[-1] > 3:
@@ -65,15 +65,9 @@ def mask_roi(input: Labels,
     top_idx = crop_mask.shape_type.index(
         'polygon') if 'polygon' in crop_mask.shape_type else crop_mask.shape_type.index('rectangle')
     top_z = z_min
-
     bot_z = z_max
 
-    input_arr = input.data  # np.squeeze(input.data)
-    print(input_arr.shape)
-
     temp_idx = 2 if len(input_arr.shape) == 4 else 1
-
-    print(input_arr.shape[temp_idx:])
 
     binary_mask = draw.polygon2mask(input_arr.shape[temp_idx:], crop_mask.data[top_idx][:, 1:])
     top_vol = [np.zeros(input_arr.shape[temp_idx:])] * top_z
@@ -92,14 +86,10 @@ def mask_roi(input: Labels,
     masked_input = input_arr.data * binary_mask_full_vol
     masked_input = masked_input.astype(int)
 
-    if not masked_input.shape == input.data.shape:
+    if not masked_input.shape == input_arr.shape:
         print('Reshaped array')
-        masked_input.reshape(input.data.shape)
+        masked_input.reshape(input_arr.shape)
 
     print(f'Finished masking after {time.time() - start_time}s!')
 
-    kwargs = dict(
-        name=input.name
-    )
-
-    return Labels(masked_input, **kwargs)
+    return masked_input

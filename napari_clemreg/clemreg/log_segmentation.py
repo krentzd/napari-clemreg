@@ -156,12 +156,12 @@ def log_segmentation(input: Image,
 
     return seg_volume
 
-def filter_binary_segmentation(input: Labels,
+def filter_binary_segmentation(input: np.ndarray,
                                percentile: tuple=(5,95)):
     """Filters binary segmentation based on size
     Parameters
     ----------
-    input : napari.layers.Labels
+    input : numpy.ndarray
         Binary segmentation volume
     percentile : int
         Specifies threshold for filtering individual objects based on size
@@ -178,7 +178,7 @@ def filter_binary_segmentation(input: Labels,
     start = time.time()
 
     # Find connected components
-    labels_out = cc3d.connected_components(input.data)
+    labels_out = cc3d.connected_components(input)
     print(f'Identified {labels_out.max()} connected components.')
 
     # Count occurences of each connected component

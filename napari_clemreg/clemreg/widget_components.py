@@ -48,22 +48,20 @@ def run_moving_segmentation(Moving_Image,
 
     if Mask_ROI is not None:
         # Convert Mask_ROI to new space
-        z_min = int(z_min * (pxlsz_moving[0] / pxlsz_fixed[0]))
-        z_max = min(int(z_max * (pxlsz_moving[0] / pxlsz_fixed[0])), seg_volume.data.shape[0])
+        # z_min = int(z_min * (pxlsz_moving[0] / pxlsz_fixed[0]))
+        # z_max = min(int(z_max * (pxlsz_moving[0] / pxlsz_fixed[0])), seg_volume.data.shape[0])
+        #
+        # m_z = np.expand_dims(Mask_ROI.data[0][:,0] * (pxlsz_moving[0] / pxlsz_fixed[0]), axis=1)
+        # m_xy = Mask_ROI.data[0][:,1:] * (pxlsz_moving[1] / pxlsz_fixed[0])
+        #
+        # Mask_ROI.data = np.hstack((m_z, m_xy))
 
-        m_z = np.expand_dims(Mask_ROI.data[0][:,0] * (pxlsz_moving[0] / pxlsz_fixed[0]), axis=1)
-        m_xy = Mask_ROI.data[0][:,1:] * (pxlsz_moving[1] / pxlsz_fixed[0])
+        seg_volume = mask_roi(input_arr=seg_volume,
+                              crop_mask=Mask_ROI,
+                              z_min=z_min,
+                              z_max=z_max)
 
-        Mask_ROI.data = np.hstack((m_z, m_xy))
-
-        seg_volume_mask = mask_roi(input=seg_volume,
-                                   crop_mask=Mask_ROI,
-                                   z_min=z_min,
-                                   z_max=z_max)
-    else:
-        seg_volume_mask = seg_volume
-
-    return seg_volume_mask
+    return seg_volume
 
 """
 Fixed segmentation
@@ -164,7 +162,9 @@ def run_point_cloud_registration_and_warping(Moving_Points,
                                              warping_interpolation_order,
                                              warping_approximate_grid,
                                              warping_sub_division_factor,
-                                             registration_direction
+                                             registration_direction,
+                                             benchmarking_mode: bool=False,
+                                             **reg_kwargs
 ):
     from ..clemreg.point_cloud_registration import point_cloud_registration
     from ..clemreg.data_preprocessing import return_isotropic_image_list, _make_isotropic
@@ -174,10 +174,16 @@ def run_point_cloud_registration_and_warping(Moving_Points,
         Fixed_Points, Moving_Points = Moving_Points, Fixed_Points
         Fixed_Image, Moving_Image = Moving_Image, Fixed_Image
 
-    moving, fixed, transformed, kwargs = point_cloud_registration(moving=Moving_Points.data,
-                                                                  fixed=Fixed_Points.data,
-                                                                  algorithm=registration_algorithm,
-                                                                  max_iterations=registration_max_iterations)
+    point_cloud_reg_return_vals = point_cloud_registration(moving=Moving_Points.data,
+                                                           fixed=Fixed_Points.data,
+                                                           algorithm=registration_algorithm,
+                                                           max_iterations=registration_max_iterations,
+                                                           benchmarking_mode=benchmarking_mode,
+                                                           **reg_kwargs)
+    if benchmarking_mode:
+        moving, fixed, transformed, kwargs, elapsed = point_cloud_reg_return_vals
+    else:
+        moving, fixed, transformed, kwargs = point_cloud_reg_return_vals
 
     if registration_algorithm == 'Affine CPD' or registration_algorithm == 'Rigid CPD':
         transformed = Points(moving, **kwargs)
@@ -203,7 +209,10 @@ def run_point_cloud_registration_and_warping(Moving_Points,
                                                 Fixed_Points.metadata['pxlsz'],
                                                 inverse=True,
                                                 ref_frame='EM')
-    return warp_outputs, transformed
+    if benchmarking_mode:
+        return warp_outputs, transformed, elapsed
+    else:
+        return warp_outputs, transformed
 
 """
 Helper functions

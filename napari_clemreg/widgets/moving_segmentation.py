@@ -132,7 +132,8 @@ def moving_segmentation_widget(viewer: 'napari.viewer.Viewer',
     """
     import numpy as np
     from ..clemreg.widget_components import run_moving_segmentation
-
+    from ..clemreg.mask_roi import mask_area
+    
     @thread_worker
     def _run_segmentation_thread(**kwargs):
         seg_volume_mask = run_moving_segmentation(**kwargs)
