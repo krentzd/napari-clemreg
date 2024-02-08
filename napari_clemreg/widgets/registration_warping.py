@@ -4,72 +4,88 @@ from napari.layers import Points, Image
 from napari.qt.threading import thread_worker
 from napari.layers.utils._link_layers import link_layers
 from napari.utils.notifications import show_error
+import pint
 
-@magic_factory(layout='vertical',
+from ..clemreg.on_init_specs import specs
+
+
+def on_init(widget):
+
+    def change_moving_pixelsize(input_points: Points):
+        moving_image_pixelsize_z, moving_image_pixelsize_xy = input_points.metadata['pxlsz']
+
+        widget.moving_image_pixelsize_xy.value = str(moving_image_pixelsize_xy) + 'nanometer'
+        widget.moving_image_pixelsize_z.value = str(moving_image_pixelsize_z) + 'nanometer'
+
+    def change_fixed_pixelsize(input_points: Points):
+        fixed_image_pixelsize_z, fixed_image_pixelsize_xy = input_points.metadata['pxlsz']
+
+        widget.fixed_image_pixelsize_xy.value = str(fixed_image_pixelsize_xy) + 'nanometer'
+        widget.fixed_image_pixelsize_z.value = str(fixed_image_pixelsize_z) + 'nanometer'
+
+    widget.Moving_Points.changed.connect(change_moving_pixelsize)
+    widget.Fixed_Points.changed.connect(change_fixed_pixelsize)
+
+
+@magic_factory(widget_init=on_init, layout='vertical',
                call_button='Register',
                widget_header={'widget_type': 'Label',
                               'label': f'<h2 text-align="left">Point Cloud Registration</h2>'},
                widget_header_2={'widget_type': 'Label',
                             'label': f'<h2 text-align="middle">and Image Warping</h2>'},
-               registration_algorithm={'label': 'Registration Algorithm',
-                                       'widget_type': 'ComboBox',
-                                       'choices': ["BCPD", "Rigid CPD", "Affine CPD"],
-                                       'value': 'Rigid CPD',
-                                       'tooltip': 'Speed: Rigid CPD > Affine CPD > BCPD'},
+
+               Moving_Image=specs['Moving_Image'],
+               moving_image_pixelsize_xy=specs['moving_image_pixelsize_xy'],
+               moving_image_pixelsize_z=specs['moving_image_pixelsize_z'],
+
+               Fixed_Image=specs['Fixed_Image'],
+               fixed_image_pixelsize_xy=specs['fixed_image_pixelsize_xy'],
+               fixed_image_pixelsize_z=specs['fixed_image_pixelsize_z'],
+
+               Moving_Points=specs['Moving_Points'],
+               Fixed_Points=specs['Fixed_Points'],
+
+               registration_algorithm=specs['registration_algorithm'],
 
                registration_header={'widget_type': 'Label',
                                     'label': f'<h3 text-align="left">Point Cloud Registration</h3>'},
-               registration_voxel_size={'label': 'Voxel Size',
-                                        'widget_type': 'SpinBox',
-                                        'min': 1, 'max': 1000, 'step': 1,
-                                        'value': 5},
-               registration_every_k_points={'label': 'Subsampling',
-                                            'widget_type': 'SpinBox',
-                                            'min': 1, 'max': 1000, 'step': 1,
-                                            'value': 1},
-               registration_max_iterations={'label': 'Maximum Iterations',
-                                            'widget_type': 'SpinBox',
-                                            'min': 1, 'max': 1000, 'step': 1,
-                                            'value': 50},
+
+               registration_max_iterations=specs['registration_max_iterations'],
 
                warping_header={'widget_type': 'Label',
                                'label': f'<h3 text-align="left">Image Warping</h3>'},
-               warping_interpolation_order={'label': 'Interpolation Order',
-                                            'widget_type': 'SpinBox',
-                                            'min': 0, 'max': 5, 'step': 1,
-                                            'value': 1},
-               warping_approximate_grid={'label': 'Approximate Grid',
-                                         'widget_type': 'SpinBox',
-                                         'min': 1, 'max': 10, 'step': 1,
-                                         'value': 5},
-               warping_sub_division_factor={'label': 'Sub-division Factor',
-                                            'widget_type': 'SpinBox',
-                                            'min': 1, 'max': 10, 'step': 1,
-                                            'value': 1},
-               Moving_Image={'label': 'Fluorescence Microscopy (FM) Image'},
-               Fixed_Image={'label': 'Electron Microscopy (EM) Image'},
-               Moving_Points={'label': 'Fluorescence Microscopy (FM) Point Cloud'},
-               Fixed_Points={'label': 'Electron Microscopy (EM) Point Cloud'},
+
+               warping_interpolation_order=specs['warping_interpolation_order'],
+               warping_approximate_grid=specs['warping_approximate_grid'],
+               warping_sub_division_factor=specs['warping_sub_division_factor'],
+
+               registration_direction=specs['registration_direction'],
                )
 def registration_warping_widget(viewer: 'napari.viewer.Viewer',
                                 widget_header,
                                 widget_header_2,
 
                                 Moving_Image: Image,
+                                moving_image_pixelsize_xy,
+                                moving_image_pixelsize_z,
+
                                 Fixed_Image: Image,
+                                fixed_image_pixelsize_xy,
+                                fixed_image_pixelsize_z,
+
                                 Moving_Points: Points,
                                 Fixed_Points: Points,
 
                                 registration_header,
                                 registration_algorithm,
-                                registration_voxel_size,
-                                registration_every_k_points,
                                 registration_max_iterations,
 
                                 warping_header,
                                 warping_interpolation_order,
                                 warping_approximate_grid,
-                                warping_sub_division_factor
+                                warping_sub_division_factor,
+
+                                registration_direction
                                 ):
     """
     This widget registers the moving and fixed points and then uses
@@ -94,12 +110,8 @@ def registration_warping_widget(viewer: 'napari.viewer.Viewer',
         The registration heading
     registration_algorithm : 'magicgui.widgets.ComboBox'
         The algorithm to do the registration of the moving and fixed points.
-    registration_voxel_size : int
-        ?
-    registration_every_k_points : int
-        ?
     registration_max_iterations : int
-        ?
+        Maximum number of CPD iterations
     warping_header : str
         Warping headings
     warping_interpolation_order : int
@@ -114,45 +126,30 @@ def registration_warping_widget(viewer: 'napari.viewer.Viewer',
         napari Image layer containing the warping of the moving image to the
         fixed image.
     """
-    from ..clemreg.point_cloud_registration import point_cloud_registration
-    from ..clemreg.warp_image_volume import warp_image_volume
+    ureg = pint.UnitRegistry()
+
+    pxlsz_moving = (moving_image_pixelsize_z.to_preferred([ureg.nanometers]).magnitude, moving_image_pixelsize_xy.to_preferred([ureg.nanometers]).magnitude)
+    pxlsz_fixed = (fixed_image_pixelsize_z.to_preferred([ureg.nanometers]).magnitude, fixed_image_pixelsize_xy.to_preferred([ureg.nanometers]).magnitude)
+
+    Moving_Points.metadata['pxlsz'] = pxlsz_moving
+    Fixed_Points.metadata['pxlsz'] = pxlsz_fixed
 
     @thread_worker
-    def _registration_thread():
-        moving, fixed, transformed, kwargs = point_cloud_registration(Moving_Points.data,
-                                                                      Fixed_Points.data,
-                                                                      algorithm=registration_algorithm,
-                                                                      voxel_size=registration_voxel_size,
-                                                                      every_k_points=registration_every_k_points,
-                                                                      max_iterations=registration_max_iterations)
+    def _registration_thread(**kwargs):
+        from ..clemreg.widget_components import run_point_cloud_registration_and_warping
+        warp_outputs, transformed = run_point_cloud_registration_and_warping(**kwargs)
 
-        if registration_algorithm == 'Affine CPD' or registration_algorithm == 'Rigid CPD':
-            transformed = Points(moving, **kwargs)
-        else:
-            transformed = Points(transformed)
+        return warp_outputs, transformed
 
-        return warp_image_volume(moving_image=Moving_Image,
-                                 fixed_image=Fixed_Image.data,
-                                 transform_type=registration_algorithm,
-                                 moving_points=moving,
-                                 transformed_points=transformed,
-                                 interpolation_order=warping_interpolation_order,
-                                 approximate_grid=warping_approximate_grid,
-                                 sub_division_factor=warping_sub_division_factor), transformed
-
-    def _add_data(return_value_in):
-        return_value, points_layer = return_value_in
+    def _add_data(return_value):
+        image_layers, points_layer = return_value
         viewer.add_layer(points_layer)
-        if isinstance(return_value, list):
-            layers = []
-            for image_data in return_value:
-                data, kwargs = image_data
-                viewer.add_image(data, **kwargs)
-                layers.append(viewer.layers[kwargs['name']])
-            link_layers(layers)
-        else:
-            data, kwargs = return_value
-            viewer.add_image(data, **kwargs)
+
+        layers = []
+        for image_layer in image_layers:
+            viewer.add_layer(image_layer)
+            layers.append(viewer.layers[image_layer.name])
+        link_layers(layers)
 
     if Moving_Image is None or Fixed_Image is None:
         show_error("WARNING: You have not inputted both a fixed and moving image")
@@ -174,6 +171,15 @@ def registration_warping_widget(viewer: 'napari.viewer.Viewer',
         show_error("WARNING: YOUR fixed_image is RGB, your input must be grayscale and 3D")
         return
 
-    worker_registration = _registration_thread()
+    worker_registration = _registration_thread(Moving_Points=Moving_Points,
+                                               Fixed_Points=Fixed_Points,
+                                               Moving_Image=Moving_Image,
+                                               Fixed_Image=Fixed_Image,
+                                               registration_algorithm=registration_algorithm,
+                                               registration_max_iterations=registration_max_iterations,
+                                               warping_interpolation_order=warping_interpolation_order,
+                                               warping_approximate_grid=warping_approximate_grid,
+                                               warping_sub_division_factor=warping_sub_division_factor,
+                                               registration_direction=registration_direction)
     worker_registration.returned.connect(_add_data)
     worker_registration.start()

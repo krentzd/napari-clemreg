@@ -24,16 +24,16 @@ def _make_matrix_from_rigid_params(rot, trans, s):
 
     Parameters
     ----------
-    rot : ?
-        ?
-    trans : ?
-        ?
-    s : ?
-        ?
+    rot : float
+        Rotation of transformation matrix
+    trans : list
+        Translation of transformation matrix
+    s : float
+        Scaling factor of transformation matrix
 
     Returns
     -------
-    ?
+    Array containing the rigid transformation matrix given rotation translation and scaling
     """
     T_a = np.array([[1., 0., 0., trans[0]],
                     [0., 1., 0., trans[1]],
@@ -52,32 +52,23 @@ def _make_matrix_from_rigid_params(rot, trans, s):
 
 
 def prepare_source_and_target_nonrigid_3d(source_array,
-                                          target_array,
-                                          voxel_size=5,
-                                          every_k_points=2):
+                                          target_array):
     """
     ?
 
     Parameters
     ----------
-    source_array : ?
-    target_array : ?
-    voxel_size : int
-        ?
-    every_k_points : int
-        ?
+    source_array : numpy.ndarray
+    target_array : numpy.ndarray
     Returns
     -------
-        ?
+        Tuple of Open3D point clouds
     """
     source = o3.geometry.PointCloud()
     target = o3.geometry.PointCloud()
     source.points = o3.utility.Vector3dVector(source_array)
     target.points = o3.utility.Vector3dVector(target_array)
-    source = source.uniform_down_sample(every_k_points=every_k_points)
-    target = target.uniform_down_sample(every_k_points=every_k_points)
-    source = source.voxel_down_sample(voxel_size=voxel_size)
-    target = target.voxel_down_sample(voxel_size=voxel_size)
+
     return source, target
 
 
@@ -111,10 +102,10 @@ def _add_data(return_value, viewer):
 def point_cloud_registration(moving: PointsData,
                              fixed: PointsData,
                              algorithm: str = 'Rigid CPD',
-                             voxel_size: int = 5,
-                             every_k_points: int = 1,
                              max_iterations: int = 50,
-                             visualise: bool = False):
+                             visualise: bool = False,
+                             benchmarking_mode: bool=False,
+                             **reg_kwargs):
     """
     ?
 
@@ -141,9 +132,7 @@ def point_cloud_registration(moving: PointsData,
     """
     start = time.time()
     source, target = prepare_source_and_target_nonrigid_3d(moving,
-                                                           fixed,
-                                                           voxel_size=voxel_size,
-                                                           every_k_points=every_k_points)
+                                                           fixed)
     cbs = []
     cbs.append(RegistrationProgressCallback(max_iterations))
     if visualise:
@@ -153,21 +142,24 @@ def point_cloud_registration(moving: PointsData,
         tf_param = bcpd.registration_bcpd(source,
                                           target,
                                           maxiter=max_iterations,
-                                          callbacks=cbs)
+                                          callbacks=cbs,
+                                          **reg_kwargs)
 
     elif algorithm == 'Rigid CPD':
         tf_param, __, __ = cpd.registration_cpd(source,
                                                 target,
                                                 tf_type_name='rigid',
                                                 maxiter=max_iterations,
-                                                callbacks=cbs)
+                                                callbacks=cbs,
+                                                **reg_kwargs)
 
     elif algorithm == 'Affine CPD':
         tf_param, __, __ = cpd.registration_cpd(source,
                                                 target,
                                                 tf_type_name='affine',
                                                 maxiter=max_iterations,
-                                                callbacks=cbs)
+                                                callbacks=cbs,
+                                                **reg_kwargs)
 
     elapsed = time.time() - start
     print("time: ", elapsed)
@@ -204,7 +196,14 @@ def point_cloud_registration(moving: PointsData,
                       affine=mat,
                       size=0.5)  # Point sizes don't display correctly
 
-    return (np.asarray(source.points),
-            np.asarray(target.points),
-            tf_param._transform(source.points),
-            kwargs)
+    if benchmarking_mode:
+        return (np.asarray(source.points),
+                np.asarray(target.points),
+                tf_param._transform(source.points),
+                kwargs,
+                elapsed)
+    else:
+        return (np.asarray(source.points),
+                np.asarray(target.points),
+                tf_param._transform(source.points),
+                kwargs)

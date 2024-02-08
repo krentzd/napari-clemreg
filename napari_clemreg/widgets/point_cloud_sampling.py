@@ -1,29 +1,73 @@
 import napari
 from magicgui import magic_factory
-from napari.layers import Labels
+from napari.layers import Labels, Image, Layer
 from napari.qt.threading import thread_worker
+from ..clemreg.on_init_specs import specs
+
+def on_init(widget):
+    from ..clemreg.data_preprocessing import get_pixelsize
+
+    def change_moving_pixelsize(input_label: Labels):
+        moving_image_pixelsize_xy, __, moving_image_pixelsize_z, unit = get_pixelsize(input_label.metadata)
+
+        if unit in ['nanometer', 'nm', 'um', 'micron', 'micrometer']:
+            if unit == 'um' or unit == 'micron':
+                unit = 'micrometer'
+            elif unit == 'nm':
+                unit = 'nanometer'
+        else:
+            unit = 'nanometer'
+
+        widget.moving_image_pixelsize_xy.value = str(moving_image_pixelsize_xy) + str(unit)
+        widget.moving_image_pixelsize_z.value = str(moving_image_pixelsize_z) + str(unit)
+
+    def change_fixed_pixelsize(input_label: Labels):
+        fixed_image_pixelsize_xy, __, fixed_image_pixelsize_z, unit = get_pixelsize(input_label.metadata)
+
+        if unit in ['nanometer', 'nm', 'um', 'micron', 'micrometer']:
+            if unit == 'um' or unit == 'micron':
+                unit = 'micrometer'
+            elif unit == 'nm':
+                unit = 'nanometer'
+        else:
+            unit = 'nanometer'
+
+        widget.fixed_image_pixelsize_xy.value = str(fixed_image_pixelsize_xy) + str(unit)
+        widget.fixed_image_pixelsize_z.value = str(fixed_image_pixelsize_z) + str(unit)
+
+    widget.Moving_Segmentation.changed.connect(change_moving_pixelsize)
+    widget.Fixed_Segmentation.changed.connect(change_fixed_pixelsize)
 
 
-@magic_factory(layout='vertical',
-               call_button='Sample',
+@magic_factory(widget_init=on_init, layout='vertical', call_button='Sample',
                widget_header={'widget_type': 'Label',
                               'label': f'<h2 text-align="left">Point Cloud Sampling</h2>'},
-               point_cloud_sampling_frequency={'label': 'Sampling Frequency',
-                                               'widget_type': 'SpinBox',
-                                               'min': 1, 'max': 100, 'step': 1,
-                                               'value': 5},
-               point_cloud_sigma={'label': 'Sigma',
-                                  'widget_type': 'FloatSpinBox',
-                                  'min': 0, 'max': 10, 'step': 0.1,
-                                  'value': 1.0},
-                Moving_Segmentation={'label': 'Fluorescence Microscopy (FM) Segmentation'},
-                Fixed_Segmentation={'label': 'Electron Microscopy (EM) Segmentation'},
+
+                Moving_Segmentation=specs['Moving_Segmentation'],
+                moving_image_pixelsize_xy=specs['moving_image_pixelsize_xy'],
+                moving_image_pixelsize_z=specs['moving_image_pixelsize_z'],
+
+                Fixed_Segmentation=specs['Fixed_Segmentation'],
+                fixed_image_pixelsize_xy=specs['fixed_image_pixelsize_xy'],
+                fixed_image_pixelsize_z=specs['fixed_image_pixelsize_z'],
+
+                point_cloud_sampling_frequency=specs['point_cloud_sampling_frequency'],
+                voxel_size=specs['registration_voxel_size'],
+                point_cloud_sigma=specs['point_cloud_sigma']
                )
 def point_cloud_sampling_widget(viewer: 'napari.viewer.Viewer',
                                 widget_header,
+
                                 Moving_Segmentation: Labels,
+                                moving_image_pixelsize_xy,
+                                moving_image_pixelsize_z,
+
                                 Fixed_Segmentation: Labels,
+                                fixed_image_pixelsize_xy,
+                                fixed_image_pixelsize_z,
+
                                 point_cloud_sampling_frequency,
+                                voxel_size,
                                 point_cloud_sigma,
                                 ):
     """
@@ -50,31 +94,28 @@ def point_cloud_sampling_widget(viewer: 'napari.viewer.Viewer',
         Two Points layers sampling the inputted moving
         and fixed image
     """
-    from ..clemreg.point_cloud_sampling import point_cloud_sampling
+    from ..clemreg.widget_components import run_point_cloud_sampling
 
     @thread_worker
-    def _run_point_cloud_sampling_thread():
-        moving_point_cloud = point_cloud_sampling(input=Moving_Segmentation,
-                                                  sampling_frequency=point_cloud_sampling_frequency / 100,
-                                                  sigma=point_cloud_sigma)
+    def _run_point_cloud_sampling_thread(**kwargs):
 
-        fixed_point_cloud = point_cloud_sampling(input=Fixed_Segmentation,
-                                                 sampling_frequency=point_cloud_sampling_frequency / 100,
-                                                 sigma=point_cloud_sigma)
+        moving_point_cloud, fixed_point_cloud = run_point_cloud_sampling(**kwargs)
 
         return moving_point_cloud, fixed_point_cloud
 
     def _add_data(return_value):
-        mp = return_value[0]
-        fp = return_value[1]
+        moving_points, fixed_points = return_value
+        viewer.add_layer(moving_points)
+        viewer.add_layer(fixed_points)
 
-        viewer.add_points(mp.data,
-                          name='moving_points',
-                          face_color='red')
-        viewer.add_points(fp.data,
-                          name='fixed_points',
-                          face_color='blue')
-
-    worker_pc_sampling = _run_point_cloud_sampling_thread()
+    worker_pc_sampling = _run_point_cloud_sampling_thread(Moving_Segmentation=Moving_Segmentation,
+                                                          Fixed_Segmentation=Fixed_Segmentation,
+                                                          moving_image_pixelsize_xy=moving_image_pixelsize_xy,
+                                                          moving_image_pixelsize_z=moving_image_pixelsize_z,
+                                                          fixed_image_pixelsize_xy=fixed_image_pixelsize_xy,
+                                                          fixed_image_pixelsize_z=fixed_image_pixelsize_z,
+                                                          point_cloud_sampling_frequency=point_cloud_sampling_frequency,
+                                                          voxel_size=voxel_size,
+                                                          point_cloud_sigma=point_cloud_sigma)
     worker_pc_sampling.returned.connect(_add_data)
     worker_pc_sampling.start()

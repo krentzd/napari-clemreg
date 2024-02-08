@@ -1,18 +1,16 @@
 import napari
 from magicgui import magic_factory
-from napari.layers import Image
+from napari.layers import Image, Labels
 from napari.utils.notifications import show_error
 from napari.qt.threading import thread_worker
 
+from ..clemreg.on_init_specs import specs
 
-@magic_factory(layout='vertical',
-               call_button='Segment',
+@magic_factory(layout='vertical', call_button='Segment',
                widget_header={'widget_type': 'Label',
                               'label': f'<h2 text-align="left">Electron Microscopy Segmentation</h2>'},
-               em_seg_axis={'text': 'Prediction Across Three Axis',
-                            'widget_type': 'CheckBox',
-                            'value': False},
-               Fixed_Image={'label': 'Electron Microscopy Image (EM)'},
+               Fixed_Image=specs['Fixed_Image'],
+               em_seg_axis=specs['em_seg_axis'],
                )
 def fixed_segmentation_widget(viewer: 'napari.viewer.Viewer',
                               widget_header,
@@ -45,22 +43,20 @@ def fixed_segmentation_widget(viewer: 'napari.viewer.Viewer',
     from ..clemreg.empanada_segmentation import empanada_segmentation
 
     @thread_worker
-    def _run_fixed_thread():
-        seg_volume = empanada_segmentation(input=Fixed_Image.data,
-                                           axis_prediction=em_seg_axis)
+    def _run_fixed_thread(**kwargs):
+        from ..clemreg.widget_components import run_fixed_segmentation
+        #Increasing levels of CLAHE
 
-        if len(set(seg_volume.ravel())) <= 1:
-            return 'No segmentation'
+        seg_volume = run_fixed_segmentation(**kwargs)
 
-        return seg_volume
+        return Labels(seg_volume.astype(np.int64), **{'name': 'EM_segmentation', 'metadata': Fixed_Image.metadata})
 
     def _add_data(return_value):
         if isinstance(return_value, str):
             show_error('WARNING: No mitochondria in Fixed Image')
             return
 
-        viewer.add_labels(return_value.astype(np.int64),
-                          name="Fixed_Segmentation")
+        viewer.add_layer(return_value)
 
     if Fixed_Image is None:
         show_error("WARNING: You have not inputted both a fixed and moving image")
@@ -74,8 +70,7 @@ def fixed_segmentation_widget(viewer: 'napari.viewer.Viewer',
         show_error("WARNING: YOUR fixed_image is RGB, your input must be grayscale and 3D")
         return
 
-    print(Fixed_Image.data.shape)
-
-    worker_fixed = _run_fixed_thread()
+    worker_fixed = _run_fixed_thread(Fixed_Image=Fixed_Image,
+                                     em_seg_axis=em_seg_axis)
     worker_fixed.returned.connect(_add_data)
     worker_fixed.start()
