@@ -9,6 +9,7 @@
 [//]: # ([![tests]&#40;https://github.com/krentzd/napari-clemreg/workflows/tests/badge.svg&#41;]&#40;https://github.com/krentzd/napari-clemreg/actions&#41;)
 
 ## Installation
+### Local Installation
 
 To install `napari-clemreg` it is recommended to create a fresh [conda] environment with Python 3.9:
 
@@ -30,6 +31,10 @@ When installing `napari-clemreg` on a Windows machine, the following error might
 error Microsoft Visual C++ 14.0 is required
 ```
 Ensure that [Visual Studios C++ 14.00](https://visualstudio.microsoft.com/thank-you-downloading-visual-studio/?sku=BuildTools&rel=16) is installed
+
+### Docker Container
+If you would like to run `napari-clemreg` in a docker container instead of installing it as above, please follow the instructions in our [Docker guide](docker_guide.md)
+
 ## Usage
 CLEM-reg is the combination of 5 main steps, MitoNet segmentation, LoG segmentation,
 point cloud sampling, point cloud registration and lastly image warping. These 5 steps 
