@@ -178,6 +178,8 @@ def run_point_cloud_registration_and_warping(Moving_Points,
 
     if registration_algorithm == 'Affine CPD' or registration_algorithm == 'Rigid CPD':
         transformed = Points(moving, **kwargs)
+    else:
+        transformed = Points(transformed)
     # Make images isotropic for linked layers
     moving_image_list = return_isotropic_image_list(input_image=Moving_Image,
                                                     pxlsz_lm=Moving_Points.metadata['pxlsz'],
