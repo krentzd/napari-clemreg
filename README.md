@@ -1,12 +1,18 @@
+<center>
+
+[![Paper](https://img.shields.io/badge/Paper-bioRxiv-%23b62b39)](https://www.biorxiv.org/content/10.1101/2023.05.11.540445v3)
+[![PyPI](https://img.shields.io/pypi/v/napari-clemreg.svg?color=green)](https://pypi.org/project/napari-clemreg)
+[![PyPI - Downloads](https://img.shields.io/pypi/dm/napari-clemreg)](https://pypistats.org/packages/napri-clemreg)
+
+</center>
+
 # napari-clemreg
 ### An automated point cloud based registration algorithm for correlative light and volume electron microscopy
 
-[![License](https://img.shields.io/pypi/l/napari-clemreg.svg?color=green)](https://github.com/krentzd/napari-clemreg/raw/master/LICENSE)
-[![PyPI](https://img.shields.io/pypi/v/napari-clemreg.svg?color=green)](https://pypi.org/project/napari-clemreg)
-[![Python Version](https://img.shields.io/pypi/pyversions/napari-clemreg.svg?color=green)](https://python.org)
 
-[//]: # ([![codecov]&#40;https://codecov.io/gh/krentzd/napari-clemreg/branch/master/graph/badge.svg&#41;]&#40;https://codecov.io/gh/krentzd/napari-clemreg&#41;)
-[//]: # ([![tests]&#40;https://github.com/krentzd/napari-clemreg/workflows/tests/badge.svg&#41;]&#40;https://github.com/krentzd/napari-clemreg/actions&#41;)
+## Overview
+![width=200](docs%2Fimages%2Fclemreg_algorithm.png)
+
 
 ## Installation
 ### Local Installation
@@ -26,11 +32,16 @@ Finally, `napari-clemreg` can be installed with:
 ```
 pip install napari-clemreg
 ```
-When installing `napari-clemreg` on a Windows machine, the following error might appear:
-```
-error Microsoft Visual C++ 14.0 is required
-```
-Ensure that [Visual Studios C++ 14.00](https://visualstudio.microsoft.com/thank-you-downloading-visual-studio/?sku=BuildTools&rel=16) is installed
+
+[//]: # (When installing `napari-clemreg` on a Windows machine, the following error might appear:)
+
+[//]: # (```)
+
+[//]: # (error Microsoft Visual C++ 14.0 is required)
+
+[//]: # (```)
+
+[//]: # (Ensure that [Visual Studios C++ 14.00]&#40;https://visualstudio.microsoft.com/thank-you-downloading-visual-studio/?sku=BuildTools&rel=16&#41; is installed)
 
 ### Docker Container
 If you would like to run `napari-clemreg` in a docker container instead of installing it as above, please follow the instructions in our [Docker guide](docker_guide.md)
@@ -114,14 +125,9 @@ on the layer and then selecting `Link Layers.`
 3. When you finally go to run CLEM-reg ensure that for the `Moving Image`
 you select the LM layer that contains mitochondria.
 
-## Contributing
-
-Contributions are very welcome. Tests can be run with [tox], please ensure
-the coverage at least stays the same before you submit a pull request.
-
 ## License
 
-Distributed under the terms of the [MIT] license,
+Distributed under the terms of the [MIT] licence,
 "napari-clemreg" is free and open source software
 
 ## Issues
