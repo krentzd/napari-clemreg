@@ -5,6 +5,7 @@ from .widgets.moving_segmentation import moving_segmentation_widget
 from .widgets.point_cloud_sampling import point_cloud_sampling_widget
 from .widgets.registration_warping import registration_warping_widget
 from .widgets.run_registration import make_run_registration
+from .clemreg import empanada_segmentation  
 
 __all__ = (
     "fixed_segmentation_widget",
