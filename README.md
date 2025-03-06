@@ -28,15 +28,26 @@ To install `napari-clemreg` it is recommended to create a fresh [conda] environm
 ```
 conda create -n clemreg_env python=3.9
 ```
+Now we must activate the conda environment.
+
+``` 
+conda activate clemreg_env
+```
+
 Next, install `napari` with the following command via [pip]: 
 
 ```
 pip install "napari[all]"
 ```
 
-Finally, `napari-clemreg` can be installed with:
+Then, `napari-clemreg` can be installed with:
 ```
 pip install napari-clemreg
+```
+
+Finally, to run napari run the following.
+```
+napari
 ```
 
 [//]: # (When installing `napari-clemreg` on a Windows machine, the following error might appear:)
@@ -130,6 +141,18 @@ on the layer and then selecting `Link Layers.`
 
 3. When you finally go to run CLEM-reg ensure that for the `Moving Image`
 you select the LM layer that contains mitochondria.
+## Datasets
+Below are the links to the datasets that were used as part of this study.
+
+**EMPIAR-10819**
+- [EM] - https://www.ebi.ac.uk/empiar/EMPIAR-10819/
+- [FM] - https://www.ebi.ac.uk/biostudies/bioimages/studies/S-BSST707
+
+**EMPIAR-11537**
+- [EM] - https://www.ebi.ac.uk/empiar/EMPIAR-11537/
+- [FM] - https://www.ebi.ac.uk/biostudies/bioimages/studies/S-BSST1075
+
+Here is a sample dataset which is the binned version of EMPIAR-10819: https://zenodo.org/records/7936982.
 
 ## How to cite
 ```bibtex
