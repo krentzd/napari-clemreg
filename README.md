@@ -1,12 +1,24 @@
-# napari-clemreg
+
+
+<h1 align="center">
+napari-clemreg
+
+</h1>
+
 ### An automated point cloud based registration algorithm for correlative light and volume electron microscopy
+<p align="center">
+    <a href="https://www.biorxiv.org/content/10.1101/2023.05.11.540445v3"><img alt="Paper" src="https://img.shields.io/badge/paper-bioRxiv-%23b62b39"></a>
+    <a href="https://pypi.org/project/napari-clemreg"><img alt="PyPI" src="https://img.shields.io/pypi/v/napari-clemreg.svg?color=green"></a><a href="https://pypistats.org/packages/napari-clemreg"><img alt="PyPI - Downloads" src="https://img.shields.io/pypi/dm/napari-clemreg"></a>
+    <a href="https://github.com/krentzd/napari-clemreg/"><img alt="github" src="https://img.shields.io/github/stars/krentzd/napari-clemreg?style=social"></a>
+    <a href="https://github.com/krentzd/napari-clemreg/"><img alt="github" src="https://img.shields.io/github/forks/krentzd/napari-clemreg?style=social"></a>
+</p>
 
-[![License](https://img.shields.io/pypi/l/napari-clemreg.svg?color=green)](https://github.com/krentzd/napari-clemreg/raw/master/LICENSE)
-[![PyPI](https://img.shields.io/pypi/v/napari-clemreg.svg?color=green)](https://pypi.org/project/napari-clemreg)
-[![Python Version](https://img.shields.io/pypi/pyversions/napari-clemreg.svg?color=green)](https://python.org)
+## Overview
+CLEM-Reg fully automates the registration step for vCLEM datasets by first segmenting mitochondria in both image modalities, sampling point
+clouds from these segmentations and registering them. Once registered, the point cloud alignment is used to warp the fluorescence microscopy onto the 
+volume electron microscopy. 
+![width=200](docs%2Fimages%2Fclemreg_algorithm.png)
 
-[//]: # ([![codecov]&#40;https://codecov.io/gh/krentzd/napari-clemreg/branch/master/graph/badge.svg&#41;]&#40;https://codecov.io/gh/krentzd/napari-clemreg&#41;)
-[//]: # ([![tests]&#40;https://github.com/krentzd/napari-clemreg/workflows/tests/badge.svg&#41;]&#40;https://github.com/krentzd/napari-clemreg/actions&#41;)
 
 ## Installation
 ### Local Installation
@@ -16,71 +28,84 @@ To install `napari-clemreg` it is recommended to create a fresh [conda] environm
 ```
 conda create -n clemreg_env python=3.9
 ```
+Now we must activate the conda environment.
+
+``` 
+conda activate clemreg_env
+```
+
 Next, install `napari` with the following command via [pip]: 
 
 ```
 pip install "napari[all]"
 ```
 
-Finally, `napari-clemreg` can be installed with:
+Then, `napari-clemreg` can be installed with:
 ```
 pip install napari-clemreg
 ```
-When installing `napari-clemreg` on a Windows machine, the following error might appear:
+
+Finally, to run napari run the following.
 ```
-error Microsoft Visual C++ 14.0 is required
+napari
 ```
-Ensure that [Visual Studios C++ 14.00](https://visualstudio.microsoft.com/thank-you-downloading-visual-studio/?sku=BuildTools&rel=16) is installed
+
+[//]: # (When installing `napari-clemreg` on a Windows machine, the following error might appear:)
+
+[//]: # (```)
+
+[//]: # (error Microsoft Visual C++ 14.0 is required)
+
+[//]: # (```)
+
+[//]: # (Ensure that [Visual Studios C++ 14.00]&#40;https://visualstudio.microsoft.com/thank-you-downloading-visual-studio/?sku=BuildTools&rel=16&#41; is installed)
 
 ### Docker Container
 If you would like to run `napari-clemreg` in a docker container instead of installing it as above, please follow the instructions in our [Docker guide](docker_guide.md)
 
 ## Usage
-CLEM-reg is the combination of 5 main steps, MitoNet segmentation, LoG segmentation,
-point cloud sampling, point cloud registration and lastly image warping. These 5 steps 
-can be run all at once using the run registration widget shown below with the tick next to it.
+CLEM-reg is the combination of 5 main steps, electron microscopy segmentation, fluorescence microscopy segmentation,
+point cloud sampling, point cloud registration and image warping. These 5 steps 
+can be run all at once using the run registration widget.
 Alternatively, they can be run individually with the numbered widgets.
 
-![clemreg_widget_options.png](docs%2Fimages%2Fclemreg_widget_options.png)
+![clemreg_widget_options.png](docs%2Fimages%2Fnapari_dropdown.png)
 
 ### Run Registration
 
 
 
-![registration_labels.png](docs%2Fimages%2FCLEMreg-fig.png)
+![registration_labels.png](docs%2Fimages%2Fclemreg_params.png)
 
-1. **Moving Image** - Here you select your light microscopy (LM) data which will
-be warped to align with the fixed electron microscopy (EM) image.
-2. **Fixed Image** - Here you select your EM data which will
-act as the reference point for the LM to be aligned to.
-3. **Registration Algorithm** - Here you can decide which type of registration algorith
-will be used for the registration of inputted LM and EM. In terms of speed of each algorithm
-the following is the generally true, Rigid CPD > Affine CPD > BCPD.
-4. **MitoNet Segmentation Parameters** - Here are the advanced options for the segmentation
-of the mitochondria in the EM data.
-   1. Prediction Across Three Axis - By selecting this option MitoNet will run segmentation
-across all three axis of the EM volume and then these three predictions will be aggregate.
-5. **LoG Segmentation Parameters** - Here are the advanced options for the segmentation of 
-the mitochondria in the LM data.
-   1. Sigma - Sigma value for the Laplacian of Gaussian filter.
-   2. Threshold - Threshold value for the segmenting the LM data.
-6. **Point Cloud Sampling** - Here are the advanced options for the point cloud sampling of the 
-segmentations of the LM and EM data.
-   1. Sampling Frequency - Frequency of point sampling from the fixed and moving segmentation. The greater the value the more points in the point cloud.
-   2. Sigma - Sigma value for the canny edge filter.
-7. **Point Cloud Registration** - Here are the advanced options for the registration of the point clouds
-of both the LM and EM data.
-   1. Voxel Size - The size voxel size of each point. Smaller the size the less memory consumption.
-   2. Subsampling - Downsampling of the point clouds to reduce memory consumption. Greater the number the fewer points in the point cloud.
-   3. Maximum Iterations - The number of round of point cloud registration. If too small it won't converge on an opitmal registration.
-8. **Image Warping** - Here are the advanced options for the image warping of the moving LM images.
-   1. Interpolation Order - The order of the spline interpolation.
-   2. Aproximate Grid - Controls the "resolution" of the grid onto which you're warping. A higher value reduces the step size between coordinates.
-   3. Sub-division Factor - Controls the size of the chunk when applying the warping.
-9. **Save Parameters** - Here you can select the option to save the advanced options you've selected
-to a JSON file which can be kept for reproducibility as well as running the registration again.
-10. **Visualise Intermediate Results** - Here you can select to view the outputs of each step as they
-are completed.
+1. **Fluorescence Microscopy Image (FM)** - Here you select the layer with the fluorescence microscopy image.
+2. **FM Pixel Size (xy)** - Here you can set the xy pixel size of your FM image and its corresponding unit.
+3. **FM Pixel Size (z)** - Here you can set the z pixel size of your FM image and its corresponding unit.
+4. **Mask ROI** - Here you can select a mask layer which will be used to crop the resulting segmentation mask in the FM.
+5. **Electron Microscopy (EM)** - Here you can select the layer with the electron microscopy image.
+6. **EM Pixel Size (xy)** - Here you can set the xy pixel size of your EM image and its corresponding unit.
+7. **EM Pixel Size (z)** - Here you can set the z pixel size of your EM image and its corresponding unit.
+8. **Registration Algorithm** - Here you can decide which type of registration algorith will be used for the registration of inputted LM and EM. In terms of speed of each algorithm the following is the generally true, Rigid CPD > Affine CPD > BCPD.
+9. **Parameters from JSON** - Here you can select a JSON file containing the parameters for the registration.
+10. **Parameters custom** - If you select this, you will be able to edit the default parameters.
+11. **MitoNet Segmentation Parameters** - Here are the advanced options for the segmentation of the mitochondria in the EM data.
+    1. **Prediction Across Three Axis** - By selecting this option MitoNet will run segmentation across all three axis of the EM volume and then these three predictions will be aggregate.
+12. **LoG Segmentation Parameters** - Here are the advanced options for the segmentation of the mitochondria in the LM data.
+    1. **Sigma** - Sigma value for the Laplacian of Gaussian filter.
+    2. **Threshold** - Threshold value for the segmenting the LM data.
+    3. **Apply size filter to segmentation** - If you select this, you can then select a lower and upper volume threshold to filter out spurious segmentation.
+13. **Point Cloud Sampling** - Here are the advanced options for the point cloud sampling of the segmentations of the LM and EM data.
+    1. **Sampling Frequency** - Frequency of point sampling from the fixed and moving segmentation. The greater the value the more points in the point cloud.
+    2. **Voxel Size** - The size voxel size of each point. Smaller the size the less memory consumption.
+    3. **Sigma** - Sigma value for the canny edge filter.
+14. **Point Cloud Registration** - Here are the advanced options for the registration of the point clouds of both the LM and EM data.
+    1. Maximum Iterations - The number of round of point cloud registration. If too small it won't converge on an opitmal registration.
+15. **Image Warping** - Here are the advanced options for the image warping of the moving images.
+    1. Interpolation Order - The order of the spline interpolation.
+    2. Aproximate Grid - Controls the "resolution" of the grid onto which you're warping. A higher value reduces the step size between coordinates.
+    3. Sub-division Factor - Controls the size of the chunk when applying the warping.
+16. **Save Parameters** - Here you can select the option to save the advanced options you've selected to a JSON file which can be kept for reproducibility as well as running the registration again.
+17. **Visualise Intermediate Results** - Here you can select to view the outputs of each step as they are completed.
+18. **Registration direction** - Here you can select which of the modalities will be registered to the other. Either EM to FM or FM to EM.
 
 ### Split Registration
 As well as being able to run all the steps of CLEM-reg in one widget (the `Run registration` widget),
@@ -88,10 +113,10 @@ you are also able to do all these steps independently using the `Split Registrat
 
 There are four separate widgets that encapsulate the 5 steps of CLEM-reg each of which have
 their own unique input and output:
-1. `MitoNet Segmentation` 
+1. `Electron Micrscopy (EM) Segmentation` 
    - **Input**: EM Image
    - **Output**: EM Segmentation
-2. `LoG Segmentation`
+2. `Fluorescence Microscopy (FM) Segmentation`
    - **Input**: LM Image
    - **Output**: LM Segmentation
 3. `Point Cloud Sampling`
@@ -116,20 +141,38 @@ on the layer and then selecting `Link Layers.`
 
 3. When you finally go to run CLEM-reg ensure that for the `Moving Image`
 you select the LM layer that contains mitochondria.
+## Datasets
+Below are the links to the datasets that were used as part of this study.
 
-## Contributing
+**EMPIAR-10819**
+- [EM] - https://www.ebi.ac.uk/empiar/EMPIAR-10819/
+- [FM] - https://www.ebi.ac.uk/biostudies/bioimages/studies/S-BSST707
 
-Contributions are very welcome. Tests can be run with [tox], please ensure
-the coverage at least stays the same before you submit a pull request.
+**EMPIAR-11537**
+- [EM] - https://www.ebi.ac.uk/empiar/EMPIAR-11537/
+- [FM] - https://www.ebi.ac.uk/biostudies/bioimages/studies/S-BSST1075
 
+Here is a sample dataset which is the binned version of EMPIAR-10819: https://zenodo.org/records/7936982.
+
+## How to cite
+```bibtex
+@article {Krentzel2023.05.11.540445,
+	author = {Krentzel, Daniel and Elphick, Matou{\v s} and Domart, Marie-Charlotte and Peddie, Christopher J. and Laine, Romain F. and Shand, Cameron and Henriques, Ricardo and Collinson, Lucy M. and Jones, Martin L.},
+	title = {CLEM-Reg: An automated point cloud based registration algorithm for correlative light and volume electron microscopy},
+	elocation-id = {2023.05.11.540445},
+	year = {2024},
+	doi = {10.1101/2023.05.11.540445},
+	publisher = {Cold Spring Harbor Laboratory},
+	abstract = {Correlative light and volume electron microscopy (vCLEM) is a powerful imaging technique that enables the visualisation of fluorescently labelled proteins within their ultrastructural context on a subcellular level. Currently, expert microscopists align vCLEM acquisitions using time-consuming and subjective manual methods. This paper presents CLEM-Reg, an algorithm that automates the 3D alignment of vCLEM datasets by leveraging probabilistic point cloud registration techniques. These point clouds are derived from segmentations of common structures in each modality, created by state-of-the-art open-source methods, with the option to leverage alternative tools from other plugins or platforms. CLEM-Reg drastically reduces the time required to register vCLEM datasets to a few minutes and achieves correlation of fluorescent signal to sub-micron target structures in EM on three newly acquired vCLEM benchmark datasets (fluorescence microscopy combined with FIB-SEM or SBF-SEM). CLEM-Reg was then used to automatically obtain vCLEM overlays to unambiguously identify TGN46-positive transport carriers involved in the trafficking of proteins between the trans-Golgi network and plasma membrane. The datasets are available in the EMPIAR and BioStudies public image archives for reuse in testing and developing multimodal registration algorithms by the wider community. A napari plugin integrating the algorithm is also provided to aid end-user adoption.Competing Interest StatementThe authors have declared no competing interest.},
+	URL = {https://www.biorxiv.org/content/early/2024/12/26/2023.05.11.540445},
+	eprint = {https://www.biorxiv.org/content/early/2024/12/26/2023.05.11.540445.full.pdf},
+	journal = {bioRxiv}
+}
+```
 ## License
 
-Distributed under the terms of the [MIT] license,
+Distributed under the terms of the [MIT] licence,
 "napari-clemreg" is free and open source software
-
-## Issues
-
-If you encounter any problems, please [file an issue] along with a detailed description.
 
 [napari]: https://github.com/napari/napari
 [Cookiecutter]: https://github.com/audreyr/cookiecutter
@@ -148,4 +191,4 @@ If you encounter any problems, please [file an issue] along with a detailed desc
 [PyPI]: https://pypi.org/
 [conda]: https://docs.conda.io/en/latest/
 
-This [napari] plugin was generated with [Cookiecutter] using [@napari]'s [cookiecutter-napari-plugin] template.
+[//]: # (This [napari] plugin was generated with [Cookiecutter] using [@napari]'s [cookiecutter-napari-plugin] template.)
