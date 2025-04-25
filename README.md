@@ -126,6 +126,8 @@ their own unique input and output:
    - **Input**: EM Image, LM Image, LM Point Cloud & EM Point Cloud
    - **Output**: Registered LM Image, Registered LM Point Cloud
 
+[![Watch the video](https://github.com/krentzd/napari-clemreg/blob/krentzd-patch-1/clemreg_split_registration_thumbnail.png)](https://youtu.be/cypDti0UUwY)
+
 ### Registering Multiple LM Channels
 One can register multiple LM channels at once by doing the following.
 
