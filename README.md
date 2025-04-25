@@ -63,6 +63,8 @@ napari
 ### Docker Container
 If you would like to run `napari-clemreg` in a docker container instead of installing it as above, please follow the instructions in our [Docker guide](docker_guide.md)
 
+[![Watch the video](docs%2Fimages%2Fclemreg_docker_installation_guide.png)](https://youtu.be/2GRB99UlP6g)
+
 ## Usage
 CLEM-reg is the combination of 5 main steps, electron microscopy segmentation, fluorescence microscopy segmentation,
 point cloud sampling, point cloud registration and image warping. These 5 steps 
