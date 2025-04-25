@@ -73,8 +73,6 @@ Alternatively, they can be run individually with the numbered widgets.
 
 ### Run Registration
 
-
-
 ![registration_labels.png](docs%2Fimages%2Fclemreg_params.png)
 
 1. **Fluorescence Microscopy Image (FM)** - Here you select the layer with the fluorescence microscopy image.
@@ -106,6 +104,8 @@ Alternatively, they can be run individually with the numbered widgets.
 16. **Save Parameters** - Here you can select the option to save the advanced options you've selected to a JSON file which can be kept for reproducibility as well as running the registration again.
 17. **Visualise Intermediate Results** - Here you can select to view the outputs of each step as they are completed.
 18. **Registration direction** - Here you can select which of the modalities will be registered to the other. Either EM to FM or FM to EM.
+
+[![Watch the video](https://img.youtube.com/vi/cypDti0UUwY/0.jpg)](https://youtu.be/cypDti0UUwY)
 
 ### Split Registration
 As well as being able to run all the steps of CLEM-reg in one widget (the `Run registration` widget),
