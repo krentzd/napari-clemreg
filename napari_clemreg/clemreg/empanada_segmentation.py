@@ -96,7 +96,8 @@ def parse_args():
     parser.add_argument('--use-cpu', action='store_true', help='Whether to force inference to run on CPU.')
     parser.add_argument('--save-panoptic', action='store_true',
                         help='Whether to save raw panoptic segmentation for each stack.')
-    return parser.parse_args()
+    args, unknown = parser.parse_known_args()
+    return args
 
 
 def _empanada_segmentation(args, volume):

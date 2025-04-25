@@ -1,8 +1,12 @@
 #!/usr/bin/env python3
 # coding: utf-8
 import json
+import sys
 import os.path
 import napari
+if ".." not in sys.path:
+    sys.path.insert(0,"..")
+from napari_clemreg.clemreg.widget_components import _create_json_file
 import numpy as np
 import pint
 from magicgui import magic_factory, widgets
