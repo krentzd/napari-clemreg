@@ -63,6 +63,8 @@ napari
 ### Docker Container
 If you would like to run `napari-clemreg` in a docker container instead of installing it as above, please follow the instructions in our [Docker guide](docker_guide.md)
 
+[![Watch the video](docs%2Fimages%2Fclemreg_docker_installation_guide.png)](https://youtu.be/2GRB99UlP6g)
+
 ## Usage
 CLEM-reg is the combination of 5 main steps, electron microscopy segmentation, fluorescence microscopy segmentation,
 point cloud sampling, point cloud registration and image warping. These 5 steps 
@@ -72,8 +74,6 @@ Alternatively, they can be run individually with the numbered widgets.
 ![clemreg_widget_options.png](docs%2Fimages%2Fnapari_dropdown.png)
 
 ### Run Registration
-
-
 
 ![registration_labels.png](docs%2Fimages%2Fclemreg_params.png)
 
@@ -107,6 +107,8 @@ Alternatively, they can be run individually with the numbered widgets.
 17. **Visualise Intermediate Results** - Here you can select to view the outputs of each step as they are completed.
 18. **Registration direction** - Here you can select which of the modalities will be registered to the other. Either EM to FM or FM to EM.
 
+[![Watch the video](docs%2Fimages%2Fclem_reg_tutorial_thumbnail.png)](https://youtu.be/ud3zTLgl8Ks)
+
 ### Split Registration
 As well as being able to run all the steps of CLEM-reg in one widget (the `Run registration` widget),
 you are also able to do all these steps independently using the `Split Registration` functionality. 
@@ -125,6 +127,8 @@ their own unique input and output:
 4. `Point Cloud Registration & Image Warping`
    - **Input**: EM Image, LM Image, LM Point Cloud & EM Point Cloud
    - **Output**: Registered LM Image, Registered LM Point Cloud
+
+[![Watch the video](docs%2Fimages%2Fclemreg_split_registration_thumbnail.png)](https://youtu.be/cypDti0UUwY)
 
 ### Registering Multiple LM Channels
 One can register multiple LM channels at once by doing the following.

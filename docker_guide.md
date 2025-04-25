@@ -1,5 +1,5 @@
-# Dockerised CLEM-reg Guide
-To help make it easier to run the CLEM-reg plugin, we have created a Docker image that contains all the necessary dependencies (including CUDA and Napari). This guide will help you get started with running CLEM-reg using Docker.
+# Dockerised CLEM-Reg Guide
+To help make it easier to run the CLEM-Reg plugin, we have created a Docker image that contains all the necessary dependencies (including CUDA and Napari). This guide will help you get started with running CLEM-Reg using Docker.
 
 ## Setup
 You'll first need to install Docker for your system. You can find the installation instructions [here](https://docs.docker.com/get-docker/) for your system. Once done, then you can proceed to the next steps.
