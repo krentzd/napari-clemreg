@@ -107,7 +107,7 @@ Alternatively, they can be run individually with the numbered widgets.
 17. **Visualise Intermediate Results** - Here you can select to view the outputs of each step as they are completed.
 18. **Registration direction** - Here you can select which of the modalities will be registered to the other. Either EM to FM or FM to EM.
 
-[![Watch the video](https://github.com/krentzd/napari-clemreg/blob/krentzd-patch-1/clem_reg_tutorial_thumbnail.png)](https://youtu.be/ud3zTLgl8Ks)
+[![Watch the video](docs%2Fimages%2Fclem_reg_tutorial_thumbnail.png)](https://youtu.be/ud3zTLgl8Ks)
 
 ### Split Registration
 As well as being able to run all the steps of CLEM-reg in one widget (the `Run registration` widget),
@@ -128,7 +128,7 @@ their own unique input and output:
    - **Input**: EM Image, LM Image, LM Point Cloud & EM Point Cloud
    - **Output**: Registered LM Image, Registered LM Point Cloud
 
-[![Watch the video](https://github.com/krentzd/napari-clemreg/blob/krentzd-patch-1/clemreg_split_registration_thumbnail.png)](https://youtu.be/cypDti0UUwY)
+[![Watch the video](docs%2Fimages%2Fclemreg_split_registration_thumbnail.png)](https://youtu.be/cypDti0UUwY)
 
 ### Registering Multiple LM Channels
 One can register multiple LM channels at once by doing the following.
