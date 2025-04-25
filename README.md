@@ -60,6 +60,9 @@ napari
 
 [//]: # (Ensure that [Visual Studios C++ 14.00]&#40;https://visualstudio.microsoft.com/thank-you-downloading-visual-studio/?sku=BuildTools&rel=16&#41; is installed)
 
+[![Watch the video](docs%2Fimages%2Fclemreg_installation_thumbnail.png)](https://youtu.be/ZN68q9OU59s)
+
+
 ### Docker Container
 If you would like to run `napari-clemreg` in a docker container instead of installing it as above, please follow the instructions in our [Docker guide](docker_guide.md)
 
