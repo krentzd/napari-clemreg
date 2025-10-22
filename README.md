@@ -7,7 +7,7 @@ napari-clemreg
 
 ### An automated point cloud based registration algorithm for correlative light and volume electron microscopy
 <p align="center">
-    <a href="https://www.biorxiv.org/content/10.1101/2023.05.11.540445v3"><img alt="Paper" src="https://img.shields.io/badge/paper-bioRxiv-%23b62b39"></a>
+    <a href="https://www.nature.com/articles/s41592-025-02794-0"><img alt="Paper" src="https://img.shields.io/badge/paper-Nat._Methods-orange"></a>
     <a href="https://pypi.org/project/napari-clemreg"><img alt="PyPI" src="https://img.shields.io/pypi/v/napari-clemreg.svg?color=green"></a><a href="https://pypistats.org/packages/napari-clemreg"><img alt="PyPI - Downloads" src="https://img.shields.io/pypi/dm/napari-clemreg"></a>
     <a href="https://github.com/krentzd/napari-clemreg/"><img alt="github" src="https://img.shields.io/github/stars/krentzd/napari-clemreg?style=social"></a>
     <a href="https://github.com/krentzd/napari-clemreg/"><img alt="github" src="https://img.shields.io/github/forks/krentzd/napari-clemreg?style=social"></a>
@@ -163,17 +163,13 @@ Here is a sample dataset which is the binned version of EMPIAR-10819: https://ze
 
 ## How to cite
 ```bibtex
-@article {Krentzel2023.05.11.540445,
-	author = {Krentzel, Daniel and Elphick, Matou{\v s} and Domart, Marie-Charlotte and Peddie, Christopher J. and Laine, Romain F. and Shand, Cameron and Henriques, Ricardo and Collinson, Lucy M. and Jones, Martin L.},
-	title = {CLEM-Reg: An automated point cloud based registration algorithm for correlative light and volume electron microscopy},
-	elocation-id = {2023.05.11.540445},
-	year = {2024},
-	doi = {10.1101/2023.05.11.540445},
-	publisher = {Cold Spring Harbor Laboratory},
-	abstract = {Correlative light and volume electron microscopy (vCLEM) is a powerful imaging technique that enables the visualisation of fluorescently labelled proteins within their ultrastructural context on a subcellular level. Currently, expert microscopists align vCLEM acquisitions using time-consuming and subjective manual methods. This paper presents CLEM-Reg, an algorithm that automates the 3D alignment of vCLEM datasets by leveraging probabilistic point cloud registration techniques. These point clouds are derived from segmentations of common structures in each modality, created by state-of-the-art open-source methods, with the option to leverage alternative tools from other plugins or platforms. CLEM-Reg drastically reduces the time required to register vCLEM datasets to a few minutes and achieves correlation of fluorescent signal to sub-micron target structures in EM on three newly acquired vCLEM benchmark datasets (fluorescence microscopy combined with FIB-SEM or SBF-SEM). CLEM-Reg was then used to automatically obtain vCLEM overlays to unambiguously identify TGN46-positive transport carriers involved in the trafficking of proteins between the trans-Golgi network and plasma membrane. The datasets are available in the EMPIAR and BioStudies public image archives for reuse in testing and developing multimodal registration algorithms by the wider community. A napari plugin integrating the algorithm is also provided to aid end-user adoption.Competing Interest StatementThe authors have declared no competing interest.},
-	URL = {https://www.biorxiv.org/content/early/2024/12/26/2023.05.11.540445},
-	eprint = {https://www.biorxiv.org/content/early/2024/12/26/2023.05.11.540445.full.pdf},
-	journal = {bioRxiv}
+@article{krentzel2025clem,
+  title={CLEM-Reg: an automated point cloud-based registration algorithm for volume correlative light and electron microscopy},
+  author={Krentzel, Daniel and Elphick, Matou{\v{s}} and Domart, Marie-Charlotte and Peddie, Christopher J and Laine, Romain F and Shand, Cameron and Henriques, Ricardo and Collinson, Lucy M and Jones, Martin L},
+  journal={Nature Methods},
+  pages={1--12},
+  year={2025},
+  publisher={Nature Publishing Group US New York}
 }
 ```
 ## License
