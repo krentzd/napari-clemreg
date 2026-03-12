@@ -3,6 +3,13 @@
 import numpy as np
 import tifffile
 
+# Load images
+# If images are not Zarr, convert to zarr 
+
+
+
+
+
 def napari_get_reader(path):
     if isinstance(path, str) and path.endswith((".tif", ".tiff")):
         return tiff_reader
