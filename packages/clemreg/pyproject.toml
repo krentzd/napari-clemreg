@@ -1,0 +1,55 @@
+# Placeholder packaging for the `clemreg` core distribution.
+# Purpose: reserve the `clemreg` name on PyPI ahead of the package split
+# (see the modernisation plan, §6 "package split" and §7 "repository & release").
+# This publishes an importable but empty 0.0.0 package; the real, napari-free
+# core (segmentation, point-cloud sampling, registration, warping, MoBIE export)
+# will replace it and bump the version to 0.1.0+.
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "clemreg"
+version = "0.0.0"
+description = "Core registration library for CLEM-Reg (placeholder — see the napari-clemreg plugin)."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [
+    { name = "Daniel Krentzel", email = "dkrentzel@pm.me" },
+]
+maintainers = [
+    { name = "The Francis Crick Institute" },
+]
+keywords = [
+    "CLEM",
+    "registration",
+    "microscopy",
+    "electron microscopy",
+    "fluorescence microscopy",
+    "point cloud",
+    "image registration",
+]
+classifiers = [
+    "Development Status :: 1 - Planning",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Image Processing",
+]
+dependencies = []
+
+# NOTE: URLs still point at the current upstream repo. Update these to the
+# Crick org location after the repository transfer (plan §7).
+[project.urls]
+Homepage = "https://github.com/krentzd/napari-clemreg"
+Source = "https://github.com/krentzd/napari-clemreg"
+"Bug Tracker" = "https://github.com/krentzd/napari-clemreg/issues"
+"napari plugin (napari-clemreg)" = "https://pypi.org/project/napari-clemreg/"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/clemreg"]
