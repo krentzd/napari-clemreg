@@ -20,31 +20,7 @@ import tifffile
 from qtpy.QtWidgets import QApplication, QScrollArea
 
 from napari_clemreg._reader import napari_get_reader
-from napari_clemreg.widgets.fixed_segmentation import fixed_segmentation_dock_widget, fixed_segmentation_widget
-from napari_clemreg.widgets.moving_segmentation import moving_segmentation_dock_widget, moving_segmentation_widget
-from napari_clemreg.widgets.point_cloud_sampling import point_cloud_sampling_dock_widget, point_cloud_sampling_widget
-from napari_clemreg.widgets.registration_warping import registration_warping_dock_widget, registration_warping_widget
 from napari_clemreg.widgets.run_registration import make_run_registration, make_run_registration_widget
-
-WIDGET_FACTORIES = [
-    fixed_segmentation_widget,
-    moving_segmentation_widget,
-    point_cloud_sampling_widget,
-    registration_warping_widget,
-    make_run_registration,
-]
-
-# The functions actually registered in napari.yaml (see test_npe2_manifest_loads):
-# each wraps the corresponding WIDGET_FACTORIES entry in a QScrollArea (see
-# clemreg/_qt_layout.py) so the dock panel has a bounded height/width,
-# matching AIoD's own napari plugin's approach.
-DOCK_WIDGET_FACTORIES = [
-    fixed_segmentation_dock_widget,
-    moving_segmentation_dock_widget,
-    point_cloud_sampling_dock_widget,
-    registration_warping_dock_widget,
-    make_run_registration_widget,
-]
 
 
 @pytest.fixture
@@ -53,29 +29,27 @@ def qapp():
     return QApplication.instance() or QApplication([])
 
 
-@pytest.mark.parametrize("factory", WIDGET_FACTORIES, ids=[f.__name__ for f in WIDGET_FACTORIES])
-def test_widget_factory_builds(factory, qapp):
-    widget = factory()
-    assert widget is not None
+def test_widget_factory_builds(qapp):
+    assert make_run_registration() is not None
 
 
-@pytest.mark.parametrize("factory", DOCK_WIDGET_FACTORIES, ids=[f.__name__ for f in DOCK_WIDGET_FACTORIES])
-def test_dock_widget_factory_builds_scroll_area(factory, qapp):
-    """These are what napari.yaml actually registers -- confirm each one
-    builds and is scroll-bounded, not just its underlying FunctionGui.
+def test_dock_widget_factory_builds_scroll_area(qapp):
+    """This is what napari.yaml actually registers -- confirm it builds
+    and is scroll-bounded (see clemreg/_qt_layout.py), not just its
+    underlying FunctionGui.
 
     Called with zero arguments, exactly how napari itself calls it
     (confirmed directly in napari's own source,
     _qnpe2._get_widget_viewer_param: viewer-injection-by-parameter-name
-    only applies to class-based widgets, not plain functions like these
-    wrappers -- "For magicgui type widget contributions, Viewer
+    only applies to class-based widgets, not plain functions like this
+    wrapper -- "For magicgui type widget contributions, Viewer
     injection is done by magicgui.register_type instead", that code's
-    own comment). A first version of these wrappers required
+    own comment). A first version of this wrapper required
     `napari_viewer` with no default and crashed in the real app with
     exactly this call pattern, despite `factory(None)` passing here --
     this test calls it the same way napari does.
     """
-    widget = factory()
+    widget = make_run_registration_widget()
     assert isinstance(widget, QScrollArea)
     assert widget.widget() is not None
 

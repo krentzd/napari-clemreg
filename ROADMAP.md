@@ -38,7 +38,6 @@ From the original modernisation plan (`docs/napari-clemreg-modernisation-plan.md
 Issues waiting on a decision are labelled [`needs-decision`](https://github.com/martlj/napari-clemreg/issues?q=is%3Aopen+label%3Aneeds-decision), and issues waiting on someone or something outside this repo are labelled [`blocked`](https://github.com/martlj/napari-clemreg/issues?q=is%3Aopen+label%3Ablocked). Decisions without an issue of their own:
 
 - **Should `.claude/` go upstream?** It holds the `napari-dev` skill. When this work goes back to the upstream repository (#1), either leave `.claude/` out of that PR or ask the upstream owner whether they want it.
-- **Retire the split widgets?** Run Registration's per-step buttons (#35) now cover their use cases. This is decision D7 in the [package split design](docs/design/package-split.md#decisions-log), and it doesn't block the split.
 - **Keep magicgui for the widgets, or move to raw Qt?** Decision D8; see the magicgui note under *Newer ideas*. It can wait until after the split.
 
 ## Newer ideas (from live testing, not in the original plan)

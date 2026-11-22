@@ -317,8 +317,7 @@ def _wire_step_buttons(widget):
     # themselves. Watching the viewer's own layer-inserted event instead
     # means the "Register" flow needs no changes at all to get the same
     # highlighting: match by the fixed layer names widget_components.py
-    # already uses (also relied on elsewhere in this codebase, e.g.
-    # registration_warping.py's _add_data looking layers up by name).
+    # already uses.
     _PIPELINE_OUTPUT_FIELDS = {
         'FM_segmentation': 'Moving_Segmentation',
         'EM_segmentation': 'Fixed_Segmentation',
