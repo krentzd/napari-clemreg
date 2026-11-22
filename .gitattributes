@@ -1,0 +1,3 @@
+# Pixi lock file: never 3-way merge it; regenerate it with `pixi lock`
+# (or `pixi update napari-clemreg` after changing setup.cfg's dependencies)
+pixi.lock merge=binary linguist-language=YAML linguist-generated=true
