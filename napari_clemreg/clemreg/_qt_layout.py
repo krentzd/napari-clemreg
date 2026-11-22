@@ -38,25 +38,33 @@ def extract_field_widget(gui, field_name: str) -> QWidget:
     return native if parent is gui.native else parent
 
 
-def group_into_collapsible(gui, title: str, field_names: list, expanded: bool = False) -> QCollapsible:
-    """Move a set of a FunctionGui's fields into one collapsible section.
+def make_collapsible(gui, title: str, field_names: list) -> QCollapsible:
+    """Move a set of a FunctionGui's fields into a new, collapsed section.
 
-    Reparents each named field's row widget out of the FunctionGui's own
-    flat layout and into a new `QCollapsible`, which is then appended to
-    the FunctionGui's layout in their place. The underlying magicgui
-    `Widget` objects are untouched (still registered on `gui`, still
-    readable via `.value`, still collected into the call button's
-    arguments) -- only their visual parent changes.
+    Only the fields' Qt rows are reparented: the magicgui widgets stay on
+    `gui`, so `.value` and the call button's arguments work as before.
+    The section isn't placed anywhere; see group_into_collapsible.
     """
     section = QCollapsible(title)
     for name in field_names:
         section.addWidget(extract_field_widget(gui, name))
-    if expanded:
-        section.expand(animate=False)
-    else:
-        section.collapse(animate=False)
+    section.collapse(animate=False)
+    return section
+
+
+def group_into_collapsible(gui, title: str, field_names: list) -> QCollapsible:
+    """make_collapsible, with the section appended to the form."""
+    section = make_collapsible(gui, title, field_names)
     gui.native.layout().addWidget(section)
     return section
+
+
+def refit_collapsible(section: QCollapsible) -> None:
+    """Resize an open section to its content after rows are shown or
+    hidden. QCollapsible fixes its height when it opens and only updates
+    it when a child resizes, so newly shown rows would be cut off."""
+    if section.isExpanded():
+        section.expand(animate=False)
 
 
 # Explicit dark text colour -- confirmed live: napari's dark theme's

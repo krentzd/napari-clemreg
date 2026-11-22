@@ -139,7 +139,7 @@ widget runs them all at once, or one at a time with each section's **Run this st
 - **Registration Algorithm**: `Rigid CPD` (default), `Affine CPD` or `BCPD`. Rigid CPD is fastest and BCPD (non-rigid) is slowest.
 - **Parameters from JSON**: load parameters from a saved JSON file. Currently broken: the file is not read ([#47](https://github.com/martlj/napari-clemreg/issues/47)).
 
-**Parameter sections.** Each section is collapsed by default. The first four each have a **Run this step** button, which runs just that step on whatever layers are in the section's inputs. The Point Cloud Registration button also warps the image, using the Image Warping section's settings. When a step finishes, its output is filled into the next section's input and highlighted in amber, so you can step through the pipeline or start partway through from layers you already have.
+**Parameter sections.** Each section is collapsed by default. Each has a **Run this step** button, which runs just that step on whatever layers are in the section's inputs. When a step finishes, its output is filled into the next section's input and highlighted in amber, so you can step through the pipeline or start partway through from layers you already have.
 
 1. **EM Segmentation Parameters**
    - **EM Segmentation Backend**: `MitoNet (Segment-Flow)` (default) or `MitoNet (empanada-dl)`. Both run the same model; see [EM segmentation with MitoNet](#em-segmentation-with-mitonet).
@@ -155,11 +155,11 @@ widget runs them all at once, or one at a time with each section's **Run this st
    - **Fluorescence Microscopy (FM) Point Cloud** and **Electron Microscopy (EM) Point Cloud**: the inputs for this step.
    - **Voxel Size**: size of the voxel grid the point clouds are downsampled onto. **Larger values give fewer points**, which is faster and uses less memory. It is applied during point cloud sampling, although it sits in this section ([#49](https://github.com/martlj/napari-clemreg/issues/49)).
    - **Maximum Iterations**: maximum number of registration iterations. If this is too low, the registration may not converge.
-5. **Image Warping**
-   - **Interpolation Order**: order of the spline interpolation.
-   - **Approximate Grid**: controls the resolution of the grid used to approximate the warp. A higher value reduces the step size between coordinates.
-   - **Sub-division Factor**: controls the size of the chunks the warp is applied in.
-   - **Output Pixel Size**: `Native LM resolution` (default) warps the FM image onto a grid close to its own pixel size and places it over the EM image using the layer's scale. `EM pixel grid (legacy)` resamples it onto the EM image's much finer pixel grid, as earlier versions did.
+   - **Image Warping**, a section inside this one, since this step's **Run this step** button also warps the FM image:
+     - **Interpolation Order**: order of the spline interpolation.
+     - **Output Pixel Size**: `Native LM resolution` (default) warps the FM image onto a grid close to its own pixel size and places it over the EM image using the layer's scale. `EM pixel grid (legacy)` resamples it onto the EM image's much finer pixel grid, as earlier versions did.
+     - **Approximate Grid** (BCPD only): controls the resolution of the grid used to approximate the warp. A higher value reduces the step size between coordinates.
+     - **Sub-division Factor** (BCPD only): controls the size of the chunks the warp is applied in.
 
 **Output options**
 - **Save parameters**: save the current parameters to a JSON file, for reproducibility. Currently broken: ticking it makes **Register** fail ([#47](https://github.com/martlj/napari-clemreg/issues/47)).

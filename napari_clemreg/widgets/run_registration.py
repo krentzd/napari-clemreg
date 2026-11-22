@@ -14,7 +14,10 @@ from napari.layers import Image, Shapes, Labels, Points
 from napari.utils.notifications import show_error
 from napari.qt.threading import GeneratorWorker
 from ..clemreg.on_init_specs import specs
-from ..clemreg._qt_layout import group_into_collapsible, wrap_in_scroll_area
+from ..clemreg._qt_layout import (
+    extract_field_widget, group_into_collapsible, make_collapsible, refit_collapsible,
+    wrap_in_scroll_area,
+)
 from ..clemreg.exceptions import ClemregError
 
 
@@ -140,13 +143,16 @@ def on_init(widget):
                            ['Moving_Segmentation', 'Fixed_Segmentation',
                             'point_cloud_sampling_frequency', 'point_cloud_sigma',
                             'run_point_cloud_sampling_button'])
-    group_into_collapsible(widget, 'Point Cloud Registration',
-                           ['Moving_Points', 'Fixed_Points',
-                            'registration_voxel_size', 'registration_max_iterations',
-                            'run_registration_and_warping_button'])
-    group_into_collapsible(widget, 'Image Warping',
-                           ['warping_interpolation_order', 'warping_approximate_grid',
-                            'warping_sub_division_factor', 'warping_output_resolution'])
+    # The registration step's button also warps, so the warping settings
+    # sit inside its section, above the button.
+    warping = make_collapsible(widget, 'Image Warping',
+                               ['warping_interpolation_order', 'warping_output_resolution',
+                                'warping_approximate_grid', 'warping_sub_division_factor'])
+    registration = group_into_collapsible(widget, 'Point Cloud Registration',
+                                          ['Moving_Points', 'Fixed_Points',
+                                           'registration_voxel_size', 'registration_max_iterations'])
+    registration.addWidget(warping)
+    registration.addWidget(extract_field_widget(widget, 'run_registration_and_warping_button'))
 
     # Cheap insurance for the same "doesn't shrink back down" behaviour
     # on the few small toggles left (1-2 widgets each) -- harmless even
@@ -169,6 +175,13 @@ def on_init(widget):
     def toggle_save_json(save_json: bool):
         for x in save_json_settings:
             setattr(getattr(widget, x), 'visible', save_json)
+        _shrink_to_fit()
+
+    def show_bcpd_warping_settings(algorithm: str):
+        # Only BCPD's non-rigid warp uses these; Rigid/Affine CPD warp with a matrix.
+        for name in ('warping_approximate_grid', 'warping_sub_division_factor'):
+            getattr(widget, name).visible = algorithm == 'BCPD'
+        refit_collapsible(warping)
         _shrink_to_fit()
 
     def change_z_max(input_image: Image):
@@ -254,6 +267,8 @@ def on_init(widget):
     widget.params_from_json.changed.connect(toggle_json_widget)
     widget.filter_segmentation.changed.connect(toggle_filter_segmentation)
     widget.save_json.changed.connect(toggle_save_json)
+    widget.registration_algorithm.changed.connect(show_bcpd_warping_settings)
+    show_bcpd_warping_settings(widget.registration_algorithm.value)
 
     # A layer already selected at construction time (e.g. auto-selected
     # because it's the only choice, or the EM layer matching by name)

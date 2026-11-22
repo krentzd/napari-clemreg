@@ -126,3 +126,71 @@ def test_reader_returns_valid_layer_data_tuple(tmp_path):
     np.testing.assert_array_equal(data, array)
     assert layer_type == 'image'
     assert 'metadata' in layer_kwargs
+
+
+def _section(widget, title):
+    from superqt import QCollapsible
+
+    (section,) = [s for s in widget.native.findChildren(QCollapsible) if s.text() == title]
+    return section
+
+
+def _row(widget, field_name):
+    """A field's label-and-control row (its parent, once grouped)."""
+    return getattr(widget, field_name).native.parent()
+
+
+def test_image_warping_sits_inside_point_cloud_registration(qapp):
+    """Its settings are used by the Point Cloud Registration step's button,
+    so they sit inside that section, above the button."""
+    widget = make_run_registration()
+    registration = _section(widget, 'Point Cloud Registration')
+    warping = _section(widget, 'Image Warping')
+    layout = registration.content().layout()
+
+    button = widget.run_registration_and_warping_button.native
+    (button_index,) = [i for i in range(layout.count())
+                       if layout.itemAt(i).widget() in (button, button.parent())]
+
+    assert registration.isAncestorOf(warping)
+    assert layout.indexOf(warping) < button_index
+
+
+_BCPD_ONLY = ['warping_approximate_grid', 'warping_sub_division_factor']
+_ALL_ALGORITHMS = ['warping_interpolation_order', 'warping_output_resolution']
+
+
+@pytest.mark.parametrize('algorithm, bcpd_rows_shown', [
+    ('Rigid CPD', False), ('Affine CPD', False), ('BCPD', True)])
+def test_bcpd_only_warping_settings_follow_the_algorithm(qapp, algorithm, bcpd_rows_shown):
+    widget = make_run_registration()
+    widget.registration_algorithm.value = 'BCPD'  # a real change for every case
+    widget.registration_algorithm.value = algorithm
+
+    for name in _BCPD_ONLY:
+        assert _row(widget, name).isVisibleTo(widget.native) is bcpd_rows_shown
+    for name in _ALL_ALGORITHMS:
+        assert _row(widget, name).isVisibleTo(widget.native)
+
+
+def test_bcpd_only_settings_start_hidden(qapp):
+    widget = make_run_registration()  # Rigid CPD by default
+
+    assert not any(_row(widget, name).isVisibleTo(widget.native) for name in _BCPD_ONLY)
+
+
+def test_showing_bcpd_settings_in_an_open_section_does_not_clip_them(qapp):
+    """An expanded QCollapsible fixes its height when it opens, and only
+    recomputes it when a child resizes, not when a row is shown."""
+    widget = make_run_registration()
+    registration = _section(widget, 'Point Cloud Registration')
+    warping = _section(widget, 'Image Warping')
+    warping.expand(animate=False)
+    registration.expand(animate=False)
+
+    widget.registration_algorithm.value = 'BCPD'
+    QApplication.processEvents()
+
+    for section in (warping, registration):
+        content = section.content()
+        assert content.maximumHeight() >= content.sizeHint().height()
