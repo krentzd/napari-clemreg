@@ -72,6 +72,11 @@ def fixed_segmentation_widget(viewer: 'napari.viewer.Viewer',
         show_error("WARNING: YOUR fixed_image is RGB, your input must be grayscale and 3D")
         return
 
+    from ..clemreg.widget_components import em_backend_ready
+
+    if not em_backend_ready(em_segmentation_backend):
+        return
+
     _run_fixed_thread(Fixed_Image=Fixed_Image,
                       em_segmentation_backend=em_segmentation_backend)
 
@@ -93,4 +98,4 @@ def fixed_segmentation_dock_widget(napari_viewer: 'napari.viewer.Viewer' = None)
     # not runtime values, so call with no args and let its own
     # Viewer-typed-parameter auto-injection resolve the current viewer.
     gui = fixed_segmentation_widget()
-    return wrap_in_scroll_area(gui.native)
+    return wrap_in_scroll_area(gui)

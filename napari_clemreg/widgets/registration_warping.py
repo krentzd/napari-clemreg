@@ -12,13 +12,20 @@ from ..clemreg._qt_layout import wrap_in_scroll_area
 
 def on_init(widget):
 
+    # Only point clouds from Point Cloud Sampling carry 'pxlsz'. Any other
+    # Points layer can be selected too (napari auto-selects new layers), so
+    # skip those rather than raise KeyError.
     def change_moving_pixelsize(input_points: Points):
+        if input_points is None or 'pxlsz' not in input_points.metadata:
+            return
         moving_image_pixelsize_z, moving_image_pixelsize_xy = input_points.metadata['pxlsz']
 
         widget.moving_image_pixelsize_xy.value = str(moving_image_pixelsize_xy) + 'nanometer'
         widget.moving_image_pixelsize_z.value = str(moving_image_pixelsize_z) + 'nanometer'
 
     def change_fixed_pixelsize(input_points: Points):
+        if input_points is None or 'pxlsz' not in input_points.metadata:
+            return
         fixed_image_pixelsize_z, fixed_image_pixelsize_xy = input_points.metadata['pxlsz']
 
         widget.fixed_image_pixelsize_xy.value = str(fixed_image_pixelsize_xy) + 'nanometer'
@@ -27,17 +34,10 @@ def on_init(widget):
     widget.Moving_Points.changed.connect(change_moving_pixelsize)
     widget.Fixed_Points.changed.connect(change_fixed_pixelsize)
 
-    # Same bug as run_registration.py's Moving_Image/Fixed_Image fields:
-    # a layer already selected at construction time never fires its own
-    # `changed` signal, so pixel sizes stayed at their placeholder value
-    # until the user manually reselected a layer. Seed both once here --
-    # guarded on 'pxlsz' being present, since (unlike a `.changed`-driven
-    # selection the user made deliberately) whatever's pre-selected here
-    # could in principle be an unrelated Points layer without it.
-    if widget.Moving_Points.value is not None and 'pxlsz' in widget.Moving_Points.value.metadata:
-        change_moving_pixelsize(widget.Moving_Points.value)
-    if widget.Fixed_Points.value is not None and 'pxlsz' in widget.Fixed_Points.value.metadata:
-        change_fixed_pixelsize(widget.Fixed_Points.value)
+    # A layer already selected at construction time never fires `changed`,
+    # so seed the pixel sizes once from what's shown.
+    change_moving_pixelsize(widget.Moving_Points.value)
+    change_fixed_pixelsize(widget.Fixed_Points.value)
 
 
 @magic_factory(widget_init=on_init, layout='vertical',
@@ -218,4 +218,4 @@ def registration_warping_dock_widget(napari_viewer: 'napari.viewer.Viewer' = Non
     # not runtime values, so call with no args and let its own
     # Viewer-typed-parameter auto-injection resolve the current viewer.
     gui = registration_warping_widget()
-    return wrap_in_scroll_area(gui.native)
+    return wrap_in_scroll_area(gui)

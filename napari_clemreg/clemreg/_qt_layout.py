@@ -15,7 +15,7 @@ grouping changes.
 """
 from __future__ import annotations
 
-from qtpy.QtCore import Qt
+from qtpy.QtCore import QSize, Qt
 from qtpy.QtWidgets import QApplication, QScrollArea, QWidget
 from superqt import QCollapsible
 
@@ -98,16 +98,42 @@ def clear_highlight_on_user_select(field_widget) -> None:
     field_widget.native.activated.connect(lambda *_: field_widget.native.setStyleSheet(''))
 
 
-def wrap_in_scroll_area(widget: QWidget, max_height_fraction: float = 0.85) -> QScrollArea:
-    """Wrap `widget` in a QScrollArea so the dock panel this becomes has a
-    bounded height regardless of how much content it holds, instead of
-    growing past the screen (the prior fix for that -- calling
-    `adjustSize()` after every visibility toggle -- only made the panel
-    shrink back down correctly; it never stopped it growing past the
-    screen in the first place, since nothing bounded its maximum size).
+class MagicguiScrollArea(QScrollArea):
+    """A QScrollArea holding a magicgui widget, docked in its place.
+
+    napari keeps a docked widget's layer dropdowns in sync with the layer
+    list only if the docked object itself has a ``reset_choices`` method
+    (``QtMainWindow.add_dock_widget`` connects the viewer's layer
+    inserted/removed/reordered events to it). A plain QScrollArea has
+    none, so wrapping a magicgui widget in one silently stopped its
+    dropdowns updating when layers were added. This forwards it.
     """
-    scroll = QScrollArea()
-    scroll.setWidget(widget)
+
+    def __init__(self, gui):
+        super().__init__()
+        # Also keeps the magicgui wrapper alive as long as its dock.
+        self.gui = gui
+        self.setWidget(gui.native)
+
+    def reset_choices(self, *_):
+        self.gui.reset_choices()
+
+    def minimumSizeHint(self):
+        # QScrollArea's own hint caps its width, so napari would dock the
+        # form narrower than it is and squeeze it. Computed on each call, so
+        # it reflects napari's stylesheet, which is applied after building.
+        hint = super().minimumSizeHint()
+        width = (self.widget().sizeHint().width()
+                 + self.verticalScrollBar().sizeHint().width()
+                 + 2 * self.frameWidth())
+        return QSize(max(hint.width(), width), hint.height())
+
+
+def wrap_in_scroll_area(gui, max_height_fraction: float = 0.85) -> MagicguiScrollArea:
+    """Wrap the magicgui widget `gui` in a scroll area, so its dock panel
+    never grows taller than the screen. Takes the magicgui widget, not its
+    `.native` QWidget, so the scroll area can forward `reset_choices`."""
+    scroll = MagicguiScrollArea(gui)
     scroll.setWidgetResizable(True)
     scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
 

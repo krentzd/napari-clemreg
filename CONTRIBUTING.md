@@ -64,8 +64,8 @@ for the full repository/release plan.
 
 ## Before merging a branch into `modernisation`
 
-- Run the test suite (`tox`, or `pytest` against an active env — see
-  [CLAUDE.md](CLAUDE.md) for which local env to use and why).
+- Run the test suite (`pixi run -e test test`, `tox`, or `pytest` against an
+  active env — see [CLAUDE.md](CLAUDE.md) for which local env to use and why).
 - Check CI is green.
 - Update [CHANGELOG.md](CHANGELOG.md) (an entry under `[Unreleased]`) and
   [ROADMAP.md](ROADMAP.md) (remove what's finished, add follow-ups) in the

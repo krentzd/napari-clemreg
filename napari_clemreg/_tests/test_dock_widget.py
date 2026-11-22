@@ -12,6 +12,8 @@ covers what's reliable locally: that each `magic_factory` widget builds
 (exercises `on_init_specs.py` and every `on_init` callback) and that the
 npe2 manifest + reader hook are wired correctly.
 """
+from importlib.resources import files
+
 import numpy as np
 import pytest
 import tifffile
@@ -122,7 +124,7 @@ def test_advanced_fields_grouped_into_collapsed_sections(qapp):
 def test_npe2_manifest_loads():
     from npe2 import PluginManifest
 
-    manifest = PluginManifest.from_file('napari_clemreg/napari.yaml')
+    manifest = PluginManifest.from_file(str(files('napari_clemreg') / 'napari.yaml'))
 
     assert manifest.name == 'napari-clemreg'
     widget_commands = {w.command for w in manifest.contributions.widgets}

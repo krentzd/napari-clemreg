@@ -13,6 +13,7 @@ from pathlib import Path
 from ..clemreg.point_cloud_registration import point_cloud_registration
 from ..clemreg.point_cloud_sampling import point_cloud_sampling
 from ..clemreg.warp_image_volume import warp_image_volume
+from ..clemreg._arrays import as_array
 from ..clemreg.data_preprocessing import make_isotropic, _make_isotropic
 from napari.qt.threading import thread_worker
 
@@ -50,7 +51,7 @@ def run_moving_segmentation(Moving_Image,
         roi = MaskRoi(polygon=np.asarray(Mask_ROI.data[0]), z_min=z_min, z_max=z_max)
     size_filter = (filter_size_lower, filter_size_upper) if filter_segmentation else None
 
-    return segment_fm(Moving_Image.data,
+    return segment_fm(as_array(Moving_Image),
                       sigma=log_sigma,
                       threshold=log_threshold,
                       size_filter=size_filter,
@@ -59,6 +60,26 @@ def run_moving_segmentation(Moving_Image,
 """
 Fixed segmentation
 """
+def em_backend_ready(em_segmentation_backend):
+    """Whether the chosen EM Segmentation Backend can run; if not, show an
+    error saying what to do. Cheap (it doesn't import the backend), so
+    widgets call it on the GUI thread before starting a worker."""
+    from ..clemreg.em_segmentation import check_backend_installed
+    from ..clemreg.exceptions import BackendNotInstalledError
+
+    try:
+        check_backend_installed(EM_BACKENDS[em_segmentation_backend])
+    except BackendNotInstalledError as e:
+        show_error(
+            f"{em_segmentation_backend} needs the optional `empanada` extra "
+            f"(missing: {' and '.join(e.missing)}). That extra can't currently be installed "
+            "on Python 3.11 or newer (https://github.com/martlj/napari-clemreg/issues/5), "
+            "so choose MitoNet (Segment-Flow) as the EM Segmentation Backend instead."
+        )
+        return False
+    return True
+
+
 def run_fixed_segmentation(Fixed_Image,
                            em_segmentation_backend='MitoNet (Segment-Flow)'
 ):
@@ -80,7 +101,7 @@ def run_fixed_segmentation(Fixed_Image,
             'can take a while, especially on first run. Progress is printed '
             'to the terminal.'
         )
-    seg_volume = segment_em(Fixed_Image.data, backend=backend)
+    seg_volume = segment_em(as_array(Fixed_Image), backend=backend)
     if backend == 'segment-flow':
         show_info('EM segmentation via Segment-Flow finished.')
     return seg_volume
@@ -107,17 +128,17 @@ def run_point_cloud_sampling(Moving_Segmentation,
     pxlsz_moving = (moving_image_pixelsize_z.to_preferred([ureg.nanometers]).magnitude, moving_image_pixelsize_xy.to_preferred([ureg.nanometers]).magnitude)
     pxlsz_fixed = (fixed_image_pixelsize_z.to_preferred([ureg.nanometers]).magnitude, fixed_image_pixelsize_xy.to_preferred([ureg.nanometers]).magnitude)
 
-    moving_seg = _make_isotropic(Moving_Segmentation.data > 0,
+    moving_seg = _make_isotropic(as_array(Moving_Segmentation) > 0,
                                  pxlsz_lm=pxlsz_moving,
                                  pxlsz_em=pxlsz_fixed)
     # Need to check for isotropic EM volume
     if pxlsz_fixed[0] != pxlsz_fixed[1]:
-        fixed_seg = _make_isotropic(Fixed_Segmentation.data,
+        fixed_seg = _make_isotropic(as_array(Fixed_Segmentation),
                                     pxlsz_lm=pxlsz_moving,
                                     pxlsz_em=pxlsz_fixed,
                                     ref_frame='EM')
     else:
-        fixed_seg = Fixed_Segmentation.data
+        fixed_seg = as_array(Fixed_Segmentation)
 
     moving_seg_kwargs = dict(
         name=Moving_Segmentation.name,
@@ -241,7 +262,7 @@ def run_point_cloud_registration_and_warping(Moving_Points,
         warp_outputs = []
         for image in images:
             print(f'Warping {image.name} with {registration_algorithm} (direct-to-native)...')
-            img_wrp = _warp_image_volume_affine(image=image.data,
+            img_wrp = _warp_image_volume_affine(image=as_array(image),
                                                 matrix=matrix_combined,
                                                 output_shape=coarse_output_shape,
                                                 interpolation_order=warping_interpolation_order)

@@ -94,3 +94,22 @@ def test_genuine_user_interaction_clears_highlight():
 
     field.native.activated.emit(1)
     assert field.native.styleSheet() == ''
+
+
+def test_scroll_area_is_wide_enough_for_its_widget(qtbot):
+    """QScrollArea's own size hint caps its width, so napari docked Run
+    Registration narrower than its form, squeezing it and cutting off the
+    unit fields. At its minimum width, under napari's stylesheet and with a
+    vertical scrollbar, the form should get the width it asks for."""
+    from napari.qt import get_stylesheet
+    from napari_clemreg.clemreg._qt_layout import wrap_in_scroll_area
+    from napari_clemreg.widgets.run_registration import make_run_registration
+
+    scroll = wrap_in_scroll_area(make_run_registration())
+    qtbot.addWidget(scroll)
+    scroll.setStyleSheet(get_stylesheet('dark'))
+    scroll.show()
+    scroll.resize(scroll.minimumSizeHint().width(), 300)
+    qtbot.waitUntil(scroll.verticalScrollBar().isVisible)
+
+    assert scroll.viewport().width() >= scroll.widget().sizeHint().width()

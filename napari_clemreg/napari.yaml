@@ -23,6 +23,9 @@ contributions:
   - id: napari-clemreg.sample_data
     title: Sample Benchmark Data
     python_name: napari_clemreg.clemreg.sample_data:make_sample_data
+  - id: napari-clemreg.ome_zarr_sample_data
+    title: Sample Benchmark Data (OME-Zarr)
+    python_name: napari_clemreg.clemreg.sample_data:make_ome_zarr_sample_data
   - id: napari-clemreg.em_mask_sample_data
     title: EM Mask Sample Data
     python_name: napari_clemreg.clemreg.sample_data:make_em_mask_sample_data
@@ -36,6 +39,9 @@ contributions:
   - command: napari-clemreg.sample_data
     display_name: Sample Benchmark Data
     key: benchmark_dataset.1
+  - command: napari-clemreg.ome_zarr_sample_data
+    display_name: Sample Benchmark Data (OME-Zarr, streamed from the BioImage Archive)
+    key: benchmark_dataset_ome_zarr.1
   - command: napari-clemreg.em_mask_sample_data
     display_name: EM Mask (precomputed, no GPU needed)
     key: em_mask.1

@@ -87,7 +87,15 @@ git checkout modernisation
 
 This branch requires **Python 3.11+**. The base install no longer includes `empanada-dl`, so it resolves on Python 3.11. Install it with the `segment-flow` extra to get the default EM segmentation backend (it also needs Nextflow, Conda and a JDK; see [EM segmentation with MitoNet](#em-segmentation-with-mitonet)).
 
-Using [`uv`](https://docs.astral.sh/uv/) (recommended: fast, and installs the Python version for you if needed). `uv pip install` and `uv run` both auto-detect the local `.venv`, so **don't `source .venv/bin/activate`**. If a conda environment is already active (e.g. `base` auto-activates in many setups), a plain `source activate` can silently lose to conda's own `PATH` handling and run the wrong `napari` entirely:
+Using [pixi](https://pixi.sh/) (recommended on Apple-silicon Macs and on Linux with glibc 2.31 or newer, the platforms `pixi.toml` supports: one command sets up everything, including Nextflow and a JDK for the Segment-Flow backend):
+
+```
+pixi run napari
+```
+
+The first run creates the environment in `.pixi/` from `pixi.toml` and `pixi.lock`, with napari-clemreg installed from your checkout in editable mode, so code changes appear the next time you start napari. Segment-Flow still needs `conda` on `PATH` (your own Miniconda or Miniforge) to build the model's environment. Run the tests with `pixi run -e test test`.
+
+Or using [`uv`](https://docs.astral.sh/uv/) (fast, and installs the Python version for you if needed). `uv pip install` and `uv run` both auto-detect the local `.venv`, so **don't `source .venv/bin/activate`**. If a conda environment is already active (e.g. `base` auto-activates in many setups), a plain `source activate` can silently lose to conda's own `PATH` handling and run the wrong `napari` entirely:
 
 ```
 uv venv --python 3.11
@@ -189,8 +197,8 @@ The combined widget's **Run this step** buttons do the same job without switchin
 Both the `1) Electron Microscopy (EM) Segmentation` widget and the `Run registration` widget default to running MitoNet through Crick's [AI-on-Demand (AIoD)](https://franciscrickinstitute.github.io/aiod_docs/) Segment-Flow pipeline. This is fully integrated: pick the backend and run. There's no need to install AIoD's separate `aiod_napari` plugin or to pass its output to `Point Cloud Sampling` by hand. The bundled alternative, `MitoNet (empanada-dl)`, is still in the same **EM Segmentation Backend** dropdown, but `empanada-dl` is unmaintained and currently can't be installed on Python 3.11 ([#5](https://github.com/martlj/napari-clemreg/issues/5)). Segment-Flow avoids that problem because the model runs in its own isolated environment.
 
 **Prerequisites for the Segment-Flow backend** (the rest of napari-clemreg works without them):
-- [Nextflow](https://www.nextflow.io/) and [Conda](https://docs.conda.io/) on `PATH`.
-- A JDK, ideally version 17–21. Very recent JDKs (tested: 26) fail with `Unsupported class file major version`. On macOS, `brew install openjdk@21` is enough on its own: it's detected automatically without setting `JAVA_HOME`. On other platforms, set `JAVA_HOME` to a compatible JDK if your system default is newer.
+- [Nextflow](https://www.nextflow.io/) and [Conda](https://docs.conda.io/) on `PATH`. The pixi environment includes Nextflow, but not Conda.
+- A JDK, ideally version 17–21 (the pixi environment includes JDK 21). Very recent JDKs (tested: 26) fail with `Unsupported class file major version`. On macOS, `brew install openjdk@21` is enough on its own: it's detected automatically without setting `JAVA_HOME`. On other platforms, set `JAVA_HOME` to a compatible JDK if your system default is newer.
 - The `segment-flow` extra, which adds the small, pure-Python packages used to talk to AIoD's model registry (no heavy ML dependencies). The [development installation](#development-installation-this-fork) above already includes it; to add it to an existing install:
   ```
   uv pip install "napari-clemreg[segment-flow]"
@@ -228,6 +236,17 @@ Below are the links to the datasets that were used as part of this study.
 - [FM] - https://www.ebi.ac.uk/biostudies/bioimages/studies/S-BSST1075
 
 Here is a sample dataset which is the binned version of EMPIAR-10819: https://zenodo.org/records/7936982.
+
+The same data is on the BioImage Archive as OME-Zarr, with the FIB-SEM volume at full resolution (5 nm) and pixel sizes in the files: [S-BIAD4355](https://www.ebi.ac.uk/biostudies/bioimages/studies/S-BIAD4355).
+
+### Sample data in napari
+`File → Open Sample → napari-clemreg` offers the benchmark data from either source. Both give the same five layers (`EM` at 20 nm, and four FM channels), so the widgets work the same way with either.
+
+- **Sample Benchmark Data** downloads two TIFFs from Zenodo (about 600 MB) the first time, then loads them from a local cache. Nothing needs the network after that.
+- **Sample Benchmark Data (OME-Zarr, streamed from the BioImage Archive)** downloads nothing in advance and stores nothing on disk. Instead:
+  - Opening it takes 10–15 seconds, during which napari doesn't respond: it downloads about 250 MB to show the first slices. The archive stores the EM in blocks of 56 slices, so napari also pauses for a few seconds the first time you scroll into each new block. It keeps what it has shown in memory, so going back is instant.
+  - Each pipeline step downloads the images it reads, every time it runs, and every new napari session starts again. You need a network connection throughout.
+  - The pixel sizes come from the files. The FM channels are identical to the Zenodo ones; the EM is the same volume, but the Zenodo file's contrast was stretched, so segmentation and registration results differ slightly.
 
 ## How to cite
 ```bibtex

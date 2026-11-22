@@ -30,6 +30,7 @@ from napari.components import ViewerModel
 from napari.layers import Image, Labels, Points
 
 import napari_clemreg.clemreg.widget_components as widget_components
+from napari_clemreg.clemreg import em_segmentation
 from napari_clemreg.clemreg.exceptions import NoSegmentationError
 from napari_clemreg.widgets import (
     fixed_segmentation,
@@ -38,11 +39,11 @@ from napari_clemreg.widgets import (
     registration_warping,
     run_registration,
 )
-from napari_clemreg.widgets.fixed_segmentation import fixed_segmentation_widget
-from napari_clemreg.widgets.moving_segmentation import moving_segmentation_widget
-from napari_clemreg.widgets.point_cloud_sampling import point_cloud_sampling_widget
-from napari_clemreg.widgets.registration_warping import registration_warping_widget
-from napari_clemreg.widgets.run_registration import make_run_registration
+from napari_clemreg.widgets.fixed_segmentation import fixed_segmentation_dock_widget, fixed_segmentation_widget
+from napari_clemreg.widgets.moving_segmentation import moving_segmentation_dock_widget, moving_segmentation_widget
+from napari_clemreg.widgets.point_cloud_sampling import point_cloud_sampling_dock_widget, point_cloud_sampling_widget
+from napari_clemreg.widgets.registration_warping import registration_warping_dock_widget, registration_warping_widget
+from napari_clemreg.widgets.run_registration import make_run_registration, make_run_registration_widget
 
 SHAPE = (8, 32, 32)
 TIMEOUT_MS = 5000
@@ -156,10 +157,18 @@ def pipeline(monkeypatch, qtbot):
 def errors(monkeypatch):
     messages = []
     for module in (fixed_segmentation, moving_segmentation, point_cloud_sampling,
-                   registration_warping, run_registration):
+                   registration_warping, run_registration, widget_components):
         if hasattr(module, 'show_error'):
             monkeypatch.setattr(module, 'show_error', messages.append)
     return messages
+
+
+@pytest.fixture
+def empanada_installed(monkeypatch):
+    """Make the MitoNet (empanada-dl) backend's dependency check pass,
+    so tests can select it without torch or empanada-dl installed. The
+    pipeline stubs never import them."""
+    monkeypatch.setattr(em_segmentation, '_EMPANADA_PACKAGES', {})
 
 
 @pytest.fixture
@@ -187,9 +196,37 @@ def _is_highlighted(field):
     return field.native.styleSheet() != ''
 
 
+# --- Docked widgets follow the layer list -----------------------------------
+
+@pytest.mark.parametrize('factory, field, add_layer', [
+    # Not its image dropdowns: Run Registration refreshes those itself.
+    (make_run_registration_widget, 'Fixed_Segmentation', 'add_labels'),
+    (fixed_segmentation_dock_widget, 'Fixed_Image', 'add_image'),
+    (moving_segmentation_dock_widget, 'Moving_Image', 'add_image'),
+    (point_cloud_sampling_dock_widget, 'Moving_Segmentation', 'add_labels'),
+    (registration_warping_dock_widget, 'Moving_Image', 'add_image'),
+], ids=lambda value: getattr(value, '__name__', None))
+def test_docked_widget_picks_up_layers_added_later(qtbot, viewer, factory, field, add_layer):
+    """napari refreshes a docked widget's layer dropdowns, when layers are
+    added, removed or reordered, by calling the docked object's own
+    reset_choices (QtMainWindow.add_dock_widget). The factories in
+    napari.yaml return a QScrollArea around the magicgui widget, which
+    must forward it, or the dropdowns never update.
+    test_real_viewer.py checks the same through napari itself."""
+    dock = factory()
+    layer = getattr(viewer, add_layer)(np.zeros(SHAPE, dtype=np.int64), name='added_later')
+    assert layer not in getattr(dock.gui, field).choices
+
+    dock.reset_choices(None)  # what napari calls, with the layer event
+
+    assert layer in getattr(dock.gui, field).choices
+    assert dock.widget() is dock.gui.native
+
+
 # --- Split widgets -----------------------------------------------------------
 
-def test_split_em_segmentation_adds_layer_and_passes_parameters(qtbot, viewer, pipeline, images):
+def test_split_em_segmentation_adds_layer_and_passes_parameters(qtbot, viewer, pipeline, images,
+                                                               empanada_installed):
     __, em = images
     gui = fixed_segmentation_widget()
     gui.em_segmentation_backend.value = 'MitoNet (empanada-dl)'
@@ -247,6 +284,19 @@ def test_split_registration_warping_adds_warped_image(qtbot, viewer, pipeline, i
     assert kwargs['registration_algorithm'] == 'Affine CPD'
 
 
+def test_split_registration_warping_ignores_points_without_pixel_sizes(qtbot, viewer):
+    """Any Points layer can be auto-selected when added. Only the point
+    clouds from sampling carry 'pxlsz'; others used to raise KeyError."""
+    gui = registration_warping_widget()
+    pixel_size = gui.moving_image_pixelsize_xy.value
+
+    viewer.add_layer(_points('drawn_by_hand'))
+    gui.reset_choices()
+
+    assert gui.Moving_Points.value is viewer.layers['drawn_by_hand']
+    assert gui.moving_image_pixelsize_xy.value == pixel_size
+
+
 def test_split_em_segmentation_reports_no_segmentation(qtbot, viewer, pipeline, errors, images):
     __, em = images
     pipeline.fixed_result = NoSegmentationError('No mitochondria found in the EM image')
@@ -269,6 +319,28 @@ def test_split_fm_segmentation_reports_no_segmentation(qtbot, viewer, pipeline, 
     assert 'FM_segmentation' not in viewer.layers
 
 
+def _assert_reports_missing_empanada(qtbot, errors, pipeline):
+    """The error says what to do, and nothing was started."""
+    _wait_for_workers(qtbot)
+    assert len(errors) == 1
+    assert '`empanada` extra' in errors[0]
+    assert 'MitoNet (Segment-Flow)' in errors[0]
+    assert all(calls == [] for calls in pipeline.calls.values())
+
+
+def test_split_em_segmentation_reports_missing_empanada(qtbot, viewer, pipeline, errors, images,
+                                                        empanada_missing):
+    """A missing torch used to surface as a bare 'No module named torch'
+    from inside the worker."""
+    __, em = images
+    gui = fixed_segmentation_widget()
+    gui.em_segmentation_backend.value = 'MitoNet (empanada-dl)'
+
+    gui(Fixed_Image=em)
+
+    _assert_reports_missing_empanada(qtbot, errors, pipeline)
+
+
 # --- Run Registration: the Register button -----------------------------------
 
 def _assert_also_reraised(raised, exc_type):
@@ -288,6 +360,47 @@ def _run_registration(images):
     gui.Moving_Image.value = fm
     gui.Fixed_Image.value = em
     return gui
+
+
+def test_run_registration_does_not_preselect_one_image_for_both(qtbot, viewer):
+    """Both dropdowns default to the first image layer, which put the EM
+    sample in as the FM image too (with the EM's pixel sizes)."""
+    em = viewer.add_image(np.zeros(SHAPE), name='EM')
+    fm = viewer.add_image(np.zeros(SHAPE), name='FM')
+    gui = make_run_registration()
+
+    assert gui.Fixed_Image.value is em
+    assert gui.Moving_Image.value is fm
+
+
+def test_run_registration_separates_images_added_after_it_was_built(qtbot, viewer):
+    """The usual order: dock the widget, then open the sample."""
+    gui = make_run_registration()
+    em = viewer.add_image(np.zeros(SHAPE), name='EM')
+    fm = viewer.add_image(np.zeros(SHAPE), name='FM', metadata={'XResolution': 4, 'YResolution': 4})
+
+    assert gui.Fixed_Image.value is em
+    assert gui.Moving_Image.value is fm
+    assert gui.moving_image_pixelsize_xy.value.to('micrometer').magnitude == pytest.approx(0.25)
+
+    # Once separated, it stops: later layers don't override the user.
+    gui.Moving_Image.value = em
+    viewer.add_labels(np.zeros(SHAPE, dtype=np.int64), name='EM_segmentation')
+    assert gui.Moving_Image.value is em
+
+
+def test_run_registration_keeps_an_explicit_choice(qtbot, viewer):
+    """Picking the same layer twice is the user's call; the pixel sizes
+    must still match what the dropdown shows."""
+    em = viewer.add_image(np.zeros(SHAPE), name='EM', metadata={'XResolution': 50, 'YResolution': 50})
+    viewer.add_image(np.zeros(SHAPE), name='FM', metadata={'XResolution': 4, 'YResolution': 4})
+    gui = make_run_registration()
+
+    gui.Moving_Image.value = em
+    viewer.add_labels(np.zeros(SHAPE, dtype=np.int64), name='EM_segmentation')
+
+    assert gui.Moving_Image.value is em
+    assert gui.moving_image_pixelsize_xy.value.to('micrometer').magnitude == pytest.approx(0.02)
 
 
 def test_register_runs_every_step_and_adds_warped_image(qtbot, viewer, pipeline, images):
@@ -382,6 +495,16 @@ def test_register_reports_no_segmentation(qtbot, viewer, pipeline, errors, image
     _assert_also_reraised(raised, NoSegmentationError)
 
 
+def test_register_reports_missing_empanada_before_starting(qtbot, viewer, pipeline, errors, images,
+                                                          empanada_missing):
+    gui = _run_registration(images)
+    gui.em_segmentation_backend.value = 'MitoNet (empanada-dl)'
+
+    gui()
+
+    _assert_reports_missing_empanada(qtbot, errors, pipeline)
+
+
 # --- Run Registration: the "Run this step" buttons ---------------------------
 
 def test_em_step_auto_sets_and_highlights_next_input(qtbot, viewer, pipeline, images):
@@ -438,6 +561,16 @@ def test_step_button_reports_error_and_is_re_enabled(qtbot, viewer, pipeline, er
     gui.run_em_segmentation_button.clicked.emit()
 
     qtbot.waitUntil(lambda: any('EM segmentation failed' in m for m in errors), timeout=TIMEOUT_MS)
+    assert gui.run_em_segmentation_button.native.isEnabled()
+
+
+def test_em_step_reports_missing_empanada(qtbot, viewer, pipeline, errors, images, empanada_missing):
+    gui = _run_registration(images)
+    gui.em_segmentation_backend.value = 'MitoNet (empanada-dl)'
+
+    gui.run_em_segmentation_button.clicked.emit()
+
+    _assert_reports_missing_empanada(qtbot, errors, pipeline)
     assert gui.run_em_segmentation_button.native.isEnabled()
 
 
