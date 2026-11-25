@@ -710,8 +710,10 @@ def make_run_registration(
         viewer.add_layer(yield_value)
 
     def _yield_point_clouds(yield_value):
-        points, kwargs = yield_value[0], yield_value[1]
-        viewer.add_points(points.data, **kwargs)
+        points, kwargs = yield_value
+        # Keep the affine: Rigid and Affine CPD's transformed points are the
+        # moving points, with the registration as the layer's affine.
+        viewer.add_points(points.data, affine=points.affine, **kwargs)
 
     @thread_worker
     @_surface_runtime_errors
@@ -767,8 +769,8 @@ def make_run_registration(
         moving_points, fixed_points = run_point_cloud_sampling(**point_cloud_kwargs)
 
         if visualise_intermediate_results:
-            yield (moving_points.data, {'name': 'moving_points', 'face_color': 'red'})
-            yield (fixed_points.data, {'name': 'fixed_points', 'face_color': 'blue'})
+            yield (moving_points, {'name': 'moving_points', 'face_color': 'red'})
+            yield (fixed_points, {'name': 'fixed_points', 'face_color': 'blue'})
 
         reg_and_warping_keys = ['Moving_Image',
                                 'Fixed_Image',
