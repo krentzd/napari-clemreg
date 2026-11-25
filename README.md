@@ -25,17 +25,50 @@ The code as published in Nature Methods is tagged [`v1.0.0-nature-methods`](http
 ## Installation
 ### Local Installation
 
-This version of `napari-clemreg` isn't on PyPI yet, so install it from source with [pixi](https://pixi.sh/), which sets up Python, napari and everything else it needs (Apple-silicon Macs and Linux):
+This version of `napari-clemreg` isn't on PyPI yet, so install it from source. First, get the code:
 
 ```
 git clone -b version-2 https://github.com/krentzd/napari-clemreg.git
 cd napari-clemreg
+```
+
+#### With conda
+
+Create a [conda] environment with Python 3.11, plus Nextflow and a JDK for EM segmentation:
+
+```
+conda create -n clemreg_env -c conda-forge -c bioconda python=3.11 nextflow "openjdk=21"
+```
+Now activate the environment:
+
+```
+conda activate clemreg_env
+```
+
+Then install `napari-clemreg` from the cloned code, together with the Qt library napari needs to open a window:
+
+```
+pip install -e ".[segment-flow]" pyqt6
+```
+
+Finally, to run napari run the following.
+```
+napari
+```
+
+#### With pixi
+
+On Apple-silicon Macs and Linux, [pixi](https://pixi.sh/) sets up everything with one command. It needs a recent pixi: if you get an error about `pixi.toml`, run `pixi self-update` first.
+
+```
 pixi run napari
 ```
 
-EM segmentation runs MitoNet through [AI OnDemand](https://franciscrickinstitute.github.io/aiod_docs/)'s Segment-Flow pipeline. The pixi environment includes Nextflow and a JDK, but it also needs [Conda](https://docs.conda.io/) (e.g. Miniconda or Miniforge) on your system. The first run sets up the model's environment, which takes a few minutes.
+#### EM segmentation
 
-On other systems, use the Docker container below.
+EM segmentation runs MitoNet through [AI OnDemand](https://franciscrickinstitute.github.io/aiod_docs/)'s Segment-Flow pipeline. Both environments above include Nextflow and a JDK, but it also needs [Conda](https://docs.conda.io/) (e.g. Miniconda or Miniforge) on your system. The first run sets up the model's environment, which takes a few minutes.
+
+If you can't install it locally, use the Docker container below.
 
 [//]: # (When installing `napari-clemreg` on a Windows machine, the following error might appear:)
 
