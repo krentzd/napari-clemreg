@@ -1,23 +1,74 @@
 #!/usr/bin/env python3
 # coding: utf-8
 import json
-import sys
-import os.path
+from pathlib import Path
+
 import napari
-if ".." not in sys.path:
-    sys.path.insert(0,"..")
-from napari_clemreg.clemreg.widget_components import _create_json_file
 import numpy as np
 import pint
 from magicgui import magic_factory, widgets
 from napari.layers import Image, Shapes, Labels, Points
-from napari.utils.notifications import show_error
+from napari.utils.notifications import show_error, show_info
 from napari.qt.threading import GeneratorWorker
 from ..clemreg.on_init_specs import specs
 from ..clemreg._qt_layout import (
     extract_field_widget, group_into_collapsible, make_collapsible, refit_collapsible,
     wrap_in_scroll_area,
 )
+
+# The settings Save parameters writes and Parameters from JSON reads back.
+# Pixel sizes, the ROI's z-range and the layers belong to the images.
+SAVED_PARAMETERS = (
+    'registration_algorithm', 'em_segmentation_backend',
+    'log_sigma', 'log_threshold', 'filter_segmentation', 'filter_size_lower', 'filter_size_upper',
+    'point_cloud_sampling_frequency', 'registration_voxel_size', 'point_cloud_sigma',
+    'registration_max_iterations',
+    'warping_interpolation_order', 'warping_approximate_grid', 'warping_sub_division_factor',
+    'warping_output_resolution', 'visualise_intermediate_results', 'registration_direction',
+)
+
+
+def _save_parameters(path, settings):
+    """Write the saved parameters among `settings` (a name -> value dict) to
+    `path` as JSON, and say where. Shows an error and returns False if that
+    isn't possible."""
+    if path is None or Path(path).is_dir():
+        show_error('Choose a file to save the parameters to (Path to save parameters).')
+        return False
+    parameters = {name: settings[name] for name in SAVED_PARAMETERS}
+    path = Path(path).resolve()
+    try:
+        path.write_text(json.dumps(parameters, indent=4, ensure_ascii=False))
+    except OSError as err:
+        show_error(f"Couldn't save the parameters to {path}: {err}")
+        return False
+    show_info(f'Saved the parameters to {path}')
+    return True
+
+
+def _load_parameters(widget, path):
+    """Fill the widget's fields from a file written by Save parameters.
+    Settings the widget no longer has are ignored; if the file can't be
+    used, nothing changes."""
+    try:
+        parameters = json.loads(Path(path).read_text())
+        if not isinstance(parameters, dict):
+            raise ValueError('expected a JSON object')
+    except (OSError, ValueError) as err:
+        show_error(f"Couldn't read {path} as a JSON parameter file: {err}")
+        return
+    previous = {name: getattr(widget, name).value for name in SAVED_PARAMETERS}
+    for name in SAVED_PARAMETERS:
+        if name not in parameters:
+            continue
+        try:
+            getattr(widget, name).value = parameters[name]
+        except (ValueError, TypeError) as err:
+            for restored, value in previous.items():
+                getattr(widget, restored).value = value
+            show_error(f"Couldn't load the parameters in {path}: "
+                       f"{name} = {parameters[name]!r} isn't valid ({err}).")
+            return
 from ..clemreg.exceptions import ClemregError
 
 
@@ -264,7 +315,14 @@ def on_init(widget):
     widget.Fixed_Image.changed.connect(change_fixed_pixelsize)
     widget.z_min.changed.connect(change_z_max_from_z_min)
     widget.Mask_ROI.changed.connect(reveal_z_min_and_z_max)
+    def load_parameters(*_):
+        path = widget.load_json_file.value
+        if widget.params_from_json.value and path is not None and Path(path).is_file():
+            _load_parameters(widget, path)
+
     widget.params_from_json.changed.connect(toggle_json_widget)
+    widget.params_from_json.changed.connect(load_parameters)
+    widget.load_json_file.changed.connect(load_parameters)
     widget.filter_segmentation.changed.connect(toggle_filter_segmentation)
     widget.save_json.changed.connect(toggle_save_json)
     widget.registration_algorithm.changed.connect(show_bcpd_warping_settings)
@@ -496,6 +554,11 @@ def _wire_step_buttons(widget):
         if moving_image is None or fixed_image is None:
             show_error("WARNING: You have not inputted both a Moving_Image and Fixed_Image")
             return
+        # This step completes a registration, so it saves like Register does.
+        if widget.save_json.value:
+            settings = {name: getattr(widget, name).value for name in SAVED_PARAMETERS}
+            if not _save_parameters(widget.save_json_path.value, settings):
+                return
 
         def _done(result):
             warp_outputs, transformed = result
@@ -675,6 +738,8 @@ def make_run_registration(
     -------
 
     """
+    # First, before any other local name exists: Save parameters writes these.
+    arguments = dict(locals())
     import time
     from pathlib import Path
     from ..clemreg.log_segmentation import log_segmentation, filter_binary_segmentation
@@ -826,8 +891,8 @@ def make_run_registration(
     if not em_backend_ready(em_segmentation_backend):
         return
 
-    if save_json and not params_from_json:
-        _create_json_file(path_to_json=save_json_path)
+    if save_json and not _save_parameters(save_json_path, arguments):
+        return
 
     start_time = time.time()
 

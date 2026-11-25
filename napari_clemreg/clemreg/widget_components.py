@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 # coding: utf-8
-import json
 import os.path
 import napari
 import numpy as np
@@ -332,60 +331,3 @@ def _print_mobie_affine(transformed, registration_algorithm, working_pxlsz_nm,
           f'Transform > Registration - Enter Transformation, select {Moving_Image.name} as the moving '
           f'image, and paste:\n{format_mobie_affine(parameters)}\n')
     return parameters
-
-
-"""
-Helper functions
-"""
-def _create_json_file(path_to_json):
-    dictionary = {
-        "registration_algorithm": registration_algorithm,
-        "log_sigma": log_sigma,
-        "log_threshold": log_threshold,
-        "custom_z_zoom": custom_z_zoom,
-        "z_zoom_value": z_zoom_value,
-        "filter_segmentation": filter_segmentation,
-        "filter_size": filter_size,
-        "point_cloud_sampling_frequency": point_cloud_sampling_frequency,
-        "point_cloud_sigma": point_cloud_sigma,
-        "registration_voxel_size": registration_voxel_size,
-        "registration_max_iterations": registration_max_iterations,
-        "warping_interpolation_order": warping_interpolation_order,
-        "warping_approximate_grid": warping_approximate_grid,
-        "warping_sub_division_factor": warping_sub_division_factor
-    }
-
-    json_object = json.dumps(dictionary, indent=4)
-
-    if path_to_json == '':
-        path_to_json = 'parameters.json'
-
-    with open(path_to_json, "w") as outfile:
-        outfile.write(json_object)
-
-def load_from_json():
-    if params_from_json and load_json_file.is_file():
-        f = open(str(load_json_file))
-
-        data = json.load(f)
-        try:
-            registration_algorithm = data["registration_algorithm"]
-            log_sigma = data["log_sigma"]
-            log_threshold = data["log_threshold"]
-            custom_z_zoom = data["custom_z_zoom"],
-            z_zoom_value = ["z_zoom_value"],
-            filter_segmentation = ["filter_segmentation"],
-            filter_size = ["filter_size"],
-            point_cloud_sampling_frequency = data["point_cloud_sampling_frequency"]
-            point_cloud_sigma = data["point_cloud_sigma"]
-            registration_voxel_size = data["registration_voxel_size"]
-            registration_max_iterations = data["registration_max_iterations"]
-            warping_interpolation_order = data["warping_interpolation_order"]
-            warping_approximate_grid = data["warping_approximate_grid"]
-            warping_sub_division_factor = data["warping_sub_division_factor"]
-        except KeyError:
-            show_error("JSON file missing required param")
-            return
-    elif params_from_json and not load_json_file.is_file():
-        show_error("Load from JSON selected but no JSON file selected or file path isn't real")
-        return
