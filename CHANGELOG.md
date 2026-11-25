@@ -15,6 +15,7 @@ Changes since the version published in Nature Methods ([`v1.0.0-nature-methods`]
 - The TIFF reader reads pixel sizes with `bioio`, so they're found in TIFFs not written by ImageJ.
 - **Register** prints its total run time in the terminal.
 - A Docker image with napari and everything the default EM segmentation needs, and a pixi environment for running from source.
+- Rigid and Affine CPD registrations print the transform for [MoBIE](https://imagej.net/plugins/mobie) (`Transform > Registration - Enter Transformation`), in micrometres and including known offsets such as the sample data's crops. It's also stored in the warped layers' metadata (`mobie_affine`).
 
 ### Changed
 - **Requires Python 3.11 or newer** (previously 3.7+), and supports current napari releases.

@@ -223,6 +223,8 @@ def run_point_cloud_registration_and_warping(Moving_Points,
         transformed = Points(moving, **kwargs)
     else:
         transformed = Points(transformed)
+    mobie = _print_mobie_affine(transformed, registration_algorithm, Moving_Points, Fixed_Points,
+                                Moving_Image, Fixed_Image)
     # The working grid both point clouds (and hence `transformed`'s
     # affine) were computed in is isotropic at the EM z-pixel-size on all
     # three axes (see _make_isotropic/return_isotropic_image_list).
@@ -292,10 +294,43 @@ def run_point_cloud_registration_and_warping(Moving_Points,
             warp_output.data = resample_to_pixelsize(warp_output.data, working_pxlsz, target_pxlsz)
             warp_output.scale = scale
 
+    if mobie is not None:
+        for warp_output in warp_outputs:
+            warp_output.metadata['mobie_affine'] = mobie
+
     if benchmarking_mode:
         return warp_outputs, transformed, elapsed
     else:
         return warp_outputs, transformed
+
+
+def _layer_origin_um(layer, pxlsz_nm):
+    """Where `layer`'s first voxel lies, in µm (z, y, x): the origin recorded
+    in its metadata (e.g. by the sample loaders, for a crop of a file), plus
+    napari's `translate`. `pxlsz_nm` is its (z, xy) pixel size in nm."""
+    pixel_size_um = np.array([pxlsz_nm[0], pxlsz_nm[1], pxlsz_nm[1]]) / 1000
+    translate_voxels = np.asarray(layer.translate[-3:]) / np.asarray(layer.scale[-3:])
+    return np.asarray(layer.metadata.get('origin_um', (0, 0, 0))) + translate_voxels * pixel_size_um
+
+
+def _print_mobie_affine(transformed, registration_algorithm, Moving_Points, Fixed_Points,
+                        Moving_Image, Fixed_Image):
+    """Print a Rigid or Affine CPD registration as a MoBIE affine (µm), and
+    return its 12 numbers. BCPD is non-rigid, so it has none."""
+    from ..clemreg.mobie import format_mobie_affine, mobie_affine
+
+    if registration_algorithm not in ('Rigid CPD', 'Affine CPD'):
+        return None
+    working_pxlsz_nm = Fixed_Points.metadata['pxlsz'][0]
+    parameters = mobie_affine(transformed.affine.affine_matrix,
+                              working_pixel_size_um=working_pxlsz_nm / 1000,
+                              moving_origin_um=_layer_origin_um(Moving_Image, Moving_Points.metadata['pxlsz']),
+                              fixed_origin_um=_layer_origin_um(Fixed_Image, Fixed_Points.metadata['pxlsz']))
+    print(f'\nMoBIE affine (µm), {Moving_Image.name} onto {Fixed_Image.name}. In MoBIE, right-click > '
+          f'Transform > Registration - Enter Transformation, select {Moving_Image.name} as the moving '
+          f'image, and paste:\n{format_mobie_affine(parameters)}\n')
+    return parameters
+
 
 """
 Helper functions
