@@ -21,10 +21,9 @@ It covers:
 - two linked FM channels (compared by name, because linked layers come
   back as a set with no fixed order)
 
-EM segmentation isn't covered: it needs MitoNet. The EM -> FM registration
-direction isn't in the baseline because it always crashes (#68); a strict
-xfail below pins that. Once #68 is fixed, add an EM -> FM case to
-REGISTRATION_CASES and regenerate.
+- the EM -> FM registration direction
+
+EM segmentation isn't covered: it needs MitoNet.
 
 To regenerate the saved values after a change that is *meant* to alter
 results, run this module directly and say why in the PR:
@@ -66,6 +65,8 @@ REGISTRATION_CASES = [
     ('bcpd', 'BCPD', 'Native LM resolution', FM_TO_EM, False),
     ('rigid_em_grid', 'Rigid CPD', 'EM pixel grid (legacy)', FM_TO_EM, False),
     ('rigid_linked', 'Rigid CPD', 'Native LM resolution', FM_TO_EM, True),
+    ('rigid_em_to_fm', 'Rigid CPD', 'Native LM resolution', EM_TO_FM, False),
+    ('bcpd_em_to_fm', 'BCPD', 'Native LM resolution', EM_TO_FM, False),
 ]
 
 
@@ -169,25 +170,6 @@ def test_output_matches_baseline(outputs, baseline, key):
     else:
         scale = max(float(np.abs(expected).max()), 1.0) if expected.size else 1.0
         np.testing.assert_allclose(actual, expected, rtol=1e-5, atol=1e-5 * scale)
-
-
-@pytest.mark.xfail(strict=True, raises=KeyError, reason="#68: EM -> FM direction crashes with KeyError: 'output_shape'")
-def test_em_to_fm_direction_runs():
-    from napari_clemreg.clemreg import widget_components as wc
-
-    ureg = pint.UnitRegistry()
-    em = _blobs(CENTERS, seed=0)
-    fm = _blobs([tuple(c + o for c, o in zip(center, FM_OFFSET)) for center in CENTERS], seed=1) * 1000
-    moving_points, fixed_points = wc.run_point_cloud_sampling(
-        Labels((fm > 300).astype(np.uint8)), Labels((em > 0.3).astype(np.uint8)),
-        _quantity(ureg, FM_PIXEL_SIZE['xy']), _quantity(ureg, FM_PIXEL_SIZE['z']),
-        _quantity(ureg, EM_PIXEL_SIZE['xy']), _quantity(ureg, EM_PIXEL_SIZE['z']), **SAMPLING)
-
-    warped, __ = wc.run_point_cloud_registration_and_warping(
-        moving_points, fixed_points, Image(fm, name='FM'), Image(em, name='EM'), 'Rigid CPD',
-        registration_direction=EM_TO_FM, **WARPING)
-
-    assert warped[0].name == 'EM_warped'
 
 
 if __name__ == '__main__':
