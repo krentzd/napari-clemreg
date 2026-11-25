@@ -10,9 +10,11 @@ FROM ubuntu:22.04 AS clemreg
 
 ARG DEBIAN_FRONTEND=noninteractive
 
-# Libraries Qt, vispy and open3d need (https://github.com/napari/napari/blob/main/dockerfile).
+# Libraries Qt, vispy and open3d need (https://github.com/napari/napari/blob/main/dockerfile),
+# and a C++ compiler: probreg has no Python 3.11 wheel, so pip builds it.
 RUN apt-get update && \
     apt-get install -qqy --no-install-recommends \
+        build-essential \
         ca-certificates \
         git \
         wget \
