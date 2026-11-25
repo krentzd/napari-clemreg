@@ -32,14 +32,17 @@ FM_NAMES = ["FM_TGN46", "FM_Lysotracker", "FM_Mitotracker", "FM_Hoechst"]
 # Distinct per axis, so a z/y/x mix-up shows.
 EM_S2_SCALE = (0.03, 0.02, 0.01)
 FM_S0_SCALE = (0.13, 0.035, 0.034)
+# The archive's downsampled levels have a half-voxel translation.
+EM_S2_TRANSLATION = (0.005, 0.004, 0.003)
 
 
 def _write_ome_zarr(path, levels, dtype, unit, axes):
     """Write an NGFF 0.4 image. `levels` maps each level path to
-    (shape, z chunk depth, scale); every voxel's value is its z index."""
+    (shape, z chunk depth, scale[, translation]); every voxel's value is
+    its z index."""
     group = zarr.open_group(str(path), mode="w", zarr_format=2)
     datasets = []
-    for name, (shape, z_chunk, scale) in levels.items():
+    for name, (shape, z_chunk, scale, *translation) in levels.items():
         z = np.arange(shape[0]).reshape(-1, 1, 1)
         group.create_array(name, data=np.broadcast_to(z, shape).astype(dtype), chunks=(z_chunk, *shape[1:]),
                            chunk_key_encoding={"name": "v2", "separator": "/"},
@@ -47,7 +50,9 @@ def _write_ome_zarr(path, levels, dtype, unit, axes):
         # As in the archive's copy; zarr warns about it.
         zarray = Path(path, name, ".zarray")
         zarray.write_text(json.dumps({**json.loads(zarray.read_text()), "filters": []}))
-        datasets.append({"path": name, "coordinateTransformations": [{"type": "scale", "scale": list(scale)}]})
+        transforms = [{"type": "scale", "scale": list(scale)}]
+        transforms += [{"type": "translation", "translation": list(t)} for t in translation]
+        datasets.append({"path": name, "coordinateTransformations": transforms})
     group.attrs["multiscales"] = [{
         "version": "0.4",
         "axes": [{"type": "space", "name": axis, "unit": unit} for axis in axes],
@@ -66,7 +71,7 @@ def local_urls(tmp_path):
         urls = {"em": _write_ome_zarr(root / "em.ome.zarr", {
             "s0": ((4, 4, 4), 4, (0.0075, 0.005, 0.0025)),
             "s1": ((4, 4, 4), 4, (0.015, 0.01, 0.005)),
-            "s2": ((150, 4, 4), 56, EM_S2_SCALE),
+            "s2": ((150, 4, 4), 56, EM_S2_SCALE, EM_S2_TRANSLATION),
         }, np.uint8, unit, axes)}
         for channel in ("golgi", "lyso", "mito", "dapi"):
             urls[channel] = _write_ome_zarr(root / f"{channel}.ome.zarr", {
@@ -184,6 +189,18 @@ def test_ome_zarr_sample_pixel_sizes_come_from_the_file(local_urls):
     assert get_pixelsize(layers["EM"][1]["metadata"]) == (*EM_S2_SCALE[::-1], "micron")
     for name in FM_NAMES:
         assert get_pixelsize(layers[name][1]["metadata"]) == (*FM_S0_SCALE[::-1], "micron")
+
+
+def test_ome_zarr_sample_records_where_each_layer_starts(local_urls):
+    """MoBIE places each file at its own coordinates, so the affine printed
+    for it needs where each cropped layer starts, in µm (z, y, x): the crop
+    plus the level's translation."""
+    layers = _layers(local_urls())
+
+    assert layers["EM"][1]["metadata"]["origin_um"] == pytest.approx(
+        (EM_S2_TRANSLATION[0] + 40 * EM_S2_SCALE[0], *EM_S2_TRANSLATION[1:]))
+    for name in FM_NAMES:
+        assert layers[name][1]["metadata"]["origin_um"] == pytest.approx((7 * FM_S0_SCALE[0], 0, 0))
 
 
 def test_ome_zarr_sample_accepts_micrometer_units(local_urls):

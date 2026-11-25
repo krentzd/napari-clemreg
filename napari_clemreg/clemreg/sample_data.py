@@ -27,6 +27,9 @@ POOCH = pooch.create(
     },
 )
 
+# The FM layers of both samples start at this slice of the FM stack.
+_FM_Z_START = 7
+
 # The FM channels, in the Zenodo hyperstack's channel order:
 # (key in OME_ZARR_URLS, layer name, colormap).
 _FM_CHANNELS = [
@@ -56,7 +59,10 @@ def make_sample_data():
     # ImageDescription's slices=28/channels=4). No axis reordering is needed;
     # index channel on axis 1 and the z-range on axis 0.
 
-    fm_metadata = {'ImageDescription': 'ImageJ=1.53t\nimages=112\nchannels=4\nslices=28\nhyperstack=true\nmode=grayscale\nunit=micron\nspacing=0.13\nloop=false\nmin=0.0\nmax=65535.0\n',
+    # 'origin_um': where each layer starts in its file, for the MoBIE affine.
+    # The FM layers skip the first slices (0.13 µm apart); the EM is whole.
+    fm_metadata = {'origin_um': (_FM_Z_START * 0.13, 0.0, 0.0),
+                   'ImageDescription': 'ImageJ=1.53t\nimages=112\nchannels=4\nslices=28\nhyperstack=true\nmode=grayscale\nunit=micron\nspacing=0.13\nloop=false\nmin=0.0\nmax=65535.0\n',
                    'XResolution': 28.349506,
                    'YResolution': 28.349506}
     # 'path': the EM layer is the whole file, unmodified, so record where it is.
@@ -65,12 +71,13 @@ def make_sample_data():
     # opened from disk (its sample loader sets the same key for this file).
     # The FM layers are single channels sliced out of a 4-channel hyperstack,
     # so the file's path would be wrong for them; they get none.
-    em_metadata = {'ImageDescription': '\nunit=micron\nspacing=0.02\n',
+    em_metadata = {'origin_um': (0.0, 0.0, 0.0),
+                   'ImageDescription': '\nunit=micron\nspacing=0.02\n',
                    'XResolution': 50,
                    'YResolution': 50,
                    'path': em_path}
 
-    fm_layers = [(fm[7:, channel], {'blending': 'additive', 'colormap': colormap, 'name': name, 'metadata': fm_metadata})
+    fm_layers = [(fm[_FM_Z_START:, channel], {'blending': 'additive', 'colormap': colormap, 'name': name, 'metadata': fm_metadata})
                  for channel, (_, name, colormap) in enumerate(_FM_CHANNELS)]
     return [(em, {'name': 'EM', 'metadata': em_metadata}), *fm_layers]
 
@@ -91,7 +98,7 @@ OME_ZARR_URLS = {
 # level s2 (20 nm), slices 40-145. Its contrast is stretched relative to
 # the archive's copy, so the EM pixels differ; the FM pixels are identical.
 _EM_LEVEL, _EM_Z = "s2", slice(40, 146)
-_FM_LEVEL, _FM_Z = "s0", slice(7, None)
+_FM_LEVEL, _FM_Z = "s0", slice(_FM_Z_START, None)
 _MICROMETRE_UNITS = {"micron", "micrometer"}
 # Without these, a host that drops packets freezes napari for aiohttp's
 # default 5 minutes.
@@ -118,10 +125,18 @@ def _pixel_sizes(url, attrs, level):
     return PhysicalPixelSizes(Z=z_size, Y=y_size, X=x_size)
 
 
+def _translation(attrs, level):
+    """`level`'s translation in µm (z, y, x), or zeros if it has none."""
+    datasets = {dataset["path"]: dataset for dataset in attrs["multiscales"][0]["datasets"]}
+    transforms = {t["type"]: t for t in datasets[level]["coordinateTransformations"]}
+    return tuple(transforms.get("translation", {}).get("translation", (0.0, 0.0, 0.0)))
+
+
 def _open_ome_zarr_level(url, level, z):
     """Open one level of an NGFF 0.4 (z, y, x) image, cropped to `z`, as a
     lazy dask array in native byte order. Returns it with its pixel sizes
-    in µm. Reads no pixels."""
+    in µm, and where its first voxel lies in the file, in µm (z, y, x).
+    Reads no pixels."""
     is_remote = url.startswith(("http://", "https://"))
     storage_options = {"client_kwargs": {"timeout": _HTTP_TIMEOUT}} if is_remote else None
     try:
@@ -130,6 +145,7 @@ def _open_ome_zarr_level(url, level, z):
             warnings.filterwarnings("ignore", message="Found an empty list of filters")
             group = zarr.open_group(url, mode="r", storage_options=storage_options)
             pixel_sizes = _pixel_sizes(url, group.attrs, level)
+            z_offset, y_offset, x_offset = _translation(group.attrs, level)
             array = group[level]
         # zarr reads a missing chunk as zeros, which would give black layers,
         # so check one exists. `strict` raises server errors instead of
@@ -148,7 +164,8 @@ def _open_ome_zarr_level(url, level, z):
     data = da.from_zarr(array)[z]
     if not data.dtype.isnative:
         data = data.astype(data.dtype.newbyteorder("="))
-    return data, pixel_sizes
+    origin_um = (z_offset + z.start * pixel_sizes.Z, y_offset, x_offset)
+    return data, pixel_sizes, origin_um
 
 
 def make_ome_zarr_sample_data(urls=None):
@@ -164,10 +181,11 @@ def make_ome_zarr_sample_data(urls=None):
     urls = OME_ZARR_URLS if urls is None else urls
 
     def layer(key, level, z, **kwargs):
-        data, pixel_sizes = _open_ome_zarr_level(urls[key], level, z)
+        data, pixel_sizes, origin_um = _open_ome_zarr_level(urls[key], level, z)
         # No 'path' key, unlike the Zenodo EM layer: there's no local file.
         metadata = {
             "physical_pixel_sizes": pixel_sizes,
+            "origin_um": origin_um,
             "ome_zarr": {"url": urls[key], "level": level, "z_slice": [z.start, z.stop]},
         }
         return data, {**kwargs, "metadata": metadata}

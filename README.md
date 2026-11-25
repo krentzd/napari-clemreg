@@ -151,6 +151,11 @@ on the layer and then selecting `Link Layers.`
 3. When you finally go to run CLEM-reg ensure that for the **Fluorescence Microscopy Image (FM)**
 you select the LM layer that contains mitochondria.
 
+### Opening the result in MoBIE
+For **Rigid CPD** and **Affine CPD**, CLEM-Reg prints the registration to the terminal as an affine transform for [MoBIE](https://imagej.net/plugins/mobie), in micrometres. To use it, open the FM and EM images in MoBIE, right-click, choose `Transform > Registration - Enter Transformation`, select the FM image as the moving image and paste the 12 numbers. BCPD is non-rigid, so it has no affine transform.
+
+The transform already includes the offsets CLEM-Reg knows about, such as the slices the sample data leaves out. If you cropped your images before opening them in napari, open the same cropped images in MoBIE.
+
 ## How to cite
 ```bibtex
 @article{krentzel2025clem,

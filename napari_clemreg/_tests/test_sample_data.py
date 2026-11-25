@@ -54,8 +54,11 @@ def test_make_sample_data_returns_expected_layers():
     assert Path(em_kwargs["metadata"]["path"]).name == "em_20nm_z_40_145.tif"
     assert Path(em_kwargs["metadata"]["path"]).is_file()
 
+    # Where each layer starts in its file, for the MoBIE affine: the FM
+    # layers skip the first 7 of 28 slices (0.13 µm apart).
+    assert em_kwargs["metadata"]["origin_um"] == (0.0, 0.0, 0.0)
     for data, kwargs in result[1:]:
         assert data.ndim == 3
-        assert "metadata" in kwargs
+        assert kwargs["metadata"]["origin_um"] == pytest.approx((7 * 0.13, 0.0, 0.0))
         # FM layers are channel slices of a hyperstack: its path would be wrong.
         assert "path" not in kwargs["metadata"]
