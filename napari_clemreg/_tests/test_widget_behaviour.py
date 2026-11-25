@@ -45,8 +45,13 @@ def _labels_array():
     return labels
 
 
-def _points(name):
-    return Points(np.random.default_rng(0).uniform(0, 30, size=(20, 3)), name=name)
+def _points(name, **kwargs):
+    return Points(np.random.default_rng(0).uniform(0, 30, size=(20, 3)), name=name, **kwargs)
+
+
+# Rigid and Affine CPD return the moving points with the registration as
+# the layer's affine.
+REGISTRATION = np.array([[1.0, 0, 0, 2], [0, 0, -1, 30], [0, 1, 0, -5], [0, 0, 0, 1]])
 
 
 class Pipeline:
@@ -94,7 +99,7 @@ class Pipeline:
     def run_point_cloud_registration_and_warping(self, **kwargs):
         self.calls['run_point_cloud_registration_and_warping'].append(kwargs)
         warped = Image(np.zeros(SHAPE), name=kwargs['Moving_Image'].name + '_warped')
-        return [warped], _points('transformed_points')
+        return [warped], _points('transformed_points', affine=REGISTRATION)
 
 
 @pytest.fixture
@@ -287,6 +292,17 @@ def test_register_runs_every_step_and_adds_warped_image(qtbot, viewer, pipeline,
     assert pipeline.calls['run_point_cloud_sampling'][0]['voxel_size'] == 42
     warp_kwargs = pipeline.calls['run_point_cloud_registration_and_warping'][0]
     assert warp_kwargs['warping_output_resolution'] == 'EM pixel grid (legacy)'
+
+
+def test_register_shows_the_transformed_points_where_they_were_registered(qtbot, viewer, pipeline, images):
+    """The layer Register adds keeps the registration, so the transformed
+    points overlay the fixed points."""
+    gui = _run_registration(images)
+
+    gui()
+
+    _wait_for_layer(qtbot, viewer, 'transformed_points')
+    np.testing.assert_allclose(viewer.layers['transformed_points'].affine.affine_matrix, REGISTRATION)
 
 
 def test_register_reports_em_failure_and_does_not_register(qtbot, viewer, pipeline, errors, images):

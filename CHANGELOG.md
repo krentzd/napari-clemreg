@@ -28,6 +28,7 @@ Changes since the version published in Nature Methods ([`v1.0.0-nature-methods`]
 - The **Prediction Across Three Axis** option.
 
 ### Fixed
+- With **Visualise Intermediate Results** on, **Register** showed Rigid and Affine CPD's `transformed_points` where the moving points were, instead of on the fixed points: it dropped the layer's affine, which holds the registration.
 - The non-rigid (BCPD) warp's affine part was computed incorrectly.
 - FM volumes were stretched by a few percent in z when resampled, which shifted warped objects high in the stack.
 - **Register** hung silently when a segmentation step failed. It now reports the error.
