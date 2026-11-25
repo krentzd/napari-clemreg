@@ -28,6 +28,7 @@ Changes since the version published in Nature Methods ([`v1.0.0-nature-methods`]
 - The **Prediction Across Three Axis** option.
 
 ### Fixed
+- **Registration direction → EM → FM** crashed with `KeyError: 'output_shape'`. It now warps the EM onto the FM: with **Native LM resolution** onto the FM image's own grid, with **EM pixel grid** at the EM's pixel size over the FM's extent.
 - The non-rigid (BCPD) warp's affine part was computed incorrectly.
 - FM volumes were stretched by a few percent in z when resampled, which shifted warped objects high in the stack.
 - **Register** hung silently when a segmentation step failed. It now reports the error.
