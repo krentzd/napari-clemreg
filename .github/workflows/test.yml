@@ -5,10 +5,12 @@ on:
     branches:
       - main
       - modernisation
+      - version-2
   pull_request:
     branches:
       - main
       - modernisation
+      - version-2
 
 jobs:
   test:

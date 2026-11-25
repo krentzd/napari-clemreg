@@ -1,0 +1,54 @@
+# Pixi workspace for running and developing napari-clemreg.
+#
+#   pixi run napari          # launch napari with the plugin (editable install)
+#   pixi run -e test test    # run the test suite
+#
+# The plugin itself is still packaged with setup.cfg; this file only
+# describes the environment. napari-clemreg is installed from this
+# checkout in editable mode, so code changes show up on the next launch.
+# After changing setup.cfg's dependencies, run `pixi update napari-clemreg`;
+# plain `pixi install` doesn't notice them.
+[workspace]
+name = "napari-clemreg"
+description = "Run and develop the napari-clemreg plugin."
+channels = ["conda-forge", "bioconda"]
+# Apple-silicon macOS and Linux only (no Intel macOS or Windows yet).
+# Linux needs glibc 2.31: open3d >= 0.19 only ships manylinux_2_31 wheels,
+# and with pixi's default (glibc 2.28) Linux would get open3d 0.18.
+platforms = [
+    "osx-arm64",
+    { name = "linux-64-glibc-2-31", platform = "linux-64", glibc = "2.31" },
+]
+
+[dependencies]
+# setup.cfg's python_requires is >=3.11; 3.11 is what the suite is verified on.
+python = "3.11.*"
+# Qt binding for napari. Not a plugin dependency (napari-dev rule 1), so it
+# lives here, not in setup.cfg.
+pyqt6 = ">=6.7,<7"
+# MitoNet (Segment-Flow), the default EM segmentation backend, runs
+# through Nextflow, which needs a JDK around 17-21. It also needs `conda`
+# on PATH to build the model's own environment; use your existing
+# Miniconda/Miniforge install for that.
+nextflow = "*"
+openjdk = "21.*"
+
+[pypi-dependencies]
+# The `empanada` extra is left out: it can't install on Python 3.11 (#5).
+napari-clemreg = { path = ".", editable = true, extras = ["segment-flow"] }
+
+[feature.test.pypi-dependencies]
+pytest = "*"
+pytest-cov = "*"
+pytest-qt = "*"
+
+[feature.test.target.linux-64.pypi-dependencies]
+pytest-xvfb = "*"
+
+[feature.test.tasks]
+test = "pytest -v --color=yes --cov=napari_clemreg --cov-report=xml"
+test-slow = "pytest -v --color=yes --run-slow"
+
+[environments]
+default = { solve-group = "default" }
+test = { features = ["test"], solve-group = "default" }

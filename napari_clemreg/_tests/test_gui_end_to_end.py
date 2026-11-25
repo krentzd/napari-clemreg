@@ -1,13 +1,15 @@
 """End-to-end run of Run Registration on the real sample data (slow).
 
-Loads the Zenodo benchmark sample and the precomputed EM mask, then uses
+Loads the benchmark sample (from Zenodo, and streamed as OME-Zarr from the
+BioImage Archive) and the precomputed EM mask, then uses
 the "Run this step" buttons to run FM segmentation, point cloud
 sampling, and registration and warping, with the real pipeline. EM
 segmentation is skipped by using the precomputed mask, so no MitoNet,
 Segment-Flow or GPU is needed.
 
-Takes about 2 minutes and about 2.5 GB of memory. The first run
-downloads about 600 MB of sample data (cached by pooch afterwards).
+Takes about 2-3 minutes per sample, peaking at about 8 GB of memory. The first
+run downloads about 600 MB of Zenodo data (cached by pooch afterwards);
+the OME-Zarr sample is streamed again on every run.
 Marked slow: run with `pytest --run-slow`. The weekly `slow-tests` CI
 workflow does this.
 """
@@ -16,7 +18,11 @@ import pytest
 from napari.components import ViewerModel
 from napari.layers import Layer
 
-from napari_clemreg.clemreg.sample_data import make_em_mask_sample_data, make_sample_data
+from napari_clemreg.clemreg.sample_data import (
+    make_em_mask_sample_data,
+    make_ome_zarr_sample_data,
+    make_sample_data,
+)
 from napari_clemreg.widgets.run_registration import make_run_registration
 
 STEP_TIMEOUT_MS = 15 * 60 * 1000
@@ -35,8 +41,10 @@ def viewer(qtbot, monkeypatch):
 
 
 @pytest.mark.slow
-def test_run_registration_step_by_step_on_sample_data(qtbot, viewer):
-    for data, kwargs, *layer_type in make_sample_data() + make_em_mask_sample_data():
+@pytest.mark.parametrize('make_benchmark', [make_sample_data, make_ome_zarr_sample_data],
+                         ids=['zenodo', 'ome-zarr'])
+def test_run_registration_step_by_step_on_sample_data(qtbot, viewer, make_benchmark):
+    for data, kwargs, *layer_type in make_benchmark() + make_em_mask_sample_data():
         viewer.add_layer(Layer.create(data, kwargs, layer_type[0] if layer_type else 'image'))
     em = viewer.layers['EM']
 

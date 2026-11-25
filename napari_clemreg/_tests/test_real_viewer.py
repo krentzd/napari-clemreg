@@ -31,8 +31,8 @@ def _widget_display_names():
 
 
 def _magicgui(dock_content):
-    """The magicgui widget inside one of this plugin's QScrollArea wrappers."""
-    return dock_content.widget()._magic_widget
+    """The magicgui widget inside one of this plugin's scroll-area wrappers."""
+    return dock_content.gui
 
 
 @pytest.mark.parametrize('display_name', _widget_display_names())
@@ -53,8 +53,10 @@ def test_run_registration_sees_viewer_layers(make_napari_viewer):
     __, content = viewer.window.add_plugin_dock_widget('napari-clemreg', 'Run registration')
     gui = _magicgui(content)
 
+    # No manual gui.reset_choices(): napari has to refresh the dropdowns
+    # itself. It only does that if the docked widget has reset_choices,
+    # which the QScrollArea wrapper lost until it forwarded it.
     fm = viewer.add_image(np.zeros((4, 16, 16)), name='FM')
-    gui.reset_choices()
 
     assert em in gui.Fixed_Image.choices
     assert fm in gui.Moving_Image.choices

@@ -77,3 +77,7 @@ target/
 
 # written by setuptools_scm
 */_version.py
+
+# pixi environments
+.pixi/*
+!.pixi/config.toml

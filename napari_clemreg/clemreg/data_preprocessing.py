@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # coding: utf-8
 from napari.layers import Image
+from ._arrays import as_array
 from ._napari_compat import get_linked_layers
 from scipy import ndimage
 import numpy as np
@@ -250,7 +251,7 @@ def return_isotropic_image_list(input_image: Image,
 
     for image in images:
         print(f'Resampling {image.name}')
-        image_iso = _make_isotropic(image.data,
+        image_iso = _make_isotropic(as_array(image),
                                     pxlsz_lm,
                                     pxlsz_em,
                                     inverse=kwargs.get('inverse', False),
@@ -295,14 +296,14 @@ def make_isotropic(input_image: Image,
         images = get_linked_layers(input_image)
         images.add(input_image)
         for image in images:
-            image.data = _make_isotropic(image.data,
+            image.data = _make_isotropic(as_array(image),
                                                pxlsz_lm,
                                                pxlsz_em,
                                                inverse=kwargs.get('inverse', False),
                                                ref_frame=kwargs.get('ref_frame', 'LM'),
                                                order=kwargs.get('order', 0))
     else:
-        input_image.data = _make_isotropic(input_image.data,
+        input_image.data = _make_isotropic(as_array(input_image),
                                            pxlsz_lm,
                                            pxlsz_em,
                                            inverse=kwargs.get('inverse', False),

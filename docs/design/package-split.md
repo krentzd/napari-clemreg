@@ -74,6 +74,7 @@ What's different from the 2026-09-21 plan:
 The core raises its own exceptions, all subclasses of `ClemregError(Exception)`:
 
 - `NoSegmentationError` replaces the `'No segmentation'` string that the core returns today. That string was the cause of #25 and #50.
+- `BackendNotInstalledError` says an EM segmentation backend's optional packages are missing (`missing` lists them), before anything is imported. The plugin's adapter turns it into a message about the widget's dropdown.
 - `SegmentFlowNotAvailable` and `SegmentFlowRunError` are re-based onto `ClemregError`. At the moment they subclass `RuntimeError`, which superqt's generator workers treat as a deleted worker and swallow, causing the Register hang in #53. The plugin's adapters must also stop any other `RuntimeError` reaching a generator worker (#53).
 
 The core never shows GUI messages. `show_info` calls become `logging` calls, and progress is reported through an optional `progress` callback, which the plugin connects to napari's progress bars.

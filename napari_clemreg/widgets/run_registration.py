@@ -222,6 +222,29 @@ def on_init(widget):
         widget.fixed_image_pixelsize_xy.value = str(fixed_xy_pixelsize) + str(unit)
         widget.fixed_image_pixelsize_z.value = str(fixed_z_pixelsize) + str(unit)
 
+    def keep_moving_and_fixed_apart():
+        # Both dropdowns default to the first image layer, so with the
+        # sample data both would be EM. Point Moving at another layer.
+        fixed = widget.Fixed_Image.value
+        if fixed is None or widget.Moving_Image.value is not fixed:
+            return
+        others = [layer for layer in widget.Moving_Image.choices if layer is not fixed]
+        if others:
+            widget.Moving_Image.value = others[0]
+
+    def images_apart():
+        moving, fixed = widget.Moving_Image.value, widget.Fixed_Image.value
+        return moving is not None and fixed is not None and moving is not fixed
+
+    def on_layer_inserted(event):
+        # Usually the widget is docked before the data is opened. Stops once
+        # the two differ, so later layers never override a user's choice.
+        widget.Fixed_Image.reset_choices()
+        widget.Moving_Image.reset_choices()
+        keep_moving_and_fixed_apart()
+        if images_apart():
+            viewer.layers.events.inserted.disconnect(on_layer_inserted)
+
     widget.z_max.changed.connect(change_z_min)
     widget.Moving_Image.changed.connect(change_z_max)
     widget.Moving_Image.changed.connect(change_moving_pixelsize)
@@ -240,10 +263,16 @@ def on_init(widget):
     # layer. Confirmed directly: this is exactly what was happening with
     # the EM layer, which starts pre-selected as the only available
     # choice. Seed both fields once here to match what's already shown.
+    keep_moving_and_fixed_apart()
     if widget.Moving_Image.value is not None:
         change_moving_pixelsize(widget.Moving_Image.value)
     if widget.Fixed_Image.value is not None:
         change_fixed_pixelsize(widget.Fixed_Image.value)
+
+    from napari.viewer import current_viewer
+    viewer = current_viewer()
+    if viewer is not None and not images_apart():
+        viewer.layers.events.inserted.connect(on_layer_inserted)
 
     _wire_step_buttons(widget)
 
@@ -308,15 +337,18 @@ def _wire_step_buttons(widget):
         viewer.layers.events.inserted.connect(_highlight_if_pipeline_output)
 
     def _run_em_segmentation_step():
-        from ..clemreg.widget_components import run_fixed_segmentation
+        from ..clemreg.widget_components import em_backend_ready, run_fixed_segmentation
 
         fixed_image = widget.Fixed_Image.value
+        backend = widget.em_segmentation_backend.value
         if fixed_image is None:
             show_error("WARNING: You have not inputted a Fixed Image")
             return
         if len(fixed_image.data.shape) != 3:
             show_error("WARNING: Your Fixed_Image must be 3D, your current input has a shape of {}".format(
                 fixed_image.data.shape))
+            return
+        if not em_backend_ready(backend):
             return
 
         def _done(layer):
@@ -336,8 +368,7 @@ def _wire_step_buttons(widget):
             'errored': _with_button_reset(button, _errored),
         })
         def _thread():
-            seg_volume = run_fixed_segmentation(Fixed_Image=fixed_image,
-                                                em_segmentation_backend=widget.em_segmentation_backend.value)
+            seg_volume = run_fixed_segmentation(Fixed_Image=fixed_image, em_segmentation_backend=backend)
             return Labels(seg_volume.astype(np.int64), name='EM_segmentation', metadata=fixed_image.metadata)
 
         _thread()
@@ -774,6 +805,11 @@ def make_run_registration(
             show_error("WARNING: Your mask size exceeds the size of the image.")
             return
 
+    from ..clemreg.widget_components import em_backend_ready
+
+    if not em_backend_ready(em_segmentation_backend):
+        return
+
     if save_json and not params_from_json:
         _create_json_file(path_to_json=save_json_path)
 
@@ -872,4 +908,4 @@ def make_run_registration_widget(napari_viewer: 'napari.viewer.Viewer' = None):
     # magicgui's registered napari.viewer.Viewer type provider) resolve
     # it, exactly as it already did before this widget was wrapped.
     gui = make_run_registration()
-    return wrap_in_scroll_area(gui.native)
+    return wrap_in_scroll_area(gui)

@@ -25,6 +25,15 @@ def pytest_collection_modifyitems(config, items):
 
 
 @pytest.fixture
+def empanada_missing(monkeypatch):
+    """Make the MitoNet (empanada-dl) backend look uninstalled, whatever
+    this environment has."""
+    from napari_clemreg.clemreg import em_segmentation
+
+    monkeypatch.setattr(em_segmentation, '_EMPANADA_PACKAGES', {'_clemreg_no_such_module': '_clemreg_no_such_module'})
+
+
+@pytest.fixture
 def seed():
     """A fixed seed for tests that need reproducible randomness."""
     value = 0

@@ -4,22 +4,29 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Remotes
 
-This is a personal fork (`martlj/napari-clemreg`) of `krentzd/napari-clemreg`. `origin` is the fork; `upstream` is the original. Push work to `origin`; only pull from `upstream` to sync in changes from the original project.
+Work happens in the original repository, `krentzd/napari-clemreg` (remote `upstream`), on its `version-2` branch (since 2026-11-25). Push branches and open PRs there. `origin` is the fork `martlj/napari-clemreg`, where the modernisation work began; its issue tracker and earlier PRs stay there. In PRs on `krentzd/napari-clemreg`, refer to the fork's issues as `martlj/napari-clemreg#N`, since a bare `#N` means that repository's own issue.
 
 ## Branching
 
-`modernisation` is the fork's default branch (since 2026-09-23) and its integration branch. `main` is a clean mirror of upstream and is not the default: never commit fork-specific work there. Modernisation work happens on `modernisation` via one branch per issue, e.g. `6-mobie-export`, merged in via PR. See [CONTRIBUTING.md](CONTRIBUTING.md) for the full workflow before starting new work.
+`version-2` on `krentzd/napari-clemreg` is the integration branch. It started from the fork's `modernisation` branch (134db6f). `main` there is the published version and stays the default branch: don't commit this work to it. Work happens on one branch per issue, e.g. `6-mobie-export`, merged into `version-2` via PR. See [CONTRIBUTING.md](CONTRIBUTING.md) for the full workflow before starting new work.
 
 ## Commands
 
-Install the plugin locally (Python 3.9 recommended, per README):
+The maintainer's day-to-day setup is pixi (`pixi.toml`; Python 3.11, PyQt6, Nextflow and JDK 21 from conda-forge/bioconda, napari-clemreg editable with the `segment-flow` extra; Apple-silicon macOS and Linux with glibc 2.31 or newer):
 
 ```
-conda create -n clemreg_env python=3.9
-conda activate clemreg_env
-pip install "napari[all]"
-pip install -e .
+pixi run napari             # default environment
+pixi run -e test test       # test environment: pytest, pytest-qt, pytest-cov
+pixi run -e test test-slow  # also the slow tests (see below)
 ```
+
+Elsewhere, any Python 3.11+ environment works:
+
+```
+pip install -e ".[segment-flow]" pyqt6
+```
+
+Code changes need only a napari restart. After editing `setup.cfg`'s dependencies, run `pixi update napari-clemreg`: plain `pixi install` doesn't notice `setup.cfg` changes (checked). Commit `pixi.lock` with `pixi.toml` changes. Segment-Flow still uses the system `conda` (Miniconda) to build model environments.
 
 Run the test suite (uses tox, matching CI's per-Python/per-OS matrix):
 
@@ -45,13 +52,13 @@ Widget tests: `test_dock_widget.py` checks that every widget and dock widget bui
 **macOS: torch + napari can segfault on import** (two OpenMP runtimes loaded in one process — torch's bundled `libiomp5` vs. the conda-forge `libomp` napari's stack pulls in). `napari_clemreg/_tests/conftest.py` sets `KMP_DUPLICATE_LIB_OK=TRUE` and `OMP_NUM_THREADS=1` before those imports, so pytest runs are unaffected; if you import `napari_clemreg` (or `torch` then `napari`) directly in a script or REPL, set those env vars first. No-op on Linux CI.
 
 Two kinds of tests are opt-in:
-- **Slow** (`@pytest.mark.slow`, run with `--run-slow`): real sample-data downloads, reader checks on the real Zenodo files, and `test_gui_end_to_end.py`, which runs Run Registration step by step on the real sample data (about 2 minutes, about 2.5 GB of memory). CI's per-push `tests` workflow skips them. The `slow tests` workflow runs them after each merge into `modernisation` (except docs-only changes), weekly, and on demand (Actions tab → "slow tests" → Run workflow). With tox, pass the flag through: `tox -- --run-slow`.
+- **Slow** (`@pytest.mark.slow`, run with `--run-slow`): real sample-data downloads, reader checks on the real Zenodo files, and `test_gui_end_to_end.py`, which runs Run Registration step by step on the real sample data, once from the Zenodo TIFFs and once streamed as OME-Zarr from the BioImage Archive (about 2–3 minutes each, peaking at about 8 GB of memory; the OME-Zarr run needs the network every time, since nothing is cached). CI's per-push `tests` workflow skips them. The `slow tests` workflow runs them after each merge into `version-2` (except docs-only changes) and on demand (Actions tab → "slow tests" → Run workflow, choosing `version-2`). Its weekly schedule only runs from the default branch, so it's inactive until this work reaches `main`. With tox, pass the flag through: `tox -- --run-slow`.
 - **Real Viewer** (`test_real_viewer.py`, runs only with `CLEMREG_REAL_VIEWER=1`): opens each dock widget in a real napari Viewer through the npe2 manifest. CI sets the variable on Linux. Locally it works with the native macOS Qt platform but segfaults under `QT_QPA_PLATFORM=offscreen`, which is why it's opt-in.
 
-There are pre-existing local conda envs for this repo:
-- `clemreg_env` (python 3.9) — matches the **pre-#3** `setup.cfg` pins the repo actually ships and installs cleanly today (has `napari-clemreg` installed editable from this checkout via `pip install -e . --no-deps`). Use this for day-to-day work and for the §0 characterisation baseline, since `setup.cfg`'s `python_requires` now says `>=3.11` but a real `pip install` still can't resolve on 3.11 until #5 (`empanada-dl`) is unblocked.
-- `clemreg-py311-verify` (python 3.11) — built to empirically verify the #3 (Python 3.11) dependency bump. Has every `setup.cfg` dependency installed at its latest available version **except `empanada-dl`** (deliberately excluded, since it's the #5 blocker) — `napari-clemreg` is installed editable via `pip install -e . --no-deps` here too. The full test suite passes here (30 passed, 1 xfailed) as of the #3 work. Reuse this env rather than rebuilding it for further Python 3.11 verification; extend it if you need to test a newer pin.
-- `napari-clemreg-311` and `napari-clemreg` (no suffix) — both broken (numpy/scikit-image ABI mismatches from earlier, less careful upgrade attempts). Not worth fixing; superseded by `clemreg-py311-verify`.
+There are older local conda envs for this repo. Use pixi (above) for day-to-day work; these are kept only for reference:
+- `clemreg_env` (python 3.9) — matches the **pre-#3** `setup.cfg` pins, and was used for the §0 characterisation baseline. It can't run the current code: `python_requires` is `>=3.11`, and `zarr >= 3.1` needs Python 3.11.
+- `clemreg-py311-verify` (python 3.11) — built to verify the #3 (Python 3.11) dependency bump, with every `setup.cfg` dependency except `empanada-dl`. It predates the `zarr`, `dask`, `fsspec[http]` and `aiohttp` dependencies, so extend it before using it.
+- `napari-clemreg-311` and `napari-clemreg` (no suffix) — both broken (numpy/scikit-image ABI mismatches from earlier, less careful upgrade attempts). Not worth fixing; superseded by pixi.
 
 **macOS: open3d's wheel needs `libusb`** (`brew install libusb`) or it fails to import with a `dlopen`/`Library not loaded` error. Not a napari-clemreg issue — open3d's compiled binary links against it unconditionally.
 
@@ -98,11 +105,11 @@ Keep [CHANGELOG.md](CHANGELOG.md) and [ROADMAP.md](ROADMAP.md) in step with ever
 - ROADMAP: remove or rewrite anything the PR finishes, and add follow-ups, open decisions or bugs it uncovers, with issue links. The ROADMAP only lists what's still to do. What's done belongs in the CHANGELOG.
 - If the PR closes an issue, or finishes a sub-issue of #7, check that the issue (and the [package split design](docs/design/package-split.md), if relevant) agrees.
 
-**After a merge:** when you're told a PR has merged, and at the start of a session before other work, cross-check. List the PRs merged into `modernisation` since the newest PR linked in the CHANGELOG (`gh pr list -R martlj/napari-clemreg --base modernisation --state merged`). Also look for ROADMAP items those PRs finished and issues they fixed that are still open. Fix any gaps in one catch-up PR. Don't merge it, as with any other PR.
+**After a merge:** when you're told a PR has merged, and at the start of a session before other work, cross-check. List the PRs merged into `version-2` since the newest PR linked in the CHANGELOG (`gh pr list -R krentzd/napari-clemreg --base version-2 --state merged`). Also look for ROADMAP items those PRs finished and issues they fixed that are still open. Fix any gaps in one catch-up PR. Don't merge it, as with any other PR.
 
 ## Closing issues
 
-`modernisation` is the default branch, so GitHub closes an issue when a merged PR's description (or a commit message) contains a closing keyword before its number: *close(s/d)*, *fix(es/ed)*, *resolve(s/d)*. It matches the keyword **anywhere**, including prose, negations and future tense. "doesn't fully fix #53" closed #53 (PR #67), and "(fixes #47)", written about planned work, closed #47 while it was still broken (PR #62; reopened).
+PRs into `version-2` don't close issues on merge, because it isn't the default branch: close them by hand (step 2 below). Closing keywords still matter, because they fire once `version-2` merges into `main`, and they did on the fork, where `modernisation` was the default. GitHub closes an issue when a PR merged into the default branch (or a commit message) contains a closing keyword before its number: *close(s/d)*, *fix(es/ed)*, *resolve(s/d)*. It matches the keyword **anywhere**, including prose, negations and future tense. "doesn't fully fix #53" closed #53 (PR #67), and "(fixes #47)", written about planned work, closed #47 while it was still broken (PR #62; reopened).
 
 - **Only** write a closing keyword before an issue number when the PR completely resolves that issue, e.g. `Fixes #50` in the summary.
 - Everywhere else, refer to issues without one: "part of #58", "for #47", "see #53", "#47 is planned for phase 1". Avoid "fix"/"close"/"resolve" directly before `#N` in any wording, and check the PR description for this before opening it.

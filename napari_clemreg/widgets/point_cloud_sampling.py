@@ -145,4 +145,4 @@ def point_cloud_sampling_dock_widget(napari_viewer: 'napari.viewer.Viewer' = Non
     # not runtime values, so call with no args and let its own
     # Viewer-typed-parameter auto-injection resolve the current viewer.
     gui = point_cloud_sampling_widget()
-    return wrap_in_scroll_area(gui.native)
+    return wrap_in_scroll_area(gui)

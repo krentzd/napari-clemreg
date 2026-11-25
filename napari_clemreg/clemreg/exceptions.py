@@ -21,3 +21,14 @@ class NoSegmentationError(ClemregError):
     Replaces the 'No segmentation' string the adapters used to return,
     which callers had to remember to check for (#25, #50).
     """
+
+
+class BackendNotInstalledError(ClemregError):
+    """Raised when the chosen EM segmentation backend's optional packages
+    (e.g. torch and empanada-dl, the `empanada` extra) aren't installed.
+    `missing` lists them.
+    """
+
+    def __init__(self, message: str, missing=()):
+        super().__init__(message)
+        self.missing = list(missing)
