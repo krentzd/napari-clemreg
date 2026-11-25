@@ -1,8 +1,7 @@
 """The core modules must not import napari or Qt (package split boundary).
 
-See docs/design/package-split.md ("Keeping the boundary in place"). The
-modules in CORE_MODULES become the napari-free `clemreg` package in
-phase 2 of the split (#59). Until then they live in
+The modules in CORE_MODULES are meant to become a napari-free `clemreg`
+package. Until then they live in
 `napari_clemreg/clemreg/`, and `napari_clemreg/__init__.py` imports the
 widgets, so importing any of them normally pulls napari in regardless.
 This test therefore imports them the way the future package will be

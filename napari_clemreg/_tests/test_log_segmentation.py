@@ -1,4 +1,4 @@
-"""Characterisation tests (modernisation plan §0.1.2).
+"""Characterisation tests.
 
 Unlike the deterministic unit tests, these pin what the pipeline does
 *today* on a fixed synthetic input, with tolerance, as the regression

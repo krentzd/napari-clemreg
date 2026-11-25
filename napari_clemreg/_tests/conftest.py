@@ -49,9 +49,8 @@ def rng():
 
 def make_blob_volume(shape, centers, radius, rng, noise_sigma=0.02):
     """Synthetic volume with Gaussian blobs at known centres, for
-    characterisation tests (§0.2 of the modernisation plan) -- generated
-    procedurally rather than committed as binary test data, so it stays
-    reproducible (seeded) without adding a fixture file to the repo.
+    characterisation tests. Generated (seeded) rather than committed as
+    binary test data.
     """
     vol = np.zeros(shape, dtype=np.float64)
     zz, yy, xx = np.meshgrid(*[np.arange(s) for s in shape], indexing='ij')

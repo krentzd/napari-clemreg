@@ -81,3 +81,7 @@ target/
 # pixi environments
 .pixi/*
 !.pixi/config.toml
+
+# Local working notes for Claude Code (not part of the project)
+CLAUDE.md
+.claude/

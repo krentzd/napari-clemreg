@@ -45,7 +45,7 @@ def _polygon_from(crop_mask):
     """(N, 2) (y, x) vertices from an array, or from a Shapes-like object."""
     if isinstance(crop_mask, np.ndarray):
         return crop_mask[:, -2:]
-    # Shapes-like (backwards compatibility, decision D4): one shape, with
+    # Shapes-like (backwards compatibility): one shape, with
     # vertices in `.data`.
     assert len(crop_mask.data) == 1, 'Crop mask must contain one shape'
     return np.asarray(crop_mask.data[0])[:, -2:]

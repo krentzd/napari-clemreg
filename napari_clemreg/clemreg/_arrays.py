@@ -7,8 +7,7 @@ def as_array(obj):
     """Return `obj` (an array, or anything with a `.data` array such as a
     napari layer) as a numpy array.
 
-    Layers are accepted so copies of the published batch notebook keep
-    working (decision D4 in docs/design/package-split.md). Dask arrays are
+    Layers are accepted for backwards compatibility. Dask arrays are
     computed with `callbacks=()`: the default swaps dask's process-wide
     callbacks, which races napari's slicing cache when this runs in a
     worker thread.

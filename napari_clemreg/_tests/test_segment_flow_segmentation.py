@@ -1,5 +1,4 @@
-"""Segment-Flow EM segmentation integration (modernisation plan §4a,
-issue #5 tighter-integration option).
+"""Segment-Flow EM segmentation integration.
 
 Most of this is testable without Nextflow: prerequisite checking and the
 revision pin. The real end-to-end test needs an actual Nextflow + Conda

@@ -56,8 +56,7 @@ def test_make_warp_identity_transform_is_unchanged(rng):
     """Identity transform => image unchanged (within interpolation tolerance).
 
     When from_points == to_points, _make_warp should be the identity
-    everywhere -- see the modernisation plan's testing-foundation
-    invariants, docs/napari-clemreg-modernisation-plan.md §0.1.1.
+    everywhere.
 
     Regression test for a bug (#9) where the TPS right-hand side zeroed
     only 3 of the 4 rows needed to satisfy the affine-orthogonality

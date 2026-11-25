@@ -126,7 +126,7 @@ def _open_ome_zarr_level(url, level, z):
     storage_options = {"client_kwargs": {"timeout": _HTTP_TIMEOUT}} if is_remote else None
     try:
         with warnings.catch_warnings():
-            # The archive's copy stores "filters": [] (see ROADMAP).
+            # The archive's copy stores "filters": [], which zarr warns about.
             warnings.filterwarnings("ignore", message="Found an empty list of filters")
             group = zarr.open_group(url, mode="r", storage_options=storage_options)
             pixel_sizes = _pixel_sizes(url, group.attrs, level)
@@ -181,10 +181,8 @@ def make_ome_zarr_sample_data(urls=None):
 def make_em_mask_sample_data():
     """A precomputed EM segmentation mask (mitochondria instances) matching
     the EM volume in ``make_sample_data``, for exercising the pipeline from
-    Point Cloud Sampling onward without a GPU or the bundled MitoNet/empanada
-    widget (see issue #12). Bundled directly in the package (~1MB) rather
-    than fetched, since it's small and was already sitting unused in
-    notebooks/data/em_mask.tif.
+    Point Cloud Sampling onward without running EM segmentation. Bundled
+    in the package (~1 MB) rather than downloaded.
     """
     path = importlib.resources.files('napari_clemreg.clemreg.data') / 'em_mask.tif'
     mask = tifffile.imread(path)
