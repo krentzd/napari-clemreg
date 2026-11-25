@@ -25,34 +25,17 @@ The code as published in Nature Methods is tagged [`v1.0.0-nature-methods`](http
 ## Installation
 ### Local Installation
 
-To install `napari-clemreg` it is recommended to create a fresh [conda] environment with Python 3.11 or newer:
+This version of `napari-clemreg` isn't on PyPI yet, so install it from source with [pixi](https://pixi.sh/), which sets up Python, napari and everything else it needs (Apple-silicon Macs and Linux):
 
 ```
-conda create -n clemreg_env python=3.11
-```
-Now we must activate the conda environment.
-
-``` 
-conda activate clemreg_env
+git clone -b version-2 https://github.com/krentzd/napari-clemreg.git
+cd napari-clemreg
+pixi run napari
 ```
 
-Next, install `napari` with the following command via [pip]: 
+EM segmentation runs MitoNet through [AI OnDemand](https://franciscrickinstitute.github.io/aiod_docs/)'s Segment-Flow pipeline. The pixi environment includes Nextflow and a JDK, but it also needs [Conda](https://docs.conda.io/) (e.g. Miniconda or Miniforge) on your system. The first run sets up the model's environment, which takes a few minutes.
 
-```
-pip install "napari[all]"
-```
-
-Then, `napari-clemreg` can be installed with:
-```
-pip install "napari-clemreg[segment-flow]"
-```
-
-EM segmentation runs MitoNet through [AI OnDemand](https://franciscrickinstitute.github.io/aiod_docs/)'s Segment-Flow pipeline, which also needs [Nextflow](https://www.nextflow.io/), [Conda](https://docs.conda.io/) and a JDK (version 17–21) on your system. The first run sets up the model's environment, which takes a few minutes.
-
-Finally, to run napari run the following.
-```
-napari
-```
+On other systems, use the Docker container below.
 
 [//]: # (When installing `napari-clemreg` on a Windows machine, the following error might appear:)
 
@@ -64,11 +47,9 @@ napari
 
 [//]: # (Ensure that [Visual Studios C++ 14.00]&#40;https://visualstudio.microsoft.com/thank-you-downloading-visual-studio/?sku=BuildTools&rel=16&#41; is installed)
 
-[![Watch the video](docs%2Fimages%2Fclemreg_installation_thumbnail.png)](https://youtu.be/ZN68q9OU59s)
-
 
 ### Docker Container
-If you would like to run `napari-clemreg` in a docker container instead of installing it as above, build the image from a clone of this repository and run it:
+If you would like to run `napari-clemreg` in a docker container instead of installing it as above, build the image in the clone from above and run it:
 
 ```
 docker build -t clemreg --target clemreg -f clemreg.dockerfile .
