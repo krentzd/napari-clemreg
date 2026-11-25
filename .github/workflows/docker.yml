@@ -1,0 +1,46 @@
+name: docker
+
+# Builds both Docker targets and checks that the plugin and the Segment-Flow
+# tools work inside the image.
+
+on:
+  pull_request:
+    paths:
+      - clemreg.dockerfile
+      - .dockerignore
+      - setup.cfg
+      - .github/workflows/docker.yml
+  push:
+    branches:
+      - main
+      - version-2
+    paths:
+      - clemreg.dockerfile
+      - .dockerignore
+      - setup.cfg
+      - .github/workflows/docker.yml
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build the clemreg image
+        run: docker build -t clemreg --target clemreg -f clemreg.dockerfile .
+
+      - name: Check the plugin and Segment-Flow tools inside the image
+        run: |
+          docker run --rm -e QT_QPA_PLATFORM=offscreen clemreg bash -c '
+            set -e
+            npe2 validate napari-clemreg --imports
+            python -c "import napari_clemreg, aiod_registry; print(napari_clemreg.__version__)"
+            nextflow -version
+            java -version
+            conda --version
+          '
+
+      - name: Build the clemreg_xpra image
+        run: docker build -t clemreg_xpra --target clemreg_xpra -f clemreg.dockerfile .

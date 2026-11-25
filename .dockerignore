@@ -1,0 +1,10 @@
+.git
+.pixi
+.tox
+build
+dist
+*.egg-info
+**/__pycache__
+CLAUDE.md
+.claude
+*.ipynb
