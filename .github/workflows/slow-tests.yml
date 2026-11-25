@@ -3,10 +3,9 @@ name: slow tests
 # Runs the tests marked `slow`, which the per-push `tests` workflow skips:
 # real sample-data downloads, reader checks against the real Zenodo files,
 # and the end-to-end Run Registration test (test_gui_end_to_end.py).
-# Runs after every merge into `version-2` or the fork's `modernisation`
-# (skipping docs-only changes), weekly, and on demand from the Actions tab.
-# `schedule` only runs from the default branch, so on krentzd/napari-clemreg
-# (default `main`) the weekly run starts once this work reaches `main`.
+# Runs after every merge into `main` or `version-2` (skipping docs-only
+# changes), weekly (from the default branch), and on demand from the
+# Actions tab.
 #
 # The real Segment-Flow run (test_segment_flow_segmentation.py) still
 # skips here, since the runner has no Nextflow. Run that one by hand
@@ -15,7 +14,7 @@ name: slow tests
 on:
   push:
     branches:
-      - modernisation
+      - main
       - version-2
     paths-ignore:
       - "**.md"
