@@ -22,7 +22,7 @@ volume electron microscopy.
 
 ### EM segmentation (MitoNet): current status
 
-CLEM-Reg segments mitochondria in the EM volume with the [MitoNet](https://github.com/volume-em/empanada) model. On this fork's `modernisation` branch it can run MitoNet in two ways, chosen with the **EM Segmentation Backend** dropdown:
+CLEM-Reg segments mitochondria in the EM volume with the [MitoNet](https://github.com/volume-em/empanada) model. On the `version-2` branch it can run MitoNet in two ways, chosen with the **EM Segmentation Backend** dropdown:
 
 | Backend | Status |
 |---|---|
@@ -72,17 +72,17 @@ This is `open3d` (a dependency), which needs both the [Microsoft Visual C++ Redi
 
 [![Watch the video](docs%2Fimages%2Fclemreg_installation_thumbnail.png)](https://youtu.be/ZN68q9OU59s)
 
-### Development Installation (this fork)
+### Development Installation (version 2)
 
-This fork (`martlj/napari-clemreg`) is being actively modernised; see [docs/napari-clemreg-modernisation-plan.md](docs/napari-clemreg-modernisation-plan.md) for the full plan. The work is on the `modernisation` branch, which is the fork's default branch, so a plain clone gets it:
+napari-clemreg is being actively modernised; see [docs/napari-clemreg-modernisation-plan.md](docs/napari-clemreg-modernisation-plan.md) for the full plan. The work is on the `version-2` branch of this repository (it began on the fork `martlj/napari-clemreg`):
 ```
-git clone https://github.com/martlj/napari-clemreg.git
+git clone -b version-2 https://github.com/krentzd/napari-clemreg.git
 cd napari-clemreg
 ```
-If you cloned before 2026-09-23, your checkout is probably on `main`, which doesn't have this work. Switch branches rather than cloning again, because cloning into an existing checkout creates a confusing nested copy:
+In an existing checkout, switch branches rather than cloning again, because cloning into an existing checkout creates a confusing nested copy:
 ```
-git fetch origin
-git checkout modernisation
+git fetch https://github.com/krentzd/napari-clemreg.git version-2:version-2
+git checkout version-2
 ```
 
 This branch requires **Python 3.11+**. The base install no longer includes `empanada-dl`, so it resolves on Python 3.11. Install it with the `segment-flow` extra to get the default EM segmentation backend (it also needs Nextflow, Conda and a JDK; see [EM segmentation with MitoNet](#em-segmentation-with-mitonet)).

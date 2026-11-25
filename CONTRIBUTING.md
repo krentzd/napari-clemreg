@@ -2,57 +2,44 @@
 
 ## Branching strategy
 
-This fork (`martlj/napari-clemreg`) is doing substantial modernisation work (see
+The modernisation work (see
 [docs/napari-clemreg-modernisation-plan.md](docs/napari-clemreg-modernisation-plan.md))
-while the upstream owner is away. To keep that work reviewable and `main` safe
-to sync from upstream later, branches follow a simple structure:
+began on the fork `martlj/napari-clemreg`, on its `modernisation` branch.
+Since 2026-11-25 it continues in this repository, `krentzd/napari-clemreg`:
 
-- **`main`** — a clean mirror of upstream (`krentzd/napari-clemreg`). Nothing
-  fork-specific is merged here. Keeping it untouched means `git fetch upstream
-  && git merge upstream/main` stays a clean fast-forward whenever upstream
-  moves, and it's what an eventual PR back to upstream would be based on.
-  Don't merge `modernisation` into it until the upstream PR has been accepted
-  or the upstream owner agrees otherwise (plan §7). At that point `main` can
-  become the default branch again.
-- **`modernisation`** — the integration branch for this fork's own work, and
-  the fork's **default branch** (since 2026-09-23). Everything from the plan
-  lands here first, via per-issue branches (below), not by committing to it
-  directly once an issue has its own branch. Because it's the default, a plain
-  `git clone` gets it, new PRs target it, scheduled and manual CI workflows
-  run from it, and "Fixes #N" in a merged PR closes the issue automatically.
-  (Before the switch, issues fixed by merged PRs had to be closed by hand.)
-  GitHub matches those keywords anywhere in the description, including
-  "doesn't fix #N", so only use them for issues the PR completely resolves
-  (see [CLAUDE.md § Closing issues](CLAUDE.md#closing-issues)).
-- **One branch per issue or theme**, branched off `modernisation`, named
+- **`main`** — the published version and the default branch. This work
+  doesn't go into it until it's ready to release.
+- **`version-2`** — the integration branch. It started from the fork's
+  `modernisation` branch. Everything lands here via per-issue branches
+  (below), not by committing to it directly.
+- **One branch per issue or theme**, branched off `version-2`, named
   `<issue-number>-<short-slug>` (e.g. `6-mobie-export`, `12-em-mask-sample-data`).
-  Open a PR into `modernisation` when the work is ready — a real PR gives a
+  Open a PR into `version-2` when the work is ready — a real PR gives a
   diff boundary, a description, CI results, and a revert point that a growing
   pile of commits on one branch doesn't.
 
-**When Claude Code is doing the work**: it opens the branch, commits, pushes,
-and opens the PR, but does **not** merge it — merging is left to a human
-review, on request (2026-09-22).
+Most existing issues are on the fork. In PRs here, refer to them as
+`martlj/napari-clemreg#N`: a bare `#N` means this repository's issue. Merging
+into `version-2` doesn't close issues, because it isn't the default branch, so
+close them by hand. Still only write a closing keyword ("Fixes ...") before an
+issue the PR completely resolves: it fires once `version-2` merges into `main`
+(see [CLAUDE.md § Closing issues](CLAUDE.md#closing-issues)).
 
-Rationale for the split: `modernisation` started as a single branch named for
-one specific task (splitting out the `clemreg` core, §6) and accumulated
-unrelated work instead — testing, packaging, CI, bug fixes, docs. The name no
-longer matched the content, and there was no PR boundary to review any of it
-in reviewable chunks. Renamed and restructured 2026-09-22.
+**When Claude Code is doing the work**: it opens the branch, commits, pushes,
+and opens the PR, but does **not** merge it unless asked — merging is left to
+a human review (2026-09-22).
 
 ### Workflow
 
 1. Pick up a GitHub issue.
-2. `git checkout modernisation && git pull`
+2. `git checkout version-2 && git pull upstream version-2`
 3. `git checkout -b <issue-number>-<short-slug>`
-4. Do the work, commit (see commit message convention below), push.
-5. Open a PR into `modernisation`.
-6. A human reviews and merges once CI is green (Claude Code opens PRs but does not merge them — see above).
+4. Do the work, commit (see commit message convention below), push to `upstream`.
+5. Open a PR into `version-2`.
+6. A human reviews and merges once CI is green.
 7. Delete the branch after merging.
 
-When `modernisation` itself is ready to go back upstream (or once the
-upstream owner is back to review), it becomes a single PR from
-`modernisation` into `krentzd/napari-clemreg`'s `main` — see
+When `version-2` is ready to release, it becomes a single PR into `main` — see
 [docs/napari-clemreg-modernisation-plan.md §7](docs/napari-clemreg-modernisation-plan.md#7-repository--release-strategy)
 for the full repository/release plan.
 
@@ -62,7 +49,7 @@ for the full repository/release plan.
 `type(scope): short imperative description`, types: `feat`, `fix`, `docs`,
 `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`.
 
-## Before merging a branch into `modernisation`
+## Before merging a branch into `version-2`
 
 - Run the test suite (`pixi run -e test test`, `tox`, or `pytest` against an
   active env — see [CLAUDE.md](CLAUDE.md) for which local env to use and why).

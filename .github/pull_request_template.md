@@ -1,6 +1,6 @@
 ## Summary
 
-<!-- What changed and why. Link the issue: "Fixes #N" closes it on merge, so use it ONLY for issues this PR completely resolves. GitHub matches the keyword anywhere, including "doesn't fix #N" or "will fix #N". Otherwise write "part of #N" or "see #N". -->
+<!-- What changed and why. Link the issue: "Fixes #N" closes it on merge, so use it ONLY for issues this PR completely resolves. GitHub matches the keyword anywhere, including "doesn't fix #N" or "will fix #N". Otherwise write "part of #N" or "see #N". Issues on the fork are `martlj/napari-clemreg#N`. -->
 
 ## Checklist
 
