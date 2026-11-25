@@ -1,11 +1,8 @@
-"""Pipeline output baseline: the outputs must not change during the package split.
+"""Pipeline output baseline: refactoring must not change the outputs.
 
-Phase 1 of the package split (#58, docs/design/package-split.md) rewrites
-how the pipeline handles units, resampling and layers, but must not
-change any results. This module runs the pipeline through the four
-`widget_components.run_*` adapters, whose names and signatures phase 1
-keeps, on a small synthetic dataset, and compares every output with
-values saved in `data/pipeline_baseline.npz`.
+Runs the pipeline through the four `widget_components.run_*` adapters on a
+small synthetic dataset, and compares every output with values saved in
+`data/pipeline_baseline.npz`.
 
 The pipeline is deterministic (checked across separate processes), so
 the tolerances are tight. They are not zero, because floating-point

@@ -37,7 +37,7 @@ def test_make_matrix_from_rigid_params_is_homogeneous():
     np.testing.assert_allclose(mat[3], [0.0, 0.0, 0.0, 1.0])
 
 
-# Characterisation tests (modernisation plan §0.1.2): apply a *known*
+# Characterisation tests: apply a *known*
 # transform to a synthetic point cloud and assert CPD recovers it. This is
 # the cleanest available oracle for the registration step -- no golden file
 # needed, and it exercises the real open3d/probreg dependency chain that's

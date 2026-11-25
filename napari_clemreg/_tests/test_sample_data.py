@@ -1,5 +1,4 @@
-"""Sample-data caching (modernisation plan §8.1, issue #11) and the
-bundled EM mask sample data (§8.2, issue #12).
+"""Sample-data caching and the bundled EM mask sample data.
 
 The fast tests below just check the pooch registry is well-formed and
 the bundled mask loads -- no network. The Zenodo end-to-end test

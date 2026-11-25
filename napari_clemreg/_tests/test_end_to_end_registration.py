@@ -1,4 +1,4 @@
-"""End-to-end characterisation test (modernisation plan §0.1.2 / §0.1.3).
+"""End-to-end characterisation test.
 
 Exercises the full segment -> sample -> register -> warp pipeline on a
 synthetic dataset with a *known* ground-truth transform between the two

@@ -4,8 +4,6 @@
 here instead of the private import. `get_linked_layers` has no public
 equivalent, so it stays a private import -- kept behind this module so
 there's a single place to patch if napari moves or removes it.
-
-See docs/napari-clemreg-modernisation-plan.md §2.1.
 """
 from napari.experimental import link_layers
 from napari.layers.utils._link_layers import get_linked_layers

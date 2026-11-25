@@ -1,5 +1,4 @@
-"""Smoke test for the napari private-API isolation layer (modernisation
-plan §2.1). If napari ever moves or removes get_linked_layers (no public
+"""Smoke test for the napari private-API isolation layer. If napari ever moves or removes get_linked_layers (no public
 equivalent exists), this is the one place expected to break, so it gets
 its own explicit test rather than relying on it being exercised
 incidentally elsewhere.

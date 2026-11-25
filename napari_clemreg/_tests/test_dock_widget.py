@@ -1,4 +1,4 @@
-"""Widget / integration smoke tests (modernisation plan §0.1.3).
+"""Widget / integration smoke tests.
 
 These build the magicgui widgets and the npe2 manifest, but stop short of
 `napari.viewer.Viewer()` (the `make_napari_viewer` fixture from napari's
@@ -55,9 +55,8 @@ def test_dock_widget_factory_builds_scroll_area(qapp):
 
 
 def test_pixelsize_quantity_edit_fields_build(qapp):
-    """The pint-quantity pixel-size fields are the item the modernisation
-    plan (§2.2) flags as most likely to break on a magicgui upgrade.
-    """
+    """The pint-quantity pixel-size fields are the most likely to break on a
+    magicgui upgrade."""
     widget = make_run_registration()
     for name in [
         'moving_image_pixelsize_xy',
