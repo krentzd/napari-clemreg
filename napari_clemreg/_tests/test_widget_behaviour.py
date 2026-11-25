@@ -524,7 +524,7 @@ def test_register_loads_parameters_from_json(qtbot, viewer, pipeline, images, tm
 
     gui()
 
-    qtbot.waitUntil(lambda: bool(pipeline.calls['run_moving_segmentation']), timeout=TIMEOUT_MS)
+    _wait_for_layer(qtbot, viewer, 'FM_warped')  # let Register finish before teardown
     assert pipeline.calls['run_moving_segmentation'][0]['log_sigma'] == 7.0
 
 
