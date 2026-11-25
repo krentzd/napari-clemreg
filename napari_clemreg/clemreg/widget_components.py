@@ -167,7 +167,9 @@ def run_point_cloud_sampling(Moving_Segmentation,
         # this is a real, previously-unexercised API break, not a typo).
         border_color='black',
         size=5,
-        metadata={'pxlsz': pxlsz_moving}
+        # Both clouds record their working grid's shape: it's the warp's
+        # output shape for whichever is fixed (EM → FM makes the FM fixed).
+        metadata={'pxlsz': pxlsz_moving, 'output_shape': moving_seg.shape}
     )
 
     fixed_points_kwargs = dict(
@@ -204,6 +206,11 @@ def run_point_cloud_registration_and_warping(Moving_Points,
     )
     from ..clemreg._napari_compat import get_linked_layers
 
+    # Before any swap, Moving is the FM and Fixed the EM. Both point clouds
+    # are in the same working grid, isotropic at the EM z-pixel-size (see
+    # run_point_cloud_sampling), whichever direction is registered.
+    fm_pxlsz, em_pxlsz = Moving_Points.metadata['pxlsz'], Fixed_Points.metadata['pxlsz']
+    working_pxlsz = em_pxlsz[0]
     if registration_direction == u'EM \u2192 FM':
         Fixed_Points, Moving_Points = Moving_Points, Fixed_Points
         Fixed_Image, Moving_Image = Moving_Image, Fixed_Image
@@ -223,17 +230,12 @@ def run_point_cloud_registration_and_warping(Moving_Points,
         transformed = Points(moving, **kwargs)
     else:
         transformed = Points(transformed)
-    mobie = _print_mobie_affine(transformed, registration_algorithm, Moving_Points, Fixed_Points,
-                                Moving_Image, Fixed_Image)
-    # The working grid both point clouds (and hence `transformed`'s
-    # affine) were computed in is isotropic at the EM z-pixel-size on all
-    # three axes (see _make_isotropic/return_isotropic_image_list).
-    working_pxlsz = Fixed_Points.metadata['pxlsz'][0]
-    if warping_output_resolution == 'EM pixel grid (legacy)':
-        target_pxlsz = Fixed_Points.metadata['pxlsz']
-    else:
-        target_pxlsz = Moving_Points.metadata['pxlsz']
+    mobie = _print_mobie_affine(transformed, registration_algorithm, working_pxlsz,
+                                Moving_Points, Fixed_Points, Moving_Image, Fixed_Image)
+    # The output's pixel size follows the option's name in both directions.
+    target_pxlsz = em_pxlsz if warping_output_resolution == 'EM pixel grid (legacy)' else fm_pxlsz
 
+    # Relative to the fixed image's pixels, so the output overlays it.
     scale = (target_pxlsz[0] / Fixed_Points.metadata['pxlsz'][0],
             target_pxlsz[1] / Fixed_Points.metadata['pxlsz'][1],
             target_pxlsz[1] / Fixed_Points.metadata['pxlsz'][1])
@@ -278,7 +280,7 @@ def run_point_cloud_registration_and_warping(Moving_Points,
         # Make images isotropic for linked layers
         moving_image_list = return_isotropic_image_list(input_image=Moving_Image,
                                                         pxlsz_lm=Moving_Points.metadata['pxlsz'],
-                                                        pxlsz_em=Fixed_Points.metadata['pxlsz'])
+                                                        pxlsz_em=(working_pxlsz, working_pxlsz))
         print('Returned isotropic images')
         warp_outputs = warp_image_volume_from_list(moving_image_list=moving_image_list,
                                                    output_shape=Fixed_Points.metadata['output_shape'],
@@ -313,15 +315,15 @@ def _layer_origin_um(layer, pxlsz_nm):
     return np.asarray(layer.metadata.get('origin_um', (0, 0, 0))) + translate_voxels * pixel_size_um
 
 
-def _print_mobie_affine(transformed, registration_algorithm, Moving_Points, Fixed_Points,
-                        Moving_Image, Fixed_Image):
+def _print_mobie_affine(transformed, registration_algorithm, working_pxlsz_nm,
+                        Moving_Points, Fixed_Points, Moving_Image, Fixed_Image):
     """Print a Rigid or Affine CPD registration as a MoBIE affine (µm), and
-    return its 12 numbers. BCPD is non-rigid, so it has none."""
+    return its 12 numbers. BCPD is non-rigid, so it has none.
+    `working_pxlsz_nm` is the working grid's voxel size."""
     from ..clemreg.mobie import format_mobie_affine, mobie_affine
 
     if registration_algorithm not in ('Rigid CPD', 'Affine CPD'):
         return None
-    working_pxlsz_nm = Fixed_Points.metadata['pxlsz'][0]
     parameters = mobie_affine(transformed.affine.affine_matrix,
                               working_pixel_size_um=working_pxlsz_nm / 1000,
                               moving_origin_um=_layer_origin_um(Moving_Image, Moving_Points.metadata['pxlsz']),

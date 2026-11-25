@@ -141,8 +141,8 @@ def test_native_resolution_warp_puts_fm_objects_where_they_are(algorithm, tolera
     assert max(errors) < tolerance
 
 
-def _register_with_origins(algorithm, fm_origin_um, em_origin_um):
-    """Register FM onto EM, each drawn as if cropped at its origin, so in
+def _register_with_origins(algorithm, fm_origin_um, em_origin_um, direction='FM → EM'):
+    """Register FM and EM, each drawn as if cropped at its origin, so in
     MoBIE's coordinates the two are related by the identity."""
     import pint
     from napari.layers import Image, Labels
@@ -166,10 +166,19 @@ def _register_with_origins(algorithm, fm_origin_um, em_origin_um):
         moving_points, fixed_points,
         Image(fm.astype(np.float32), name='FM', metadata={'origin_um': fm_origin_um}),
         Image(em.astype(np.float32), name='EM', metadata={'origin_um': em_origin_um}),
-        algorithm, registration_direction='FM → EM',
+        algorithm, registration_direction=direction,
         warping_output_resolution='Native LM resolution', registration_max_iterations=50,
         warping_interpolation_order=1, warping_approximate_grid=5, warping_sub_division_factor=1)
     return warped
+
+
+def _assert_mobie_affine_keeps_balls_in_place(parameters):
+    """The matrix puts each ball where it is in MoBIE's coordinates. Ignoring
+    the offsets would miss by 200-400 nm; registration itself gets ~15 nm."""
+    matrix = np.reshape(parameters, (3, 4))
+    centres_xyz = np.asarray(PHYSICAL_CENTRES)[:, ::-1]
+    mapped = centres_xyz @ matrix[:, :3].T + matrix[:, 3]
+    assert np.linalg.norm(mapped - centres_xyz, axis=1).max() < 0.025  # µm
 
 
 @pytest.mark.parametrize('algorithm', ['Rigid CPD', 'Affine CPD'])
@@ -180,12 +189,16 @@ def test_mobie_affine_maps_fm_onto_em_including_crop_offsets(algorithm, capsys):
     assert 'Registration - Enter Transformation' in printed
     parameters = warped[0].metadata['mobie_affine']
     assert printed.count(format_mobie_affine(parameters)) == 1
-    # The matrix puts each ball where it is in MoBIE's coordinates. Ignoring
-    # the offsets would miss by 200-400 nm; registration itself gets ~15 nm.
-    matrix = np.reshape(parameters, (3, 4))
-    centres_xyz = np.asarray(PHYSICAL_CENTRES)[:, ::-1]
-    mapped = centres_xyz @ matrix[:, :3].T + matrix[:, 3]
-    assert np.linalg.norm(mapped - centres_xyz, axis=1).max() < 0.025  # µm
+    _assert_mobie_affine_keeps_balls_in_place(parameters)
+
+
+@pytest.mark.parametrize('algorithm', ['Rigid CPD', 'Affine CPD'])
+def test_mobie_affine_maps_em_onto_fm_for_em_to_fm(algorithm, capsys):
+    warped = _register_with_origins(algorithm, fm_origin_um=(0.06, -0.2, 0.0), em_origin_um=(0.0, 0.2, -0.2),
+                                    direction='EM → FM')
+
+    assert 'select EM as the moving image' in capsys.readouterr().out
+    _assert_mobie_affine_keeps_balls_in_place(warped[0].metadata['mobie_affine'])
 
 
 def test_no_mobie_affine_for_bcpd(capsys):
@@ -193,3 +206,72 @@ def test_no_mobie_affine_for_bcpd(capsys):
 
     assert 'MoBIE' not in capsys.readouterr().out
     assert 'mobie_affine' not in warped[0].metadata
+
+
+@pytest.mark.parametrize('algorithm', ['Rigid CPD', 'Affine CPD', 'BCPD'])
+def test_transformed_points_overlay_the_fixed_points(algorithm):
+    """Where napari draws the transformed points (data through the layer's
+    affine) is on the fixed point cloud. The FM is drawn 0.24 µm (6 voxels)
+    off in y, so drawing the moving points unchanged would fail."""
+    import pint
+    from napari.layers import Image, Labels
+    from napari_clemreg.clemreg import widget_components as wc
+    from scipy.spatial import cKDTree
+
+    em = _balls((36, 60, 60), (0.04, 0.04, 0.04))
+    fm = _balls((12, 60, 60), (0.12, 0.04, 0.04))
+    shifted = np.roll(fm, -6, axis=1)
+    assert np.array_equal(np.roll(shifted, 6, axis=1)[:, 6:], fm[:, 6:]) and not fm[:, :6].any()  # no ball wraps
+    fm = shifted
+    nm = lambda value: pint.UnitRegistry().Quantity(value, 'nanometer')
+    moving_points, fixed_points = wc.run_point_cloud_sampling(
+        Labels(fm), Labels(em), nm(40), nm(120), nm(40), nm(40),
+        point_cloud_sampling_frequency=30, voxel_size=1, point_cloud_sigma=1.0)
+    __, transformed = wc.run_point_cloud_registration_and_warping(
+        moving_points, fixed_points, Image(fm.astype(np.float32)), Image(em.astype(np.float32)),
+        algorithm, registration_direction='FM → EM', registration_max_iterations=50,
+        warping_interpolation_order=1, warping_approximate_grid=5, warping_sub_division_factor=1)
+
+    drawn = transformed.affine(transformed.data)
+    centre = lambda points: np.mean(points, axis=0)
+    assert np.linalg.norm(centre(moving_points.data) - centre(fixed_points.data)) > 4  # 40 nm voxels
+    assert np.linalg.norm(centre(drawn) - centre(fixed_points.data)) < 1
+    assert np.median(cKDTree(fixed_points.data).query(drawn)[0]) < 1.5
+
+
+@pytest.mark.parametrize('algorithm, resolution, tolerance', [
+    ('Rigid CPD', 'Native LM resolution', 0.01),
+    # Fitted onto the FM cloud, whose surfaces come from 120 nm slices, the
+    # affine's extra freedom costs a little accuracy (~11 nm, vs ~3 nm).
+    ('Affine CPD', 'Native LM resolution', 0.015),
+    ('BCPD', 'Native LM resolution', 0.025),
+    ('Rigid CPD', 'EM pixel grid (legacy)', 0.01),
+])
+def test_em_to_fm_warp_puts_em_objects_where_they_are(algorithm, resolution, tolerance):
+    """EM → FM (#68) warps the EM onto the FM, so the warped layer's scale
+    is relative to the FM's (0.12, 0.04, 0.04) µm pixels."""
+    import pint
+    from napari.layers import Image, Labels
+    from napari_clemreg.clemreg import widget_components as wc
+
+    em = _balls((36, 60, 60), (0.04, 0.04, 0.04))
+    fm = _balls((12, 60, 60), (0.12, 0.04, 0.04))
+    nm = lambda value: pint.UnitRegistry().Quantity(value, 'nanometer')
+
+    moving_points, fixed_points = wc.run_point_cloud_sampling(
+        Labels(fm), Labels(em), nm(40), nm(120), nm(40), nm(40),
+        point_cloud_sampling_frequency=30, voxel_size=1, point_cloud_sigma=1.0)
+    warped, __ = wc.run_point_cloud_registration_and_warping(
+        moving_points, fixed_points, Image(fm.astype(np.float32), name='FM'),
+        Image(em.astype(np.float32), name='EM'), algorithm, registration_direction='EM → FM',
+        warping_output_resolution=resolution, registration_max_iterations=50,
+        warping_interpolation_order=1, warping_approximate_grid=5, warping_sub_division_factor=1)
+
+    assert warped[0].name == 'EM_warped'
+    mask = warped[0].data > 0.5
+    labels, n = ndimage.label(mask)
+    centroids = np.array(ndimage.center_of_mass(mask, labels, range(1, n + 1)))
+    centroids = centroids * np.asarray(warped[0].scale) * (0.12, 0.04, 0.04)
+    assert n == len(PHYSICAL_CENTRES)
+    errors = [np.linalg.norm(np.asarray(PHYSICAL_CENTRES) - c, axis=1).min() for c in centroids]
+    assert max(errors) < tolerance
