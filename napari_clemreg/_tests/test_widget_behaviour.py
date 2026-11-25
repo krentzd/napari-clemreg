@@ -2,7 +2,7 @@
 
 test_dock_widget.py only checks that each widget builds. Almost every
 widget bug fixed so far (#23, #25, #27, #29, and the viewer-injection
-crash fixed in 9305d4b), plus #50, #53 and the open #47, is in code that only
+crash fixed in 9305d4b), plus #47, #50 and #53, is in code that only
 runs once a widget is *called* or a button is *clicked*. These tests
 cover that code.
 
@@ -462,9 +462,8 @@ def test_em_step_reports_missing_empanada(qtbot, viewer, pipeline, errors, image
     assert gui.run_em_segmentation_button.native.isEnabled()
 
 
-# --- Known, open GUI bugs -----------------------------------------------------
+# --- Saving and loading parameters (#47) ---------------------------------------
 
-@pytest.mark.xfail(strict=True, raises=NameError, reason='#47: Save parameters crashes Register')
 def test_register_saves_parameters_to_json(qtbot, viewer, pipeline, images, tmp_path):
     path = tmp_path / 'params.json'
     gui = _run_registration(images)
@@ -473,10 +472,10 @@ def test_register_saves_parameters_to_json(qtbot, viewer, pipeline, images, tmp_
 
     gui()
 
+    _wait_for_layer(qtbot, viewer, 'FM_warped')
     assert json.loads(path.read_text())['log_sigma'] == gui.log_sigma.value
 
 
-@pytest.mark.xfail(strict=True, reason='#47: Parameters from JSON never reads the file')
 def test_register_loads_parameters_from_json(qtbot, viewer, pipeline, images, tmp_path):
     path = tmp_path / 'params.json'
     path.write_text(json.dumps({'log_sigma': 7.0}))
@@ -486,9 +485,88 @@ def test_register_loads_parameters_from_json(qtbot, viewer, pipeline, images, tm
 
     gui()
 
-    qtbot.waitUntil(lambda: pipeline.calls['run_moving_segmentation'], timeout=TIMEOUT_MS)
+    qtbot.waitUntil(lambda: bool(pipeline.calls['run_moving_segmentation']), timeout=TIMEOUT_MS)
     assert pipeline.calls['run_moving_segmentation'][0]['log_sigma'] == 7.0
 
+
+def test_saved_parameters_load_into_a_new_widget(qtbot, viewer, pipeline, images, tmp_path):
+    path = tmp_path / 'params.json'
+    saving = _run_registration(images)
+    saving.registration_algorithm.value = 'Affine CPD'
+    saving.log_threshold.value = 2.5
+    saving.filter_segmentation.value = True
+    saving.registration_max_iterations.value = 80
+    saving.warping_output_resolution.value = 'EM pixel grid (legacy)'
+    saving.registration_direction.value = 'EM → FM'
+    saving.save_json.value = True
+    saving.save_json_path.value = path
+    saving()
+    _wait_for_layer(qtbot, viewer, 'FM_warped')
+
+    loading = make_run_registration()
+    loading.params_from_json.value = True
+    loading.load_json_file.value = path
+
+    for name in run_registration.SAVED_PARAMETERS:
+        assert getattr(loading, name).value == getattr(saving, name).value, name
+
+
+def test_loading_ignores_settings_that_no_longer_exist(qtbot, errors, tmp_path):
+    path = tmp_path / 'params.json'
+    path.write_text(json.dumps({'log_sigma': 5.0, 'custom_z_zoom': True, 'z_zoom_value': 2}))
+    gui = make_run_registration()
+    gui.params_from_json.value = True
+
+    gui.load_json_file.value = path
+
+    assert gui.log_sigma.value == 5.0
+    assert errors == []
+
+
+def test_unticking_parameters_from_json_keeps_later_edits(qtbot, tmp_path):
+    path = tmp_path / 'params.json'
+    path.write_text(json.dumps({'log_sigma': 5.0}))
+    gui = make_run_registration()
+    gui.params_from_json.value = True
+    gui.load_json_file.value = path
+    gui.log_sigma.value = 6.0
+
+    gui.params_from_json.value = False
+
+    assert gui.log_sigma.value == 6.0
+
+
+@pytest.mark.parametrize('content, problem', [
+    # Loaded after log_sigma, so the earlier change has to be undone.
+    ('{"log_sigma": 5.0, "warping_output_resolution": "Somewhere"}', 'warping_output_resolution'),
+    ('{"log_sigma": 5.0,', 'JSON'),
+    ('[5.0]', 'JSON'),
+], ids=['invalid value', 'malformed', 'not an object'])
+def test_loading_an_invalid_file_changes_nothing(qtbot, errors, tmp_path, content, problem):
+    path = tmp_path / 'params.json'
+    path.write_text(content)
+    gui = make_run_registration()
+    log_sigma = gui.log_sigma.value
+    gui.params_from_json.value = True
+
+    gui.load_json_file.value = path
+
+    assert gui.log_sigma.value == log_sigma
+    assert len(errors) == 1 and problem in errors[0]
+
+
+def test_register_needs_a_file_to_save_parameters_to(qtbot, viewer, pipeline, errors, images):
+    gui = _run_registration(images)
+    gui.save_json.value = True  # the path is still the default, a folder
+
+    gui()
+
+    _wait_for_workers(qtbot)
+    assert len(errors) == 1 and 'save the parameters' in errors[0]
+    assert all(calls == [] for calls in pipeline.calls.values())
+
+
+# --- Known, open GUI bugs -----------------------------------------------------
 
 def test_three_axis_option_removed(qtbot):
     # #48: Prediction Across Three Axis was removed rather than hidden.

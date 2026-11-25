@@ -111,7 +111,7 @@ To try it out, `File → Open Sample → napari-clemreg` offers a sample dataset
 6. **EM Pixel Size (xy)** - Here you can set the xy pixel size of your EM image and its corresponding unit.
 7. **EM Pixel Size (z)** - Here you can set the z pixel size of your EM image and its corresponding unit.
 8. **Registration Algorithm** - Here you can decide which type of registration algorith will be used for the registration of inputted LM and EM. In terms of speed of each algorithm the following is the generally true, Rigid CPD > Affine CPD > BCPD.
-9. **Parameters from JSON** - Here you can select a JSON file containing the parameters for the registration.
+9. **Parameters from JSON** - Here you can select a JSON file containing the parameters for the registration, saved with **Save Parameters**. Choosing the file fills in the settings below, so you can check them before running.
 10. **EM Segmentation Parameters** - Here are the advanced options for the segmentation of the mitochondria in the EM data.
     1. **EM Segmentation Backend** - How MitoNet is run: through Segment-Flow (default), or in-process with `empanada-dl` (which can't currently be installed on Python 3.11 or newer).
 11. **LoG Segmentation Parameters** - Here are the advanced options for the segmentation of the mitochondria in the LM data.
@@ -129,7 +129,7 @@ To try it out, `File → Open Sample → napari-clemreg` offers a sample dataset
         2. **Output Pixel Size** - `Native LM resolution` (default) keeps the FM pixel size; `EM pixel grid (legacy)` resamples onto the EM grid.
         3. **Aproximate Grid** (BCPD only) - Controls the "resolution" of the grid onto which you're warping. A higher value reduces the step size between coordinates.
         4. **Sub-division Factor** (BCPD only) - Controls the size of the chunk when applying the warping.
-14. **Save Parameters** - Here you can select the option to save the advanced options you've selected to a JSON file which can be kept for reproducibility as well as running the registration again.
+14. **Save Parameters** - Here you can select the option to save the advanced options you've selected to a JSON file which can be kept for reproducibility as well as running the registration again. The file is written when you click **Register**.
 15. **Visualise Intermediate Results** - Here you can select to view the outputs of each step as they are completed.
 16. **Registration direction** - Here you can select which of the modalities will be registered to the other. Either EM to FM or FM to EM.
 
