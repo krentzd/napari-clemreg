@@ -464,7 +464,14 @@ def test_em_step_reports_missing_empanada(qtbot, viewer, pipeline, errors, image
 
 # --- Saving and loading parameters (#47) ---------------------------------------
 
-def test_register_saves_parameters_to_json(qtbot, viewer, pipeline, images, tmp_path):
+@pytest.fixture
+def infos(monkeypatch):
+    messages = []
+    monkeypatch.setattr(run_registration, 'show_info', messages.append)
+    return messages
+
+
+def test_register_saves_parameters_to_json(qtbot, viewer, pipeline, images, infos, tmp_path):
     path = tmp_path / 'params.json'
     gui = _run_registration(images)
     gui.save_json.value = True
@@ -474,6 +481,38 @@ def test_register_saves_parameters_to_json(qtbot, viewer, pipeline, images, tmp_
 
     _wait_for_layer(qtbot, viewer, 'FM_warped')
     assert json.loads(path.read_text())['log_sigma'] == gui.log_sigma.value
+    assert any(str(path) in message for message in infos)
+
+
+def test_registration_step_saves_parameters_to_json(qtbot, viewer, pipeline, images, infos, tmp_path):
+    """Stepping through the pipeline never clicks Register; the step that
+    completes the registration saves instead."""
+    path = tmp_path / 'params.json'
+    gui = _run_registration(images)
+    gui.Moving_Points.value = viewer.add_layer(_points('Moving_point_cloud'))
+    gui.Fixed_Points.value = viewer.add_layer(_points('Fixed_point_cloud'))
+    gui.save_json.value = True
+    gui.save_json_path.value = path
+
+    gui.run_registration_and_warping_button.clicked.emit()
+
+    _wait_for_layer(qtbot, viewer, 'FM_warped')
+    assert json.loads(path.read_text())['log_sigma'] == gui.log_sigma.value
+    assert any(str(path) in message for message in infos)
+
+
+def test_registration_step_needs_a_file_to_save_parameters_to(qtbot, viewer, pipeline, errors, images):
+    gui = _run_registration(images)
+    gui.Moving_Points.value = viewer.add_layer(_points('Moving_point_cloud'))
+    gui.Fixed_Points.value = viewer.add_layer(_points('Fixed_point_cloud'))
+    gui.save_json.value = True  # the path is still the default, a folder
+
+    gui.run_registration_and_warping_button.clicked.emit()
+
+    _wait_for_workers(qtbot)
+    assert len(errors) == 1 and 'save the parameters' in errors[0]
+    assert pipeline.calls['run_point_cloud_registration_and_warping'] == []
+    assert gui.run_registration_and_warping_button.native.isEnabled()
 
 
 def test_register_loads_parameters_from_json(qtbot, viewer, pipeline, images, tmp_path):

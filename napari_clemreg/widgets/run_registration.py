@@ -8,7 +8,7 @@ import numpy as np
 import pint
 from magicgui import magic_factory, widgets
 from napari.layers import Image, Shapes, Labels, Points
-from napari.utils.notifications import show_error
+from napari.utils.notifications import show_error, show_info
 from napari.qt.threading import GeneratorWorker
 from ..clemreg.on_init_specs import specs
 from ..clemreg._qt_layout import (
@@ -28,18 +28,21 @@ SAVED_PARAMETERS = (
 )
 
 
-def _save_parameters(path, arguments):
-    """Write the saved parameters among Register's `arguments` to `path` as
-    JSON. Shows an error and returns False if that isn't possible."""
+def _save_parameters(path, settings):
+    """Write the saved parameters among `settings` (a name -> value dict) to
+    `path` as JSON, and say where. Shows an error and returns False if that
+    isn't possible."""
     if path is None or Path(path).is_dir():
         show_error('Choose a file to save the parameters to (Path to save parameters).')
         return False
-    parameters = {name: arguments[name] for name in SAVED_PARAMETERS}
+    parameters = {name: settings[name] for name in SAVED_PARAMETERS}
+    path = Path(path).resolve()
     try:
-        Path(path).write_text(json.dumps(parameters, indent=4, ensure_ascii=False))
+        path.write_text(json.dumps(parameters, indent=4, ensure_ascii=False))
     except OSError as err:
         show_error(f"Couldn't save the parameters to {path}: {err}")
         return False
+    show_info(f'Saved the parameters to {path}')
     return True
 
 
@@ -551,6 +554,11 @@ def _wire_step_buttons(widget):
         if moving_image is None or fixed_image is None:
             show_error("WARNING: You have not inputted both a Moving_Image and Fixed_Image")
             return
+        # This step completes a registration, so it saves like Register does.
+        if widget.save_json.value:
+            settings = {name: getattr(widget, name).value for name in SAVED_PARAMETERS}
+            if not _save_parameters(widget.save_json_path.value, settings):
+                return
 
         def _done(result):
             warp_outputs, transformed = result

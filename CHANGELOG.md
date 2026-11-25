@@ -29,7 +29,7 @@ Changes since the version published in Nature Methods ([`v1.0.0-nature-methods`]
 - The **Prediction Across Three Axis** option.
 
 ### Fixed
-- **Save parameters** made **Register** fail, and **Parameters from JSON** never read its file. Register now saves the settings to the chosen file, and choosing a parameter file fills in the widget's settings from it. Settings from older versions that no longer exist are ignored, and a file that can't be used leaves the settings unchanged.
+- **Save parameters** made **Register** fail, and **Parameters from JSON** never read its file. Register, and the Point Cloud Registration step's **Run this step**, now save the settings to the chosen file and say where, and choosing a parameter file fills in the widget's settings from it. Settings from older versions that no longer exist are ignored, and a file that can't be used leaves the settings unchanged.
 - **Registration direction → EM → FM** crashed with `KeyError: 'output_shape'`. It now warps the EM onto the FM: with **Native LM resolution** onto the FM image's own grid, with **EM pixel grid** at the EM's pixel size over the FM's extent.
 - With **Visualise Intermediate Results** on, **Register** showed Rigid and Affine CPD's `transformed_points` where the moving points were, instead of on the fixed points: it dropped the layer's affine, which holds the registration.
 - The non-rigid (BCPD) warp's affine part was computed incorrectly.
