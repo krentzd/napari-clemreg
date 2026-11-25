@@ -47,7 +47,7 @@ pytest napari_clemreg/_tests/test_warp_image_volume.py
 pytest napari_clemreg/_tests/test_warp_image_volume.py::test_name
 ```
 
-Widget tests: `test_dock_widget.py` checks that every widget and dock widget builds. `test_widget_behaviour.py` runs them: it calls each widget and clicks each **Run this step** button against a `napari.components.ViewerModel` (no real window, so it works locally under `QT_QPA_PLATFORM=offscreen`), with the `widget_components.run_*` pipeline functions replaced by recording stubs. Add a test there for any change to widget wiring. Known open GUI bugs are pinned there as `xfail(strict=True)` tests naming their issue, so remove the marker when fixing one. Unit tests for the pure math in `clemreg/` are also under `napari_clemreg/_tests/` (see §0 of the modernisation plan below).
+Widget tests: `test_dock_widget.py` checks that the widget and its dock wrapper build. `test_widget_behaviour.py` runs it: it clicks **Register** and each **Run this step** button against a `napari.components.ViewerModel` (no real window, so it works locally under `QT_QPA_PLATFORM=offscreen`), with the `widget_components.run_*` pipeline functions replaced by recording stubs. Add a test there for any change to widget wiring. Known open GUI bugs are pinned there as `xfail(strict=True)` tests naming their issue, so remove the marker when fixing one. Unit tests for the pure math in `clemreg/` are also under `napari_clemreg/_tests/` (see §0 of the modernisation plan below).
 
 **macOS: torch + napari can segfault on import** (two OpenMP runtimes loaded in one process — torch's bundled `libiomp5` vs. the conda-forge `libomp` napari's stack pulls in). `napari_clemreg/_tests/conftest.py` sets `KMP_DUPLICATE_LIB_OK=TRUE` and `OMP_NUM_THREADS=1` before those imports, so pytest runs are unaffected; if you import `napari_clemreg` (or `torch` then `napari`) directly in a script or REPL, set those env vars first. No-op on Linux CI.
 
@@ -66,9 +66,9 @@ There are older local conda envs for this repo. Use pixi (above) for day-to-day 
 
 The plugin has two layers under `napari_clemreg/`:
 
-- **`widgets/`** — thin `magicgui`-based napari GUI entry points (`run_registration.py`, `fixed_segmentation.py`, `moving_segmentation.py`, `point_cloud_sampling.py`, `registration_warping.py`). These are registered as napari commands/widgets in `napari_clemreg/napari.yaml`, the plugin manifest read by napari's plugin engine (npe2). Widget functions handle UI wiring, parameter forms (`clemreg/on_init_specs.py` defines widget layout specs), and threading via napari's `thread_worker`/`GeneratorWorker`.
+- **`widgets/`** — the `magicgui`-based napari GUI, a single widget (`run_registration.py`) registered in `napari_clemreg/napari.yaml`, the plugin manifest read by napari's plugin engine (npe2). It handles UI wiring, parameter forms (`clemreg/on_init_specs.py` defines widget layout specs), and threading via napari's `thread_worker`/`GeneratorWorker`.
 - **`clemreg/`** — the actual algorithm/glue code, napari-independent aside from layer types and threading helpers:
-  - `widget_components.py` — glue functions (e.g. `run_moving_segmentation`) called by the widgets, chaining together the pipeline steps below.
+  - `widget_components.py` — glue functions (e.g. `run_moving_segmentation`) called by the widget, chaining together the pipeline steps below.
   - `log_segmentation.py`, `empanada_segmentation.py` — FM (Laplacian-of-Gaussian) and EM (MitoNet/empanada-dl) segmentation.
   - `mask_roi.py`, `data_preprocessing.py` — ROI masking and isotropic resampling.
   - `point_cloud_sampling.py`, `point_cloud_registration.py` — point-cloud extraction from segmentations and registration (Rigid/Affine CPD, BCPD via `probreg`).
@@ -76,7 +76,7 @@ The plugin has two layers under `napari_clemreg/`:
   - `sample_data.py` — provides the built-in napari sample dataset.
 - `napari_clemreg/_reader.py` — napari file reader hook (`.tif`/`.tiff`, directories).
 
-The full pipeline (EM segmentation → FM segmentation → point-cloud sampling → point-cloud registration → image warping) can be run end-to-end via the `Run registration` widget, or each stage run independently via the numbered "split registration" widgets — both paths call into the same `clemreg/` functions.
+The full pipeline (EM segmentation → FM segmentation → point-cloud sampling → point-cloud registration → image warping) runs end-to-end with the `Run registration` widget's **Register** button, or one stage at a time with each section's **Run this step** button. Both call the same `clemreg/` functions. The numbered split-workflow widgets were removed (decision D7).
 
 ### In-progress package split
 
@@ -130,7 +130,7 @@ Two labels mark issues that can't move forward through ordinary work. Each label
 - **`needs-decision`**: waiting on a decision from the maintainer, e.g. what output a feature should produce, or an open decision in the design doc. [All issues with it](https://github.com/martlj/napari-clemreg/issues?q=is%3Aopen+label%3Aneeds-decision).
 - **`blocked`**: waiting on something outside this repo, such as a person (e.g. the upstream owner) or an upstream project (e.g. `empanada-dl`). An issue that's just waiting for the previous phase or sub-issue isn't `blocked`; that order is already shown by the sub-issues. [All issues with it](https://github.com/martlj/napari-clemreg/issues?q=is%3Aopen+label%3Ablocked).
 
-Keep them current as part of the post-merge check, and whenever a decision is made or a blocker clears: remove the label, with a comment recording the decision or what unblocked it, and update the design doc's decisions log if relevant. Add the label, with its comment, when new work turns out to need a decision or depends on someone else. Decisions with no issue of their own (e.g. D7 and D8 in the design doc) stay in the ROADMAP's *Open decisions* section.
+Keep them current as part of the post-merge check, and whenever a decision is made or a blocker clears: remove the label, with a comment recording the decision or what unblocked it, and update the design doc's decisions log if relevant. Add the label, with its comment, when new work turns out to need a decision or depends on someone else. Decisions with no issue of their own (e.g. D8 in the design doc) stay in the ROADMAP's *Open decisions* section.
 
 ## Versioning
 

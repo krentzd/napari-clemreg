@@ -121,11 +121,8 @@ If you would like to run `napari-clemreg` in a docker container instead of insta
 
 ## Usage
 CLEM-reg is the combination of 5 main steps, electron microscopy segmentation, fluorescence microscopy segmentation,
-point cloud sampling, point cloud registration and image warping. These 5 steps 
-can be run all at once using the run registration widget.
-Alternatively, they can be run individually with the numbered widgets.
-
-![clemreg_widget_options.png](docs%2Fimages%2Fnapari_dropdown.png)
+point cloud sampling, point cloud registration and image warping. The `Run registration`
+widget runs them all at once, or one at a time with each section's **Run this step** button.
 
 ### Run Registration
 
@@ -142,7 +139,7 @@ Alternatively, they can be run individually with the numbered widgets.
 - **Registration Algorithm**: `Rigid CPD` (default), `Affine CPD` or `BCPD`. Rigid CPD is fastest and BCPD (non-rigid) is slowest.
 - **Parameters from JSON**: load parameters from a saved JSON file. Currently broken: the file is not read ([#47](https://github.com/martlj/napari-clemreg/issues/47)).
 
-**Parameter sections.** Each section is collapsed by default. Each has its own **Run this step** button, which runs just that step on whatever layers are in the section's inputs. When a step finishes, its output is filled into the next section's input and highlighted in amber, so you can step through the pipeline or start partway through from layers you already have.
+**Parameter sections.** Each section is collapsed by default. Each has a **Run this step** button, which runs just that step on whatever layers are in the section's inputs. When a step finishes, its output is filled into the next section's input and highlighted in amber, so you can step through the pipeline or start partway through from layers you already have.
 
 1. **EM Segmentation Parameters**
    - **EM Segmentation Backend**: `MitoNet (Segment-Flow)` (default) or `MitoNet (empanada-dl)`. Both run the same model; see [EM segmentation with MitoNet](#em-segmentation-with-mitonet).
@@ -158,11 +155,11 @@ Alternatively, they can be run individually with the numbered widgets.
    - **Fluorescence Microscopy (FM) Point Cloud** and **Electron Microscopy (EM) Point Cloud**: the inputs for this step.
    - **Voxel Size**: size of the voxel grid the point clouds are downsampled onto. **Larger values give fewer points**, which is faster and uses less memory. It is applied during point cloud sampling, although it sits in this section ([#49](https://github.com/martlj/napari-clemreg/issues/49)).
    - **Maximum Iterations**: maximum number of registration iterations. If this is too low, the registration may not converge.
-5. **Image Warping**
-   - **Interpolation Order**: order of the spline interpolation.
-   - **Approximate Grid**: controls the resolution of the grid used to approximate the warp. A higher value reduces the step size between coordinates.
-   - **Sub-division Factor**: controls the size of the chunks the warp is applied in.
-   - **Output Pixel Size**: `Native LM resolution` (default) warps the FM image onto a grid close to its own pixel size and places it over the EM image using the layer's scale. `EM pixel grid (legacy)` resamples it onto the EM image's much finer pixel grid, as earlier versions did.
+   - **Image Warping**, a section inside this one, since this step's **Run this step** button also warps the FM image:
+     - **Interpolation Order**: order of the spline interpolation.
+     - **Output Pixel Size**: `Native LM resolution` (default) warps the FM image onto a grid close to its own pixel size and places it over the EM image using the layer's scale. `EM pixel grid (legacy)` resamples it onto the EM image's much finer pixel grid, as earlier versions did.
+     - **Approximate Grid** (BCPD only): controls the resolution of the grid used to approximate the warp. A higher value reduces the step size between coordinates.
+     - **Sub-division Factor** (BCPD only): controls the size of the chunks the warp is applied in.
 
 **Output options**
 - **Save parameters**: save the current parameters to a JSON file, for reproducibility. Currently broken: ticking it makes **Register** fail ([#47](https://github.com/martlj/napari-clemreg/issues/47)).
@@ -173,28 +170,9 @@ Alternatively, they can be run individually with the numbered widgets.
 
 [![Watch the video](docs%2Fimages%2Fclem_reg_tutorial_thumbnail.png)](https://youtu.be/ud3zTLgl8Ks)
 
-### Split Registration
-As well as running every step in the `Run registration` widget, you can run the steps independently with four separate widgets, each with its own inputs and outputs:
-1. `1) Electron Microscopy (EM) Segmentation`
-   - **Input**: EM image
-   - **Output**: EM segmentation
-2. `2) Fluorescence Microscopy (FM) Segmentation`
-   - **Input**: FM image
-   - **Output**: FM segmentation
-3. `3) Point Cloud Sampling`
-   - **Input**: FM segmentation and EM segmentation
-   - **Output**: FM point cloud and EM point cloud
-4. `4) Point Cloud Registration & Image Warping`
-   - **Input**: EM image, FM image, FM point cloud and EM point cloud
-   - **Output**: registered FM image(s) and registered FM point cloud
-
-The combined widget's **Run this step** buttons do the same job without switching widgets.
-
-[![Watch the video](docs%2Fimages%2Fclemreg_split_registration_thumbnail.png)](https://youtu.be/cypDti0UUwY)
-
 ### EM segmentation with MitoNet
 
-Both the `1) Electron Microscopy (EM) Segmentation` widget and the `Run registration` widget default to running MitoNet through Crick's [AI-on-Demand (AIoD)](https://franciscrickinstitute.github.io/aiod_docs/) Segment-Flow pipeline. This is fully integrated: pick the backend and run. There's no need to install AIoD's separate `aiod_napari` plugin or to pass its output to `Point Cloud Sampling` by hand. The bundled alternative, `MitoNet (empanada-dl)`, is still in the same **EM Segmentation Backend** dropdown, but `empanada-dl` is unmaintained and currently can't be installed on Python 3.11 ([#5](https://github.com/martlj/napari-clemreg/issues/5)). Segment-Flow avoids that problem because the model runs in its own isolated environment.
+The `Run registration` widget defaults to running MitoNet through Crick's [AI-on-Demand (AIoD)](https://franciscrickinstitute.github.io/aiod_docs/) Segment-Flow pipeline. This is fully integrated: pick the backend and run. There's no need to install AIoD's separate `aiod_napari` plugin or to pass its output to `Point Cloud Sampling` by hand. The bundled alternative, `MitoNet (empanada-dl)`, is still in the same **EM Segmentation Backend** dropdown, but `empanada-dl` is unmaintained and currently can't be installed on Python 3.11 ([#5](https://github.com/martlj/napari-clemreg/issues/5)). Segment-Flow avoids that problem because the model runs in its own isolated environment.
 
 **Prerequisites for the Segment-Flow backend** (the rest of napari-clemreg works without them):
 - [Nextflow](https://www.nextflow.io/) and [Conda](https://docs.conda.io/) on `PATH`. The pixi environment includes Nextflow, but not Conda.
@@ -207,7 +185,7 @@ Both the `1) Electron Microscopy (EM) Segmentation` widget and the `Run registra
 
 The first run on a given machine downloads and builds an isolated Conda environment for the model (cached under `~/.nextflow/aiod` and reused on later runs), so it can take several minutes. Progress is printed to the terminal, not the napari window. The model always runs inside Segment-Flow's own environment, never in napari-clemreg's Python process.
 
-**Want to try the pipeline without a GPU or setting up AIoD?** `File → Open Sample → napari-clemreg → EM Mask (precomputed, no GPU needed)` loads a precomputed EM segmentation that matches the EM volume in the main sample data. You can then start from **Point Cloud Sampling** (in either widget) without running EM segmentation at all.
+**Want to try the pipeline without a GPU or setting up AIoD?** `File → Open Sample → napari-clemreg → EM Mask (precomputed, no GPU needed)` loads a precomputed EM segmentation that matches the EM volume in the main sample data. You can then start from the **Point Cloud Sampling** step without running EM segmentation at all.
 
 ### Registering Multiple LM Channels
 One can register multiple LM channels at once by doing the following.
@@ -240,7 +218,7 @@ Here is a sample dataset which is the binned version of EMPIAR-10819: https://ze
 The same data is on the BioImage Archive as OME-Zarr, with the FIB-SEM volume at full resolution (5 nm) and pixel sizes in the files: [S-BIAD4355](https://www.ebi.ac.uk/biostudies/bioimages/studies/S-BIAD4355).
 
 ### Sample data in napari
-`File → Open Sample → napari-clemreg` offers the benchmark data from either source. Both give the same five layers (`EM` at 20 nm, and four FM channels), so the widgets work the same way with either.
+`File → Open Sample → napari-clemreg` offers the benchmark data from either source. Both give the same five layers (`EM` at 20 nm, and four FM channels), so `Run registration` works the same way with either.
 
 - **Sample Benchmark Data** downloads two TIFFs from Zenodo (about 600 MB) the first time, then loads them from a local cache. Nothing needs the network after that.
 - **Sample Benchmark Data (OME-Zarr, streamed from the BioImage Archive)** downloads nothing in advance and stores nothing on disk. Instead:

@@ -20,31 +20,7 @@ import tifffile
 from qtpy.QtWidgets import QApplication, QScrollArea
 
 from napari_clemreg._reader import napari_get_reader
-from napari_clemreg.widgets.fixed_segmentation import fixed_segmentation_dock_widget, fixed_segmentation_widget
-from napari_clemreg.widgets.moving_segmentation import moving_segmentation_dock_widget, moving_segmentation_widget
-from napari_clemreg.widgets.point_cloud_sampling import point_cloud_sampling_dock_widget, point_cloud_sampling_widget
-from napari_clemreg.widgets.registration_warping import registration_warping_dock_widget, registration_warping_widget
 from napari_clemreg.widgets.run_registration import make_run_registration, make_run_registration_widget
-
-WIDGET_FACTORIES = [
-    fixed_segmentation_widget,
-    moving_segmentation_widget,
-    point_cloud_sampling_widget,
-    registration_warping_widget,
-    make_run_registration,
-]
-
-# The functions actually registered in napari.yaml (see test_npe2_manifest_loads):
-# each wraps the corresponding WIDGET_FACTORIES entry in a QScrollArea (see
-# clemreg/_qt_layout.py) so the dock panel has a bounded height/width,
-# matching AIoD's own napari plugin's approach.
-DOCK_WIDGET_FACTORIES = [
-    fixed_segmentation_dock_widget,
-    moving_segmentation_dock_widget,
-    point_cloud_sampling_dock_widget,
-    registration_warping_dock_widget,
-    make_run_registration_widget,
-]
 
 
 @pytest.fixture
@@ -53,29 +29,27 @@ def qapp():
     return QApplication.instance() or QApplication([])
 
 
-@pytest.mark.parametrize("factory", WIDGET_FACTORIES, ids=[f.__name__ for f in WIDGET_FACTORIES])
-def test_widget_factory_builds(factory, qapp):
-    widget = factory()
-    assert widget is not None
+def test_widget_factory_builds(qapp):
+    assert make_run_registration() is not None
 
 
-@pytest.mark.parametrize("factory", DOCK_WIDGET_FACTORIES, ids=[f.__name__ for f in DOCK_WIDGET_FACTORIES])
-def test_dock_widget_factory_builds_scroll_area(factory, qapp):
-    """These are what napari.yaml actually registers -- confirm each one
-    builds and is scroll-bounded, not just its underlying FunctionGui.
+def test_dock_widget_factory_builds_scroll_area(qapp):
+    """This is what napari.yaml actually registers -- confirm it builds
+    and is scroll-bounded (see clemreg/_qt_layout.py), not just its
+    underlying FunctionGui.
 
     Called with zero arguments, exactly how napari itself calls it
     (confirmed directly in napari's own source,
     _qnpe2._get_widget_viewer_param: viewer-injection-by-parameter-name
-    only applies to class-based widgets, not plain functions like these
-    wrappers -- "For magicgui type widget contributions, Viewer
+    only applies to class-based widgets, not plain functions like this
+    wrapper -- "For magicgui type widget contributions, Viewer
     injection is done by magicgui.register_type instead", that code's
-    own comment). A first version of these wrappers required
+    own comment). A first version of this wrapper required
     `napari_viewer` with no default and crashed in the real app with
     exactly this call pattern, despite `factory(None)` passing here --
     this test calls it the same way napari does.
     """
-    widget = factory()
+    widget = make_run_registration_widget()
     assert isinstance(widget, QScrollArea)
     assert widget.widget() is not None
 
@@ -152,3 +126,71 @@ def test_reader_returns_valid_layer_data_tuple(tmp_path):
     np.testing.assert_array_equal(data, array)
     assert layer_type == 'image'
     assert 'metadata' in layer_kwargs
+
+
+def _section(widget, title):
+    from superqt import QCollapsible
+
+    (section,) = [s for s in widget.native.findChildren(QCollapsible) if s.text() == title]
+    return section
+
+
+def _row(widget, field_name):
+    """A field's label-and-control row (its parent, once grouped)."""
+    return getattr(widget, field_name).native.parent()
+
+
+def test_image_warping_sits_inside_point_cloud_registration(qapp):
+    """Its settings are used by the Point Cloud Registration step's button,
+    so they sit inside that section, above the button."""
+    widget = make_run_registration()
+    registration = _section(widget, 'Point Cloud Registration')
+    warping = _section(widget, 'Image Warping')
+    layout = registration.content().layout()
+
+    button = widget.run_registration_and_warping_button.native
+    (button_index,) = [i for i in range(layout.count())
+                       if layout.itemAt(i).widget() in (button, button.parent())]
+
+    assert registration.isAncestorOf(warping)
+    assert layout.indexOf(warping) < button_index
+
+
+_BCPD_ONLY = ['warping_approximate_grid', 'warping_sub_division_factor']
+_ALL_ALGORITHMS = ['warping_interpolation_order', 'warping_output_resolution']
+
+
+@pytest.mark.parametrize('algorithm, bcpd_rows_shown', [
+    ('Rigid CPD', False), ('Affine CPD', False), ('BCPD', True)])
+def test_bcpd_only_warping_settings_follow_the_algorithm(qapp, algorithm, bcpd_rows_shown):
+    widget = make_run_registration()
+    widget.registration_algorithm.value = 'BCPD'  # a real change for every case
+    widget.registration_algorithm.value = algorithm
+
+    for name in _BCPD_ONLY:
+        assert _row(widget, name).isVisibleTo(widget.native) is bcpd_rows_shown
+    for name in _ALL_ALGORITHMS:
+        assert _row(widget, name).isVisibleTo(widget.native)
+
+
+def test_bcpd_only_settings_start_hidden(qapp):
+    widget = make_run_registration()  # Rigid CPD by default
+
+    assert not any(_row(widget, name).isVisibleTo(widget.native) for name in _BCPD_ONLY)
+
+
+def test_showing_bcpd_settings_in_an_open_section_does_not_clip_them(qapp):
+    """An expanded QCollapsible fixes its height when it opens, and only
+    recomputes it when a child resizes, not when a row is shown."""
+    widget = make_run_registration()
+    registration = _section(widget, 'Point Cloud Registration')
+    warping = _section(widget, 'Image Warping')
+    warping.expand(animate=False)
+    registration.expand(animate=False)
+
+    widget.registration_algorithm.value = 'BCPD'
+    QApplication.processEvents()
+
+    for section in (warping, registration):
+        content = section.content()
+        assert content.maximumHeight() >= content.sizeHint().height()
