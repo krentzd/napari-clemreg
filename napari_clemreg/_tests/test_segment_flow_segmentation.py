@@ -10,6 +10,7 @@ import shutil
 from unittest.mock import patch
 
 import numpy as np
+import tifffile
 import pytest
 
 from napari_clemreg.clemreg.segment_flow_segmentation import (
@@ -151,3 +152,57 @@ def test_segment_flow_em_segmentation_real_run(tmp_path):
     mask = segment_flow_em_segmentation(volume, root_dir=tmp_path)
 
     assert mask.shape == volume.shape
+
+
+# --- Which mask a run returns -------------------------------------------------
+#
+# Segment-Flow writes every run's mask to the same cache folder, as
+# <image>_masks_<hash>_all.tiff. Unless given --param_hash, it hashes all
+# its parameters, including a temporary path, so each run's mask gets an
+# unrelated name. A fake Nextflow run writes the mask the same way.
+
+def _mask_dir(root):
+    return root / "aiod_cache" / "empanada" / "MitoNet v1_masks"
+
+
+@pytest.fixture
+def fake_nextflow(monkeypatch, tmp_path):
+    """Run segment_flow_em_segmentation without Nextflow. Its mask is the
+    input volume plus 1. The cache already holds an older run's mask, which
+    sorts after any other name. Returns the cache root."""
+    import secrets
+    from napari_clemreg.clemreg import segment_flow_segmentation as sf
+
+    root = tmp_path / "aiod"
+    _mask_dir(root).mkdir(parents=True)
+    tifffile.imwrite(_mask_dir(root) / "input_tif_masks_ffffffff_all.tiff", np.full((2, 3, 4), 7, np.uint16))
+
+    def run(cmd, cwd, env):
+        param_hash = cmd[cmd.index("--param_hash") + 1] if "--param_hash" in cmd else secrets.token_hex(4)
+        volume = tifffile.imread(cmd[cmd.index("--img_dir") + 1].replace("images.csv", "input.tif"))
+        tifffile.imwrite(_mask_dir(root) / f"input_tif_masks_{param_hash}_all.tiff", volume + 1)
+        return 0, ""
+
+    monkeypatch.setattr(sf, "_check_prerequisites", lambda: None)
+    monkeypatch.setattr(sf, "_run_nextflow", run)
+    monkeypatch.setattr(sf, "_build_model_config", lambda *args: tmp_path / "model_config.yml")
+    return root
+
+
+def test_a_run_returns_its_own_mask_not_an_older_one(fake_nextflow):
+    volume = np.arange(24, dtype=np.uint16).reshape(2, 3, 4)
+    mask = segment_flow_em_segmentation(volume, root_dir=fake_nextflow)
+    np.testing.assert_array_equal(mask, volume + 1)
+
+
+def test_a_run_deletes_its_mask_once_read_and_leaves_others(fake_nextflow):
+    segment_flow_em_segmentation(np.zeros((2, 3, 4), np.uint16), root_dir=fake_nextflow)
+    assert [p.name for p in _mask_dir(fake_nextflow).iterdir()] == ["input_tif_masks_ffffffff_all.tiff"]
+
+
+def test_a_run_without_its_mask_fails_instead_of_using_another(fake_nextflow, monkeypatch):
+    from napari_clemreg.clemreg import segment_flow_segmentation as sf
+
+    monkeypatch.setattr(sf, "_run_nextflow", lambda cmd, cwd, env: (0, ""))
+    with pytest.raises(sf.SegmentFlowRunError, match="no output mask"):
+        segment_flow_em_segmentation(np.zeros((2, 3, 4), np.uint16), root_dir=fake_nextflow)

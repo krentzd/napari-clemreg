@@ -17,6 +17,7 @@ them were guessed.
 """
 from __future__ import annotations
 
+import secrets
 import shutil
 import subprocess
 import tempfile
@@ -327,6 +328,7 @@ def segment_flow_em_segmentation(
         )
 
         model_config_path = _build_model_config(model_type, task, conf_threshold, tmpdir)
+        param_hash = secrets.token_hex(4)
 
         cmd = [
             "nextflow", "run", *source,
@@ -347,6 +349,9 @@ def segment_flow_em_segmentation(
             "--model_config", str(model_config_path),
             "--output_format", "tiff",
             "--root_dir", str(root_dir),
+            # Names this run's mask; otherwise it's a hash of all the
+            # parameters, unrelated to when the mask was made.
+            "--param_hash", param_hash,
         ]
 
         print(
@@ -397,17 +402,16 @@ def segment_flow_em_segmentation(
         print("Segment-Flow EM segmentation finished.", flush=True)
 
         # combineStacks publishes the result as
-        # <root_dir>/aiod_cache/<model>/<model_type>_masks/<image-id>_masks_<hash>_all.<format>
-        # -- confirmed against a real run. The <hash> is a resolved-param
-        # hash we don't compute ourselves, so glob for it rather than
-        # predict the exact filename (robust to that hash's computation
-        # changing upstream, and there's exactly one match for a
-        # single-image run).
-        mask_dir = root_dir / "aiod_cache" / "empanada" / f"{model_type}_masks"
-        matches = sorted(mask_dir.glob("*_all.tiff"))
-        if not matches:
+        # <root_dir>/aiod_cache/<model>/<model_type>_masks/<image-id>_masks_<param_hash>_all.<format>,
+        # next to every earlier run's mask, so read this run's by its hash.
+        # The image id is the input's file name, input.tif.
+        mask_path = root_dir / "aiod_cache" / "empanada" / f"{model_type}_masks" / f"input_tif_masks_{param_hash}_all.tiff"
+        if not mask_path.exists():
             raise SegmentFlowRunError(
-                f"Segment-Flow reported success but no output mask was found in "
-                f"{mask_dir} (looked for *_all.tiff). Nextflow output:\n{output}"
+                f"Segment-Flow reported success but no output mask was found at "
+                f"{mask_path}. Nextflow output:\n{output}"
             )
-        return tifffile.imread(matches[-1])
+        mask = tifffile.imread(mask_path)
+        # Each run's mask has its own name, so it's never reused.
+        mask_path.unlink()
+        return mask

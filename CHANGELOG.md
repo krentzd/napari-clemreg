@@ -29,6 +29,7 @@ Changes since the version published in Nature Methods ([`v1.0.0-nature-methods`]
 - The **Prediction Across Three Axis** option.
 
 ### Fixed
+- EM segmentation through Segment-Flow could return the mask of an earlier run, e.g. of the sample data after segmenting another image: every run's mask lands in the same cache folder, and the one that sorted last by name was read. Each run now names its own mask, reads that one, and deletes it afterwards. Masks left by earlier versions in `~/.nextflow/aiod/aiod_cache/empanada/` can be deleted.
 - **Save parameters** made **Register** fail, and **Parameters from JSON** never read its file. Register, and the Point Cloud Registration step's **Run this step**, now save the settings to the chosen file and say where, and choosing a parameter file fills in the widget's settings from it. Settings from older versions that no longer exist are ignored, and a file that can't be used leaves the settings unchanged.
 - **Registration direction → EM → FM** crashed with `KeyError: 'output_shape'`. It now warps the EM onto the FM: with **Native LM resolution** onto the FM image's own grid, with **EM pixel grid** at the EM's pixel size over the FM's extent.
 - With **Visualise Intermediate Results** on, **Register** showed Rigid and Affine CPD's `transformed_points` where the moving points were, instead of on the fixed points: it dropped the layer's affine, which holds the registration.
