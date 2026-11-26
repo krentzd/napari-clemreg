@@ -160,48 +160,17 @@ def log_segmentation(input: np.ndarray,
 
 def filter_binary_segmentation(input: np.ndarray,
                                percentile: tuple=(5,95)):
-    """Filters binary segmentation based on size
-    Parameters
-    ----------
-    input : numpy.ndarray
-        Binary segmentation volume
-    percentile : int
-        Specifies threshold for filtering individual objects based on size
-        determined as the number of True pixels. Indiviudal objects are
-        found with 3D connected components.
-    Returns
-    -------
-    clean_binary_volume : numpy.ndarray
-        A numpy array of the filtered binary volume
-    kwargs : dict
-        A dictionary of parameters for adding filtered binary volume to
-        napari viewer
-    """
-    start = time.time()
-
-    # Find connected components
-    labels_out = cc3d.connected_components(input)
-    print(f'Identified {labels_out.max()} connected components.')
-
-    # Count occurences of each connected component
-    num_of_occurences = np.bincount(labels_out.flatten())
-
-    percentile_lower = percentile[0]
-    percentile_upper = percentile[1]
-
-    threshold_upper = np.percentile(num_of_occurences, percentile_upper)
-    threshold_lower = np.percentile(num_of_occurences, percentile_lower)
-    print(f'Objects with size below {threshold_lower} and above {threshold_upper} will be removed.')
-
-    idx_within_thresh = np.where((num_of_occurences > threshold_lower) & (num_of_occurences < threshold_upper))[0]
-    print(f'Removing {len(num_of_occurences) - len(idx_within_thresh)} objects...')
-
-    within_thresh_binary_volume = np.isin(labels_out, num_of_occurences[idx_within_thresh])
-
-    elapsed = time.time() - start
-    print(f'Finished execution after {elapsed} seconds.')
-
-    return within_thresh_binary_volume
+    """Keep the objects (3D connected components) of a binary volume whose
+    size, in voxels, is within the (lower, upper) percentiles of all the
+    objects' sizes. Returns the filtered binary volume."""
+    labels = cc3d.connected_components(input)
+    sizes = np.bincount(labels.ravel())[1:]  # Leave out the background.
+    if sizes.size == 0:
+        return labels > 0
+    lower, upper = np.percentile(sizes, percentile)
+    keep = np.flatnonzero((sizes >= lower) & (sizes <= upper)) + 1
+    print(f'Keeping {keep.size} of {sizes.size} objects, with {lower:g} to {upper:g} voxels.')
+    return np.isin(labels, keep)
 
 
 def segment_fm(volume: np.ndarray,
