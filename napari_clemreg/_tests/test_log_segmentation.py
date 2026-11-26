@@ -41,3 +41,34 @@ def test_log_segmentation_foreground_voxel_count_within_tolerance(synthetic_blob
     # Baseline is 27281 foreground voxels; allow +/-25% for
     # dependency-driven numerical drift.
     assert 20000 <= voxel_count <= 35000
+
+
+def _cubes(sides):
+    """A mask of separate cubes with these side lengths, and each one's slice."""
+    volume = np.zeros((6, 6, 8 * len(sides)), dtype=bool)
+    where = []
+    for i, side in enumerate(sides):
+        cube = np.s_[:side, :side, 8 * i:8 * i + side]
+        volume[cube] = True
+        where.append(cube)
+    return volume, where
+
+
+def test_the_size_filter_keeps_the_objects_between_the_size_percentiles():
+    """Sizes 1, 8, 27, 64, 125: the 10th and 90th percentiles are 3.8 and
+    100.6 voxels, so the smallest and largest cube go. The background
+    isn't an object."""
+    from napari_clemreg.clemreg.log_segmentation import filter_binary_segmentation
+
+    volume, cubes = _cubes([1, 2, 3, 4, 5])
+    kept = filter_binary_segmentation(volume, percentile=(10, 90))
+
+    assert [bool(kept[cube].all()) for cube in cubes] == [False, True, True, True, False]
+    assert kept.sum() == 8 + 27 + 64
+
+
+def test_the_widest_size_filter_keeps_every_object():
+    from napari_clemreg.clemreg.log_segmentation import filter_binary_segmentation
+
+    volume, _ = _cubes([1, 2, 3])
+    np.testing.assert_array_equal(filter_binary_segmentation(volume, percentile=(0, 100)), volume)

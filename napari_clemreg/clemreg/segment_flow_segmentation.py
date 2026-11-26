@@ -17,6 +17,7 @@ them were guessed.
 """
 from __future__ import annotations
 
+import secrets
 import shutil
 import subprocess
 import tempfile
@@ -143,6 +144,25 @@ def _build_subprocess_env() -> dict:
             break
 
     return env
+
+
+def _nextflow_config(profile: str) -> str:
+    """CLEM-Reg's additions to Segment-Flow's Nextflow config, for `-c`.
+
+    runModel runs without LD_LIBRARY_PATH. Set for other software, e.g. in a
+    container, it makes PyTorch in the model's environment load the wrong
+    CUDA libraries and crash, and Segment-Flow then waits forever. Its
+    environment brings its own CUDA libraries.
+
+    On the local profile, runModel tasks run one at a time, as Segment-Flow's
+    own single-GPU profile (rosalind) does: several copies of a model don't
+    fit in an ordinary GPU's memory.
+    """
+    settings = ["beforeScript = 'unset LD_LIBRARY_PATH'"]
+    if profile == "local":
+        settings.append("maxForks = 1")
+    lines = "".join(f"        {setting}\n" for setting in settings)
+    return f"process {{\n    withName: 'runModel' {{\n{lines}    }}\n}}\n"
 
 
 def _run_nextflow(cmd: list, cwd: Path, env: dict) -> tuple[int, str]:
@@ -327,10 +347,15 @@ def segment_flow_em_segmentation(
         )
 
         model_config_path = _build_model_config(model_type, task, conf_threshold, tmpdir)
+        param_hash = secrets.token_hex(4)
+
+        nextflow_config_path = tmpdir / "clemreg.config"
+        nextflow_config_path.write_text(_nextflow_config(profile), encoding="utf-8")
 
         cmd = [
             "nextflow", "run", *source,
             "-profile", profile,
+            "-c", str(nextflow_config_path),
             # No forced serialization here (see git history for an
             # executor.queueSize=1 attempt that was reverted): the real
             # cause turned out to be _build_subprocess_env() not
@@ -347,6 +372,9 @@ def segment_flow_em_segmentation(
             "--model_config", str(model_config_path),
             "--output_format", "tiff",
             "--root_dir", str(root_dir),
+            # Names this run's mask; otherwise it's a hash of all the
+            # parameters, unrelated to when the mask was made.
+            "--param_hash", param_hash,
         ]
 
         print(
@@ -397,17 +425,17 @@ def segment_flow_em_segmentation(
         print("Segment-Flow EM segmentation finished.", flush=True)
 
         # combineStacks publishes the result as
-        # <root_dir>/aiod_cache/<model>/<model_type>_masks/<image-id>_masks_<hash>_all.<format>
-        # -- confirmed against a real run. The <hash> is a resolved-param
-        # hash we don't compute ourselves, so glob for it rather than
-        # predict the exact filename (robust to that hash's computation
-        # changing upstream, and there's exactly one match for a
-        # single-image run).
-        mask_dir = root_dir / "aiod_cache" / "empanada" / f"{model_type}_masks"
-        matches = sorted(mask_dir.glob("*_all.tiff"))
-        if not matches:
+        # <root_dir>/aiod_cache/<model>/<model_type>_masks/<image-id>_masks_<param_hash>_all.<format>,
+        # next to every earlier run's mask, so read this run's by its hash.
+        # The image id is the input's file name, input.tif.
+        mask_path = root_dir / "aiod_cache" / "empanada" / f"{model_type}_masks" / f"input_tif_masks_{param_hash}_all.tiff"
+        if not mask_path.exists():
             raise SegmentFlowRunError(
-                f"Segment-Flow reported success but no output mask was found in "
-                f"{mask_dir} (looked for *_all.tiff). Nextflow output:\n{output}"
+                f"Segment-Flow reported success but no output mask was found at "
+                f"{mask_path}. Nextflow output:\n{output}"
             )
-        return tifffile.imread(matches[-1])
+        mask = tifffile.imread(mask_path)
+        # Each run's files are named by its hash, so they're never reused.
+        mask_path.unlink()
+        (root_dir / "aiod_cache" / "splits" / f"substacks_{param_hash}.csv").unlink(missing_ok=True)
+        return mask

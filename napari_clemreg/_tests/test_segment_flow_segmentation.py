@@ -10,6 +10,7 @@ import shutil
 from unittest.mock import patch
 
 import numpy as np
+import tifffile
 import pytest
 
 from napari_clemreg.clemreg.segment_flow_segmentation import (
@@ -151,3 +152,142 @@ def test_segment_flow_em_segmentation_real_run(tmp_path):
     mask = segment_flow_em_segmentation(volume, root_dir=tmp_path)
 
     assert mask.shape == volume.shape
+
+
+# --- Which mask a run returns -------------------------------------------------
+#
+# Segment-Flow writes every run's mask to the same cache folder, as
+# <image>_masks_<hash>_all.tiff. Unless given --param_hash, it hashes all
+# its parameters, including a temporary path, so each run's mask gets an
+# unrelated name. A fake Nextflow run writes the mask the same way.
+
+def _mask_dir(root):
+    return root / "aiod_cache" / "empanada" / "MitoNet v1_masks"
+
+
+@pytest.fixture
+def fake_nextflow(monkeypatch, tmp_path):
+    """Run segment_flow_em_segmentation without Nextflow. Its mask is the
+    input volume plus 1. The cache already holds an older run's mask, which
+    sorts after any other name. Returns the cache root."""
+    import secrets
+    from napari_clemreg.clemreg import segment_flow_segmentation as sf
+
+    root = tmp_path / "aiod"
+    _mask_dir(root).mkdir(parents=True)
+    tifffile.imwrite(_mask_dir(root) / "input_tif_masks_ffffffff_all.tiff", np.full((2, 3, 4), 7, np.uint16))
+
+    def run(cmd, cwd, env):
+        param_hash = cmd[cmd.index("--param_hash") + 1] if "--param_hash" in cmd else secrets.token_hex(4)
+        volume = tifffile.imread(cmd[cmd.index("--img_dir") + 1].replace("images.csv", "input.tif"))
+        tifffile.imwrite(_mask_dir(root) / f"input_tif_masks_{param_hash}_all.tiff", volume + 1)
+        # splitStacks' list of sub-stacks, also named by the hash.
+        (root / "aiod_cache" / "splits").mkdir(exist_ok=True)
+        (root / "aiod_cache" / "splits" / f"substacks_{param_hash}.csv").write_text("z")
+        return 0, ""
+
+    monkeypatch.setattr(sf, "_check_prerequisites", lambda: None)
+    monkeypatch.setattr(sf, "_run_nextflow", run)
+    monkeypatch.setattr(sf, "_build_model_config", lambda *args: tmp_path / "model_config.yml")
+    return root
+
+
+def test_a_run_returns_its_own_mask_not_an_older_one(fake_nextflow):
+    volume = np.arange(24, dtype=np.uint16).reshape(2, 3, 4)
+    mask = segment_flow_em_segmentation(volume, root_dir=fake_nextflow)
+    np.testing.assert_array_equal(mask, volume + 1)
+
+
+def test_a_run_deletes_its_files_once_read_and_leaves_others(fake_nextflow):
+    segment_flow_em_segmentation(np.zeros((2, 3, 4), np.uint16), root_dir=fake_nextflow)
+    assert [p.name for p in _mask_dir(fake_nextflow).iterdir()] == ["input_tif_masks_ffffffff_all.tiff"]
+    assert list((fake_nextflow / "aiod_cache" / "splits").iterdir()) == []
+
+
+def test_a_run_without_its_mask_fails_instead_of_using_another(fake_nextflow, monkeypatch):
+    from napari_clemreg.clemreg import segment_flow_segmentation as sf
+
+    monkeypatch.setattr(sf, "_run_nextflow", lambda cmd, cwd, env: (0, ""))
+    with pytest.raises(sf.SegmentFlowRunError, match="no output mask"):
+        segment_flow_em_segmentation(np.zeros((2, 3, 4), np.uint16), root_dir=fake_nextflow)
+
+
+# --- CLEM-Reg's additions to Segment-Flow's Nextflow config -------------------
+
+@pytest.fixture
+def nextflow_runs(monkeypatch, tmp_path):
+    """Start segment_flow_em_segmentation without Nextflow. Returns a list
+    that gets each run's command and the text of its -c config file."""
+    from napari_clemreg.clemreg import segment_flow_segmentation as sf
+
+    runs = []
+
+    def run(cmd, cwd, env):
+        config = cmd[cmd.index("-c") + 1] if "-c" in cmd else None
+        runs.append((cmd, open(config).read() if config else None))
+        return 1, "stopped by the test"
+
+    monkeypatch.setattr(sf, "_check_prerequisites", lambda: None)
+    monkeypatch.setattr(sf, "_run_nextflow", run)
+    monkeypatch.setattr(sf, "_build_model_config", lambda *args: tmp_path / "model_config.yml")
+    return runs
+
+
+@pytest.mark.parametrize("profile, one_at_a_time", [("local", True), ("crick", False)])
+def test_run_model_gets_clemregs_nextflow_config(nextflow_runs, tmp_path, profile, one_at_a_time):
+    """runModel runs without LD_LIBRARY_PATH, and on a local machine one task
+    at a time, as Segment-Flow's own single-GPU profile does."""
+    from napari_clemreg.clemreg.segment_flow_segmentation import SegmentFlowRunError
+
+    with pytest.raises(SegmentFlowRunError):
+        segment_flow_em_segmentation(np.zeros((2, 3, 4), np.uint8), profile=profile, root_dir=tmp_path)
+
+    (cmd, config), = nextflow_runs
+    assert "withName: 'runModel'" in config
+    assert "beforeScript = 'unset LD_LIBRARY_PATH'" in config
+    assert ("maxForks = 1" in config) == one_at_a_time
+
+
+_TOY_PIPELINE = '''
+process runModel {
+    label 'gpu_process'
+    input: val x
+    output: stdout
+    script:
+    """
+    echo "LD=\\${LD_LIBRARY_PATH:-unset} start=\\$(python3 -c 'import time; print(time.time())')"
+    sleep 1
+    echo "end=\\$(python3 -c 'import time; print(time.time())')"
+    """
+}
+workflow { runModel(Channel.of(1, 2, 3)).view() }
+'''
+# Like Segment-Flow's: a local profile giving runModel 4 CPUs, so several
+# tasks would otherwise run at once.
+_TOY_CONFIG = "profiles { local { process { withLabel: gpu_process { cpus = 1 } } } }\n"
+
+
+@pytest.mark.slow
+@pytest.mark.skipif(not _HAS_NEXTFLOW, reason="needs a real Nextflow install")
+def test_clemregs_nextflow_config_works_in_real_nextflow(tmp_path):
+    """A runModel task started with LD_LIBRARY_PATH set doesn't see it, and
+    the local profile's tasks don't overlap."""
+    import re
+    import subprocess
+
+    from napari_clemreg.clemreg.segment_flow_segmentation import _build_subprocess_env, _nextflow_config
+
+    (tmp_path / "main.nf").write_text(_TOY_PIPELINE)
+    (tmp_path / "nextflow.config").write_text(_TOY_CONFIG)
+    (tmp_path / "clemreg.config").write_text(_nextflow_config("local"))
+    env = {**_build_subprocess_env(), "LD_LIBRARY_PATH": "/opt/wrong-cuda/lib"}
+
+    done = subprocess.run(["nextflow", "run", "main.nf", "-ansi-log", "false", "-profile", "local", "-c", "clemreg.config"],
+                          cwd=tmp_path, env=env, capture_output=True, text=True, timeout=300)
+
+    assert done.returncode == 0, done.stdout + done.stderr
+    assert done.stdout.count("LD=unset") == 3, done.stdout
+    spans = sorted((float(start), float(end)) for start, end in
+                   re.findall(r"start=([\d.]+)\s+end=([\d.]+)", done.stdout))
+    assert len(spans) == 3
+    assert all(later[0] >= earlier[1] for earlier, later in zip(spans, spans[1:])), spans
