@@ -146,6 +146,25 @@ def _build_subprocess_env() -> dict:
     return env
 
 
+def _nextflow_config(profile: str) -> str:
+    """CLEM-Reg's additions to Segment-Flow's Nextflow config, for `-c`.
+
+    runModel runs without LD_LIBRARY_PATH. Set for other software, e.g. in a
+    container, it makes PyTorch in the model's environment load the wrong
+    CUDA libraries and crash, and Segment-Flow then waits forever. Its
+    environment brings its own CUDA libraries.
+
+    On the local profile, runModel tasks run one at a time, as Segment-Flow's
+    own single-GPU profile (rosalind) does: several copies of a model don't
+    fit in an ordinary GPU's memory.
+    """
+    settings = ["beforeScript = 'unset LD_LIBRARY_PATH'"]
+    if profile == "local":
+        settings.append("maxForks = 1")
+    lines = "".join(f"        {setting}\n" for setting in settings)
+    return f"process {{\n    withName: 'runModel' {{\n{lines}    }}\n}}\n"
+
+
 def _run_nextflow(cmd: list, cwd: Path, env: dict) -> tuple[int, str]:
     """Run the Nextflow subprocess, printing its output line-by-line as it
     arrives instead of swallowing it until the process exits.
@@ -330,9 +349,13 @@ def segment_flow_em_segmentation(
         model_config_path = _build_model_config(model_type, task, conf_threshold, tmpdir)
         param_hash = secrets.token_hex(4)
 
+        nextflow_config_path = tmpdir / "clemreg.config"
+        nextflow_config_path.write_text(_nextflow_config(profile), encoding="utf-8")
+
         cmd = [
             "nextflow", "run", *source,
             "-profile", profile,
+            "-c", str(nextflow_config_path),
             # No forced serialization here (see git history for an
             # executor.queueSize=1 attempt that was reverted): the real
             # cause turned out to be _build_subprocess_env() not
