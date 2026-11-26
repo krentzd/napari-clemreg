@@ -412,6 +412,7 @@ def segment_flow_em_segmentation(
                 f"{mask_path}. Nextflow output:\n{output}"
             )
         mask = tifffile.imread(mask_path)
-        # Each run's mask has its own name, so it's never reused.
+        # Each run's files are named by its hash, so they're never reused.
         mask_path.unlink()
+        (root_dir / "aiod_cache" / "splits" / f"substacks_{param_hash}.csv").unlink(missing_ok=True)
         return mask

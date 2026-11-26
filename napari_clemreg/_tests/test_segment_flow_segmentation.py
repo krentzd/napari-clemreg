@@ -181,6 +181,9 @@ def fake_nextflow(monkeypatch, tmp_path):
         param_hash = cmd[cmd.index("--param_hash") + 1] if "--param_hash" in cmd else secrets.token_hex(4)
         volume = tifffile.imread(cmd[cmd.index("--img_dir") + 1].replace("images.csv", "input.tif"))
         tifffile.imwrite(_mask_dir(root) / f"input_tif_masks_{param_hash}_all.tiff", volume + 1)
+        # splitStacks' list of sub-stacks, also named by the hash.
+        (root / "aiod_cache" / "splits").mkdir(exist_ok=True)
+        (root / "aiod_cache" / "splits" / f"substacks_{param_hash}.csv").write_text("z")
         return 0, ""
 
     monkeypatch.setattr(sf, "_check_prerequisites", lambda: None)
@@ -195,9 +198,10 @@ def test_a_run_returns_its_own_mask_not_an_older_one(fake_nextflow):
     np.testing.assert_array_equal(mask, volume + 1)
 
 
-def test_a_run_deletes_its_mask_once_read_and_leaves_others(fake_nextflow):
+def test_a_run_deletes_its_files_once_read_and_leaves_others(fake_nextflow):
     segment_flow_em_segmentation(np.zeros((2, 3, 4), np.uint16), root_dir=fake_nextflow)
     assert [p.name for p in _mask_dir(fake_nextflow).iterdir()] == ["input_tif_masks_ffffffff_all.tiff"]
+    assert list((fake_nextflow / "aiod_cache" / "splits").iterdir()) == []
 
 
 def test_a_run_without_its_mask_fails_instead_of_using_another(fake_nextflow, monkeypatch):
