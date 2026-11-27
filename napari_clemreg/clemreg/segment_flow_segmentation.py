@@ -149,20 +149,16 @@ def _build_subprocess_env() -> dict:
 def _nextflow_config(profile: str) -> str:
     """CLEM-Reg's additions to Segment-Flow's Nextflow config, for `-c`.
 
-    runModel runs without LD_LIBRARY_PATH. Set for other software, e.g. in a
-    container, it makes PyTorch in the model's environment load the wrong
-    CUDA libraries and crash, and Segment-Flow then waits forever. Its
-    environment brings its own CUDA libraries.
-
     On the local profile, runModel tasks run one at a time, as Segment-Flow's
     own single-GPU profile (rosalind) does: several copies of a model don't
-    fit in an ordinary GPU's memory.
+    fit in an ordinary GPU's memory. Other profiles are left as they are.
+
+    LD_LIBRARY_PATH is passed on unchanged: in an Apptainer container started
+    with --nv, it's how the model finds the GPU driver.
     """
-    settings = ["beforeScript = 'unset LD_LIBRARY_PATH'"]
-    if profile == "local":
-        settings.append("maxForks = 1")
-    lines = "".join(f"        {setting}\n" for setting in settings)
-    return f"process {{\n    withName: 'runModel' {{\n{lines}    }}\n}}\n"
+    if profile != "local":
+        return ""
+    return "process {\n    withName: 'runModel' {\n        maxForks = 1\n    }\n}\n"
 
 
 def _run_nextflow(cmd: list, cwd: Path, env: dict) -> tuple[int, str]:

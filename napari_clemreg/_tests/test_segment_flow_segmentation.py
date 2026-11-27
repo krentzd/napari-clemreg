@@ -235,17 +235,17 @@ def nextflow_runs(monkeypatch, tmp_path):
 
 @pytest.mark.parametrize("profile, one_at_a_time", [("local", True), ("crick", False)])
 def test_run_model_gets_clemregs_nextflow_config(nextflow_runs, tmp_path, profile, one_at_a_time):
-    """runModel runs without LD_LIBRARY_PATH, and on a local machine one task
-    at a time, as Segment-Flow's own single-GPU profile does."""
+    """On a local machine runModel runs one task at a time, as Segment-Flow's
+    own single-GPU profile does, and keeps LD_LIBRARY_PATH."""
     from napari_clemreg.clemreg.segment_flow_segmentation import SegmentFlowRunError
 
     with pytest.raises(SegmentFlowRunError):
         segment_flow_em_segmentation(np.zeros((2, 3, 4), np.uint8), profile=profile, root_dir=tmp_path)
 
     (cmd, config), = nextflow_runs
-    assert "withName: 'runModel'" in config
-    assert "beforeScript = 'unset LD_LIBRARY_PATH'" in config
+    assert ("withName: 'runModel'" in config) == one_at_a_time
     assert ("maxForks = 1" in config) == one_at_a_time
+    assert "LD_LIBRARY_PATH" not in config
 
 
 _TOY_PIPELINE = '''
@@ -270,8 +270,9 @@ _TOY_CONFIG = "profiles { local { process { withLabel: gpu_process { cpus = 1 } 
 @pytest.mark.slow
 @pytest.mark.skipif(not _HAS_NEXTFLOW, reason="needs a real Nextflow install")
 def test_clemregs_nextflow_config_works_in_real_nextflow(tmp_path):
-    """A runModel task started with LD_LIBRARY_PATH set doesn't see it, and
-    the local profile's tasks don't overlap."""
+    """A runModel task sees the LD_LIBRARY_PATH it was started with (in an
+    Apptainer container, the way to the GPU driver), and the local profile's
+    tasks don't overlap."""
     import re
     import subprocess
 
@@ -280,13 +281,13 @@ def test_clemregs_nextflow_config_works_in_real_nextflow(tmp_path):
     (tmp_path / "main.nf").write_text(_TOY_PIPELINE)
     (tmp_path / "nextflow.config").write_text(_TOY_CONFIG)
     (tmp_path / "clemreg.config").write_text(_nextflow_config("local"))
-    env = {**_build_subprocess_env(), "LD_LIBRARY_PATH": "/opt/wrong-cuda/lib"}
+    env = {**_build_subprocess_env(), "LD_LIBRARY_PATH": "/.singularity.d/libs"}
 
     done = subprocess.run(["nextflow", "run", "main.nf", "-ansi-log", "false", "-profile", "local", "-c", "clemreg.config"],
                           cwd=tmp_path, env=env, capture_output=True, text=True, timeout=300)
 
     assert done.returncode == 0, done.stdout + done.stderr
-    assert done.stdout.count("LD=unset") == 3, done.stdout
+    assert done.stdout.count("LD=/.singularity.d/libs") == 3, done.stdout
     spans = sorted((float(start), float(end)) for start, end in
                    re.findall(r"start=([\d.]+)\s+end=([\d.]+)", done.stdout))
     assert len(spans) == 3
