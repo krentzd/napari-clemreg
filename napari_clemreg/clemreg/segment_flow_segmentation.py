@@ -146,21 +146,6 @@ def _build_subprocess_env() -> dict:
     return env
 
 
-def _nextflow_config(profile: str) -> str:
-    """CLEM-Reg's additions to Segment-Flow's Nextflow config, for `-c`.
-
-    On the local profile, runModel tasks run one at a time, as Segment-Flow's
-    own single-GPU profile (rosalind) does: several copies of a model don't
-    fit in an ordinary GPU's memory. Other profiles are left as they are.
-
-    LD_LIBRARY_PATH is passed on unchanged: in an Apptainer container started
-    with --nv, it's how the model finds the GPU driver.
-    """
-    if profile != "local":
-        return ""
-    return "process {\n    withName: 'runModel' {\n        maxForks = 1\n    }\n}\n"
-
-
 def _run_nextflow(cmd: list, cwd: Path, env: dict) -> tuple[int, str]:
     """Run the Nextflow subprocess, printing its output line-by-line as it
     arrives instead of swallowing it until the process exits.
@@ -345,13 +330,9 @@ def segment_flow_em_segmentation(
         model_config_path = _build_model_config(model_type, task, conf_threshold, tmpdir)
         param_hash = secrets.token_hex(4)
 
-        nextflow_config_path = tmpdir / "clemreg.config"
-        nextflow_config_path.write_text(_nextflow_config(profile), encoding="utf-8")
-
         cmd = [
             "nextflow", "run", *source,
             "-profile", profile,
-            "-c", str(nextflow_config_path),
             # No forced serialization here (see git history for an
             # executor.queueSize=1 attempt that was reverted): the real
             # cause turned out to be _build_subprocess_env() not
