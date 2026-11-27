@@ -265,7 +265,7 @@ def test_em_to_fm_warp_puts_em_objects_where_they_are(algorithm, resolution, tol
         moving_points, fixed_points, Image(fm.astype(np.float32), name='FM'),
         Image(em.astype(np.float32), name='EM'), algorithm, registration_direction='EM → FM',
         warping_output_resolution=resolution, registration_max_iterations=50,
-        warping_interpolation_order=1, warping_approximate_grid=5, warping_sub_division_factor=1)
+        warping_interpolation_order=1, warping_approximate_grid=2, warping_sub_division_factor=1)
 
     assert warped[0].name == 'EM_warped'
     mask = warped[0].data > 0.5
