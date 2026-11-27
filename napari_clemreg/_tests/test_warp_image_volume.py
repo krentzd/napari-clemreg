@@ -3,6 +3,8 @@ import pytest
 from napari.layers import Image
 from scipy import ndimage
 
+from napari_clemreg.clemreg import warp_image_volume
+from napari_clemreg.clemreg.exceptions import ClemregError
 from napari_clemreg.clemreg.warp_image_volume import (
     _fit_tps,
     _rescale_affine_matrix,
@@ -46,6 +48,34 @@ def test_fit_tps_merges_duplicate_points(rng):
 
     np.testing.assert_allclose(tps(from_points[:1]), to_points[:1], atol=1e-6)
     np.testing.assert_allclose(tps(from_points[1:2]), to_points[1:2] + [[1, 0, 0]], atol=1e-6)
+
+
+@pytest.mark.parametrize('points', [
+    np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0]]),          # too few
+    np.array([[2, 0, 0], [2, 5, 0], [2, 0, 5], [2, 5, 5]]),  # all in one plane
+])
+def test_fit_tps_says_when_points_cannot_define_a_3d_warp(points):
+    with pytest.raises(ClemregError, match='plane'):
+        _fit_tps(points, points)
+
+
+def test_warp_evaluates_the_spline_one_chunk_at_a_time(rng, monkeypatch):
+    """Sub-division Factor limits memory: the spline is never evaluated
+    at many more positions than one chunk holds."""
+    output_shape = (20, 20, 20)
+    moving_image, moving, transformed, expected = _affine_case(rng, output_shape)
+    sizes = []
+
+    def recording_fit(*args):
+        tps = _fit_tps(*args)
+        return lambda positions: sizes.append(len(positions)) or tps(positions)
+
+    monkeypatch.setattr(warp_image_volume, '_fit_tps', recording_fit)
+    warped, _ = _warp_image_volume(Image(moving_image), output_shape, moving, transformed,
+                                   approximate_grid=1, sub_division_factor=4)
+
+    assert max(sizes) <= 6 ** 3
+    np.testing.assert_allclose(warped, expected, atol=1e-6)
 
 
 def _affine_case(rng, output_shape, n_points=40):

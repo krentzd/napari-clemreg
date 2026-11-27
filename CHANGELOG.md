@@ -22,7 +22,7 @@ Changes since the version published in Nature Methods ([`v1.0.0-nature-methods`]
 - The warped FM image keeps the FM pixel size by default and is placed over the EM image with the layer's scale. **Output Pixel Size → EM pixel grid (legacy)** gives the previous output.
 - **Image Warping** settings sit inside **Point Cloud Registration**, whose button also warps the image. **Approximate Grid** and **Sub-division Factor** only appear for BCPD.
 - `empanada-dl` and `torch` moved to the optional `empanada` extra. That extra can't currently be installed on Python 3.11 or newer.
-- The non-rigid (BCPD) warp uses SciPy's thin plate spline (`RBFInterpolator`) instead of its own. It's fitted once rather than once per chunk, and it's faster and needs less memory: on the sample data the whole warp takes about 3 minutes and 9 GB, where fitting the old spline once took 10 minutes and 14 GB. It's also more exact, so BCPD results differ slightly from earlier versions'.
+- The non-rigid (BCPD) warp uses SciPy's thin plate spline. It's faster and uses less memory (on the sample data about 3 minutes and 9 GB, down from over 10 minutes and 14 GB), and it's more exact, so BCPD results differ slightly from earlier versions'.
 - New dependencies: `zarr >= 3.1`, `dask`, `fsspec[http]` and `aiohttp`, for the streamed sample. They can't be installed alongside plugins that require `zarr < 3`.
 
 ### Removed

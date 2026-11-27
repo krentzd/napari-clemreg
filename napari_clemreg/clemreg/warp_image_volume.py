@@ -6,6 +6,7 @@ from napari.layers import Points, Image
 from napari.types import PointsData, ImageData
 from scipy import ndimage
 from ._napari_compat import get_linked_layers
+from .exceptions import ClemregError
 import numpy as np
 
 
@@ -14,11 +15,14 @@ def _fit_tps(from_points, to_points):
 
     Call the result with an (n, 3) array of positions. A point listed more
     than once is used once, with its targets averaged; repeated points
-    would otherwise make the spline wrong without any warning.
+    would otherwise make the spline fail.
     """
     from scipy.interpolate import RBFInterpolator
 
     from_points, index = np.unique(np.asarray(from_points, dtype=float), axis=0, return_inverse=True)
+    if len(from_points) < 4 or np.linalg.matrix_rank(from_points - from_points.mean(axis=0)) < 3:
+        raise ClemregError('The non-rigid (BCPD) warp needs at least 4 points that are not all in one '
+                           'plane. Sample more points, or use Rigid CPD or Affine CPD.')
     index = index.ravel()
     to_points = np.asarray(to_points, dtype=float)
     targets = np.zeros((len(from_points), to_points.shape[1]))
@@ -34,26 +38,21 @@ def _coarse_axis(size, approximate_grid):
     return np.linspace(0, size - 1, steps)
 
 
-def _coarse_warp(tps, output_shape, approximate_grid):
-    """The spline evaluated on a grid over the whole output, as an array
-    of shape (3, *grid shape): where each grid position samples the
-    moving image."""
-    axes = [_coarse_axis(size, approximate_grid) for size in output_shape]
-    grid = np.stack(np.meshgrid(*axes, indexing='ij'), axis=-1)
-    warp = tps(grid.reshape(-1, 3)).reshape(grid.shape)
-    return np.moveaxis(warp, -1, 0)
-
-
-def _sampling_coordinates(coarse_warp, output_shape, region):
+def _sampling_coordinates(tps, coarse_axes, region):
     """Where each voxel of `region` (a tuple of slices) samples the moving
-    image: the coarse warp, linearly interpolated."""
-    grid_index = []
-    for size, steps, axis_slice in zip(output_shape, coarse_warp.shape[1:], region):
-        to_grid = (steps - 1) / (size - 1) if size > 1 else 0
-        grid_index.append(np.arange(axis_slice.start, axis_slice.stop) * to_grid)
+    image: the spline on the nearby coarse grid, linearly interpolated."""
+    nodes, grid_index = [], []
+    for axis, axis_slice in zip(coarse_axes, region):
+        grid_per_voxel = (len(axis) - 1) / axis[-1] if axis[-1] > 0 else 0
+        grid_position = np.arange(axis_slice.start, axis_slice.stop) * grid_per_voxel
+        first = int(grid_position[0])
+        nodes.append(axis[first:math.ceil(grid_position[-1]) + 1])
+        grid_index.append(grid_position - first)
+    grid = np.stack(np.meshgrid(*nodes, indexing='ij'), axis=-1)
+    warp = np.moveaxis(tps(grid.reshape(-1, 3)).reshape(grid.shape), -1, 0)
     grid_index = np.meshgrid(*grid_index, indexing='ij')
     return np.stack([ndimage.map_coordinates(axis_warp, grid_index, order=1, mode='nearest')
-                     for axis_warp in coarse_warp])
+                     for axis_warp in warp])
 
 
 def _regions(output_shape, sub_division_factor):
@@ -149,8 +148,8 @@ def _warp_image_volume(moving_image: Image,
     The spline maps `transformed_points` (on the output grid) onto
     `moving_points` (in the moving image), so each output voxel knows
     where to sample the moving image. It's evaluated `approximate_grid`
-    voxels apart and interpolated in between. The output is filled in
-    `sub_division_factor`³ chunks to limit memory.
+    voxels apart and interpolated in between. The output is filled in up
+    to `sub_division_factor` chunks along each axis, to limit memory.
 
     Returns (warped image, layer kwargs); for a multichannel image
     (channels first), the kwargs are a list with one dict per channel.
@@ -161,10 +160,11 @@ def _warp_image_volume(moving_image: Image,
     multichannel = data.ndim == len(output_shape) + 1
     channels = data if multichannel else data[np.newaxis]
 
-    coarse_warp = _coarse_warp(_fit_tps(transformed_points, moving_points), output_shape, approximate_grid)
+    tps = _fit_tps(transformed_points, moving_points)
+    coarse_axes = [_coarse_axis(size, approximate_grid) for size in output_shape]
     warped = np.empty((len(channels), *output_shape))
     for region in _regions(output_shape, sub_division_factor):
-        coordinates = _sampling_coordinates(coarse_warp, output_shape, region)
+        coordinates = _sampling_coordinates(tps, coarse_axes, region)
         for warped_channel, channel in zip(warped, channels):
             warped_channel[region] = ndimage.map_coordinates(channel, coordinates, order=interpolation_order)
 
